@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-10-29
 decision-makers: xandronak (repository owner)
 scope: operations
