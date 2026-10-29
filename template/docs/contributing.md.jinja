@@ -115,7 +115,7 @@ requests is in English, without exception.
    readiness verdict that the report states.
 
 In Claude Code the `create-pr` skill (`.claude/skills/create-pr/SKILL.md`) runs this checklist
-and opens the pull request.
+and opens the pull request{% if docs_review %}, then waits for the `docs-review` run and answers its comments{% endif %}.
 
 ## 5. Template updates
 
