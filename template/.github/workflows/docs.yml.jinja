@@ -1,0 +1,40 @@
+# Documentation, template, and project checks: the CI side of scripts/check.sh (AGENTS.md,
+# section 6). markdownlint-cli2 and lychee run through their official actions with the same
+# configuration files; decision records are checked by the `decisions` workflow.
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # Set the repository variable CI_RUNS_ON (a JSON array of runner labels) to run elsewhere
+    # without editing this template-owned file.
+    runs-on: {{ '${{' }} fromJSON(vars.CI_RUNS_ON || '{{ ci_runs_on_default }}') {{ '}}' }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      # Node.js for npx, which scripts/check-docs.sh and project checks use (README.md, Checks).
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: lts/*
+
+      - name: markdownlint-cli2
+        uses: DavidAnson/markdownlint-cli2-action@v25.0.0
+
+      - name: lychee
+        uses: lycheeverse/lychee-action@v2.9.0
+        with:
+          args: --no-progress .
+          fail: true
+
+      - name: template integrity
+        run: scripts/check-template.sh
+
+      - name: project checks
+        run: scripts/check-project.sh

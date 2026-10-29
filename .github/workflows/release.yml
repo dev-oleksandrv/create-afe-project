@@ -1,0 +1,35 @@
+# Release of a template version (docs/maintaining.md, section 5): a tag vX.Y.Z on main with a
+# matching CHANGELOG.md section becomes a GitHub release with that section as its notes.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","linux","ARM64"]') }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: tag is on main and has a changelog section
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] ||
+            { echo "$TAG is not vMAJOR.MINOR.PATCH without leading zeros"; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$TAG is not on main"; exit 1; }
+          version="${TAG#v}"
+          awk -v h="## [$version]" 'index($0, h) == 1 {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "CHANGELOG.md has no section for $version"; exit 1; }
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
