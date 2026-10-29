@@ -88,10 +88,11 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    - A push restarts the workflow. Wait for that run once more and answer its new comments the
      same way. After this second round, a further new comment gets a reply and an item under
      "Notes for the owner", not another round.
-   - Update the description with `gh pr edit --body-file <file>`, after the readiness check of
-     step 8: under "Checks", the review and its outcome (how many comments, how many fixed,
-     declined, or waiting on the owner, or why there was no review); under "Notes for the owner",
-     the items that wait on the owner.
+   - Update the description: rerun the readiness check of step 8 against the pushed tree (a
+     follow-up commit or a changed description can change the verdict), then
+     `gh pr edit --body-file <file>`, with, under "Checks", the review and its outcome (how many
+     comments, how many fixed, declined, or waiting on the owner, or why there was no review) and,
+     under "Notes for the owner", the items that wait on the owner.
 {%- endif %}
 {% if docs_review %}10{% else %}9{% endif %}. Report: the verdict first, then the pull request URL, the checks run with their results, and
     everything listed under "Assumptions and open questions" and "Notes for the owner".

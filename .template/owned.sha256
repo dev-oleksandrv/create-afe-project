@@ -16,7 +16,7 @@ a2980a0ebfe43811ca68643df41204f1fa43034c91a15a4e454350ee39c7105a  scripts/lib/gi
 d159454d36be8707e31701a5c3a41379317cdd5927e10f193a798c672be2b6c0  .claude/hooks/stop-check-decisions.sh
 0e910c2fe8a96ca74293c91ca3899cda8dfd25cff1879355e8f2877a0cb777b0  .claude/hooks/stop-check-template.sh
 928be5cd922889dc35c801040e33918c7a3ac6916b149f49ee50a77d488146f1  .claude/hooks/stop-run-project-hooks.sh
-7d17881550d41d5aa29a14d117124fabf042c89ebd5efb035576b4936ffbdfd5  .claude/skills/create-pr/SKILL.md
+716f9724db2323d8ec43dbeb3875bf12948242283fd6d3ff3e6a12ceec0fb0c0  .claude/skills/create-pr/SKILL.md
 c4f721d5bb5b886482e385bdb5bfc0cf88a9bb9ddfc78755ef25a8137fe6a632  .claude/skills/update-template/SKILL.md
 1ca3dd61d0eaddbf6d1367ab98e7c04d5a4aa857d1ae6145f97029d16bdd649a  .claude/skills/docs-review/SKILL.md
 8f3aeec3701bd0338830a8f18af98694e41404ad59d1f135d3a431c3ed69a8a4  .github/workflows/docs.yml
