@@ -6,6 +6,14 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+### Changed
+
+- `create-pr` skill (`.claude/skills/create-pr/SKILL.md`), with the `docs_review` module: after
+  opening the pull request it waits for the `docs-review` run, answers every comment (a fix in
+  its own commit, a decline with a reason, or a question for the owner), records the outcome in
+  the description, and reports it; a draft or a run that does not finish is reported instead of
+  waited for. `docs/contributing.md`, section 4, names the new step.
+
 ## [0.1.0] - 2026-10-29
 
 ### Added
