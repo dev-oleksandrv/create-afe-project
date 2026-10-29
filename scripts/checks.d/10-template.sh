@@ -94,14 +94,15 @@ gitc "$a" add -A && gitc "$a" commit -q -m bad
 [ $? -eq 2 ] || fail "stop-check-docs lets a committed broken document through"
 gitc "$a" switch -q main && gitc "$a" branch -q -D feature
 # A pushed feature branch must still be compared with main, not with its own upstream.
-git -C "$a" update-ref refs/remotes/origin/main "$(git -C "$a" rev-parse main)"
+git init -q --bare "$work/origin.git"
+git -C "$a" remote add origin "$work/origin.git" && gitc "$a" push -q origin main
 gitc "$a" switch -q -c pushed && printf -- '---\nstatus: proposed\ndate: 2026-01-01\ndecision-makers: test\nscope: stack\nsummary: "Test."\nsupersedes: []\n---\n\n# Test\n' > "$a/docs/decisions/0001-test.md"
 (cd "$a" && scripts/gen-decisions-index.sh > docs/decisions/README.md) && gitc "$a" add -A && gitc "$a" commit -q -m record
-git -C "$a" update-ref refs/remotes/origin/pushed HEAD && git -C "$a" branch -q --set-upstream-to=origin/pushed
+gitc "$a" push -q -u origin pushed
 printf '## Summary\n\n- x\n\n## Assumptions and open questions\n\n- None\n' > "$work/body.md"
 (cd "$a" && scripts/check-decisions.sh --ready --pr-body "$work/body.md" > /dev/null 2>&1) &&
   fail "readiness on a pushed feature branch misses the proposed record"
-gitc "$a" switch -q main && gitc "$a" branch -q -D pushed && git -C "$a" update-ref -d refs/remotes/origin/main && git -C "$a" update-ref -d refs/remotes/origin/pushed
+gitc "$a" switch -q main && gitc "$a" branch -q -D pushed && git -C "$a" remote remove origin
 
 echo "== copier update keeps project content"
 tpl="$work/tpl"
