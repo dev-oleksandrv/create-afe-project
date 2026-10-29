@@ -39,8 +39,9 @@ How the template is changed, tested, versioned, and released. Questions and file
 `docs_review` module, and a self-hosted runner without it), runs `scripts/check.sh` in each
 rendering, proves that the checks reject an edited template-owned file, a damaged project block, a
 decision record with the wrong number, and a stale index, and confirms that this repository's
-template-owned files match `template/`. CI runs it through the `docs` workflow; the runner needs
-Copier (or `uvx`), Node.js, and lychee.
+template-owned files match `template/`. CI runs it through the `docs` workflow, which sets up
+Node.js and lychee; the test installs uv into `~/.local/bin` when neither Copier nor `uvx` is
+present, so the runner needs only Git, curl, and jq.
 
 ## 4. Versions
 

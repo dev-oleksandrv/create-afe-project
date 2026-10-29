@@ -20,5 +20,5 @@ All notable changes to the template are listed here, newest first. The format fo
   (`.template/owned.sha256`), and project checks from `scripts/checks.d/`.
 - Claude Code hooks (protect, Stop checks, project Stop hooks from `.claude/hooks/project/stop/`)
   and skills (`create-pr`, `update-template`, and `docs-review` as the `docs_review` module).
-- CI workflows `docs`, `decisions`, and `docs-review`, with the runner chosen by a question and
-  overridable by the repository variable `CI_RUNS_ON`.
+- CI workflows `docs` (with Node.js set up), `decisions`, and `docs-review`, with the runner chosen
+  by a question and overridable by the repository variable `CI_RUNS_ON`.

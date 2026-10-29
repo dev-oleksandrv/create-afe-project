@@ -4,8 +4,16 @@
 # repository's own template-owned files match template/.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
+# This check provisions Copier itself (documentation-rules.md, section 9): through uvx, and on a
+# CI runner without uv by installing uv into ~/.local/bin first.
 if ! command -v copier >/dev/null; then
-  command -v uvx >/dev/null || { echo "FAIL: copier is not installed (uv tool install copier)"; exit 1; }
+  if ! command -v uvx >/dev/null; then
+    echo "== installing uv for the template tests"
+    curl -LsSf https://astral.sh/uv/install.sh |
+      env UV_INSTALL_DIR="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 INSTALLER_NO_MODIFY_PATH=1 sh > /dev/null 2>&1 ||
+      { echo "FAIL: copier is missing and uv could not be installed"; exit 1; }
+    export PATH="$HOME/.local/bin:$PATH"
+  fi
   copier() { uvx --quiet --from 'copier>=9.4' copier "$@"; }
 fi
 
