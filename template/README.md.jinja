@@ -1,0 +1,29 @@
+# {{ project_name }}
+
+{{ project_description }} Repository: `{{ github_repo }}`.
+
+Every statement in this repository carries a status (requirement, proposed, accepted,
+implemented). What exists and what is only planned is listed in the
+[documentation map](docs/README.md).
+
+## Start here
+
+- People: this file, then the [documentation map](docs/README.md).
+- AI agents: [AGENTS.md](AGENTS.md). `CLAUDE.md` imports it for Claude Code.
+
+## Checks
+
+```bash
+scripts/check.sh
+```
+
+Requires Git, Node.js (for `npx`), [lychee](https://lychee.cli.rs/), and `jq`; for example
+`brew install lychee jq`.
+
+## Project template
+
+This repository is generated from
+[`agent-docs-template`]({{ template_url }}); `.copier-answers.yml` records the
+template version. The template owns the files listed in `.template/owned.sha256`; change them
+in the template and update this repository with `copier update --trust`
+(`docs/contributing.md`, section 5).

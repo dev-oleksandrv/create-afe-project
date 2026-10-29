@@ -1,0 +1,20 @@
+{
+  // Documentation structure check. Run through scripts/check-docs.sh; CI uses the same file.
+  "config": {
+    "default": true,
+    // Line length: prose is wrapped for readability, not enforced by rule.
+    "MD013": false
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules/**"],
+  "gitignore": true,
+  "overrides": [
+    {
+      // CLAUDE.md starts with the @AGENTS.md import line, not with a heading.
+      "filter": ["CLAUDE.md"],
+      "config": { "MD041": false },
+      "combine": "merge"
+    }
+  ],
+  "noProgress": true
+}

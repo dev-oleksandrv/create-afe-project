@@ -1,0 +1,143 @@
+# Contribution rules
+
+Reference for branches, commit messages, pull requests, and template updates in this repository.
+`AGENTS.md` holds the short rules and takes precedence if the two ever disagree. This file comes
+from the project template: report such a disagreement to the template instead of editing it. Everything written into git history and pull
+requests is in English, without exception.
+
+## 1. Branches
+
+- The repository has the remote `origin`, and `main` is its default branch, known locally as
+  `origin/HEAD` (`git remote set-head origin -a` after the first push).
+- `main` is the only long-lived branch and the base of every pull request. Nothing is committed
+  to it directly, except the initial commit of the files the template generated; every other
+  change reaches it through a merged pull request.
+- A working branch is named `<type>/<slug>`.
+  - `type` says what the change touches: `docs` for documentation, decisions, requirements, and
+    plans; `ci` for checks, hooks, workflows, and skills; `feat` for new behaviour; `fix` for a
+    defect in existing behaviour; `chore` for tooling and housekeeping.
+  - `slug` names the change in two to five lowercase words joined by `-`, for example
+    `docs/requirements-platform` or `ci/check-script-timeout`. No ticket numbers: the
+    repository has no tracker.
+- One branch carries one logical change and ends in one pull request.
+- A branch that a tool created under another name (for example `claude/<name>`) is renamed to
+  the convention before it is first pushed. A branch that is already pushed keeps its name, and
+  the pull request says so under "Notes for the owner".
+- After the merge the branch is deleted.
+
+## 2. Commits
+
+- The subject line is `<Scope>: <summary>`.
+  - `Scope` names what the commit changes, written as it is written elsewhere: an owner document
+    or its area (`Requirements`, `Rules`, `Map`, `Plan`, `Contributing`), a decision (`ADR-0001`),
+    a workflow or skill (`create-pr`), later a module. Several scopes are
+    separated by commas: `ADR-0001, ADR-0002: accepted by the owner`.
+  - `summary` states what the commit does or what is now true, in the present tense, starting
+    with a lowercase letter, without a trailing period: `apply review fixes`,
+    `requirements section now exists`.
+  - The whole subject fits in 72 characters.
+- The body is separated from the subject by a blank line and wrapped at 72 characters. It is
+  present whenever the subject alone does not say why, or what else the reader must know: the
+  documents affected, the statuses that changed and who set them (`accepted by the owner`), and
+  related pull requests by number (`PR #2`). It never calls something implemented without a test.
+- One commit per logical change. Work-in-progress and fix-up commits are squashed locally before
+  the branch is pushed. A follow-up that answers review is its own commit with its own scope.
+- A commit authored by an agent ends with the co-author trailer its tool prescribes, after a
+  blank line. For Claude Code that is a `Co-Authored-By:` line naming the model.
+
+## 3. Pull requests
+
+- One pull request per branch, opened against `main`. It is a draft while the work is unfinished
+  or a check other than merge readiness fails. The `docs-review` workflow reviews non-draft pull requests only.
+- The title is the subject of the branch's only commit or, with several commits, a new subject
+  in the same `<Scope>: <summary>` form that covers the whole branch.
+- The description is the report that `AGENTS.md`, section 6, requires: Summary covers the files
+  changed, the other sections cover the checks, the assumptions, and the open questions. It has
+  these sections, in this order. The first three are always present; a section with nothing to
+  say reads "None".
+
+```markdown
+## Summary
+
+- What changed and why, one bullet per owner document or area, naming the files. Each new
+  statement names its status: `proposed`, `accepted by the owner`, `approved`, `implemented`
+  (with its test).
+
+## Checks
+
+- `scripts/check.sh`: documentation, decision records, template integrity, and project checks
+  pass; name each failing part and its output.
+- Semantic self-review (`docs/documentation-rules.md`, section 7): what was checked, and the result.
+
+## Assumptions and open questions
+
+- None, or one bullet each, starting with `blocking:`, `recorded:`, or `assumption:`.
+
+## Notes for the owner
+
+- Optional: protected files touched and the instruction that allowed it, decisions that await
+  acceptance, alternatives not taken.
+```
+
+- A pull request opened by an agent ends with the attribution line its tool prescribes, after
+  the last section. For Claude Code that is
+  `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
+- Each item under "Assumptions and open questions" carries one label:
+  - `blocking:` a question about the pull request itself (its content, wording, location, a
+    status, a decision it needs). It is answered and resolved before the merge.
+  - `recorded:` a question about the subject matter, written down with an identifier in its
+    owner document; the item names that file, for example
+    `recorded: OQ-1 in docs/requirements/<document>.md`. It does not hold the merge.
+  - `assumption:` an assumption the change rests on, also labelled where it is used.
+- Every `docs-review` comment is answered on the pull request before the merge: fixed in a
+  follow-up commit, or declined with a reason. The comments are proposals; the owner decides.
+- A pull request is ready to merge when no `blocking` item remains, every decision record it adds
+  is `accepted` or `rejected`, every check passes, and every `docs-review` comment is answered.
+  The `decisions` workflow checks the first two; it signals and does
+  not block, so a merge while it fails is the owner's deliberate exception. A pull request that
+  only waits on the owner stays open for review, not a draft. An agent reports such a pull
+  request as "not ready to merge" with the items that wait on the owner, never as ready.
+- The owner merges with a merge commit, so the branch's commits and their scopes stay visible in
+  history. Squash and rebase merges are not used.
+
+## 4. Checklist before opening a pull request
+
+1. The branch is named `<type>/<slug>` (section 1) and based on `main`.
+2. Every commit subject follows section 2, and no work-in-progress commit remains.
+3. `scripts/check.sh` passes.
+4. Every owner document affected by the change is updated in the same branch
+   (`docs/documentation-rules.md`, section 5).
+5. The description follows section 3, and every protected file touched is listed under
+   "Notes for the owner".
+6. `scripts/check-decisions.sh --ready --base origin/main --pr-body <description file>` gives the
+   readiness verdict that the report states.
+
+In Claude Code the `create-pr` skill (`.claude/skills/create-pr/SKILL.md`) runs this checklist
+and opens the pull request.
+
+## 5. Template updates
+
+This repository is generated from the project template, and `.copier-answers.yml` records the
+template version it was last updated to. Template-owned files (`documentation-rules.md`, section 9)
+change only through an update:
+
+1. Start from an up-to-date `main` with a clean working tree, on the branch
+   `chore/template-update`.
+2. Run `copier update --trust --defaults`, or add `--vcs-ref=<tag>` for a specific version. The
+   `--trust` flag lets the template regenerate `.template/owned.sha256` and the decision index.
+3. Resolve every conflict marker and `.rej` file by the class of the file
+   (`documentation-rules.md`, section 9):
+   - template-owned: take the template's side, except inside the project block of `AGENTS.md`,
+     which keeps the project's content;
+   - generated: never merge by hand; take the template's side for `.template/owned.sha256` and
+     `.copier-answers.yml`, and rerun `scripts/gen-decisions-index.sh` for the decision index;
+   - project files: keep the project's content and add the template's change only when it is
+     clearly additive; otherwise stop and ask the owner. Seeded files are never touched by an
+     update; a change the template makes to them reaches new projects only, and its changelog
+     entry says what an existing project should copy by hand.
+4. Run `scripts/check.sh`, then open a pull request titled `Template: update to <version>`, with
+   the entries of the template's `CHANGELOG.md` for the versions in between under "Summary".
+
+In Claude Code the `update-template` skill (`.claude/skills/update-template/SKILL.md`) runs these
+steps. A change the project needs in a template-owned file is made in the template repository
+first and arrives here through such an update.

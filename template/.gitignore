@@ -1,0 +1,15 @@
+# Personal Claude Code instructions, never committed (docs/documentation-rules.md, section 9)
+CLAUDE.local.md
+
+# Tooling
+node_modules/
+.lycheecache
+.DS_Store
+
+# Personal Claude Code settings, never committed (docs/documentation-rules.md, section 9)
+.claude/settings.local.json
+
+# Local secrets, never committed
+.env
+.env.*
+!.env.example
