@@ -6,6 +6,8 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-29
+
 ### Changed
 
 - `create-pr` skill (`.claude/skills/create-pr/SKILL.md`), with the `docs_review` module: after
