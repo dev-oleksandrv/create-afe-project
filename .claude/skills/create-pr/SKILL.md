@@ -41,8 +41,11 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    quoted under "Checks".
 6. Owner documents: for every changed file, find the owner document through `docs/README.md` and
    confirm it is updated in the same branch (`docs/documentation-rules.md`, section 5). A missing
-   update is made now, in its own commit, or listed as an open question. After any such commit,
-   run `scripts/check.sh` again, so that the checks describe the tree that is pushed.
+   update is made now, in its own commit, or listed as an open question. Every
+   `Decided by the owner` marker that `git diff main...HEAD` adds rests on an instruction of the
+   owner: one given in chat is noted for the description of step 8, and one with no instruction
+   at all is removed now, in its own commit (`docs/documentation-rules.md`, section 3). After any
+   such commit, run `scripts/check.sh` again, so that the checks describe the tree that is pushed.
 7. Push: `git push -u origin <branch>`.
 8. Description: write it to a file outside the repository (the session's scratch directory) in
    exactly the sections and order of section 3 of the rules, from `git diff main...HEAD`, the
@@ -53,13 +56,19 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    - Facts only: every bullet in Summary names a status; nothing is called implemented without a
      test; every protected file touched is listed under "Notes for the owner" together with the
      instruction that allowed the change.
+   - Test plan: the plan written before the implementation, from the conversation, with each
+     case's test, and each case dropped or added later named as such with its reason. When no
+     plan was written before the implementation, say so there; do not present one written now
+     as written before.
+   - Owner decisions to confirm: the markers step 6 found resting on an instruction given in
+     chat, with the file, the statement, and the instruction quoted with its date.
    - Every item under "Assumptions and open questions" carries the label of section 3 of the
      rules: `blocking:` for a question about this pull request, `recorded:` with the owner
      document that holds the question, `assumption:`. A question the branch can still answer
      itself is resolved now, not listed.
    - Before `gh pr create` (or `gh pr edit`), run
      `scripts/check-decisions.sh --ready --base origin/main --pr-body <file>`. Its result is the
-     readiness verdict.
+     part of the readiness verdict that a script checks; step 10 adds the rest.
      A failure here alone does not make the pull request a draft: it waits on the owner.
 9. Review: the comments of the `docs-review` and `code-review` workflows are answered before the
    report (section 3 of the rules). It does not run on a draft: then skip this step and say so in
@@ -98,9 +107,10 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
     everything listed under "Assumptions and open questions" and "Notes for the owner".
     - The review: how many comments there were and how each one was resolved (fixed, with its
       commit; declined, with its reason; waiting on the owner), or why there was no review.
-    - "Ready to merge" only when the readiness check, every other check, and step 6 passed and no
-      review comment is unanswered.
+    - "Ready to merge" only when the readiness check, every other check, and step 6 passed, the
+      owner has confirmed every owner decision to confirm, and no review comment is unanswered.
     - Otherwise "Not ready to merge", followed by each item that waits on the owner: the
-      `blocking` items, each added record still `proposed`, each failing check, and
+      `blocking` items, each added record still `proposed`, each owner decision to confirm
+      without the owner's confirming comment on the pull request, each failing check, and
       each review comment that waits on the owner. Never
       call a pull request ready next to an open item.

@@ -56,6 +56,10 @@ Wording rules for behaviour:
 - Requirements use RFC 2119 keywords (MUST, SHOULD, MAY) and never claim to be implemented.
 - Proposals say "proposed"; accepted decisions say "accepted" or "decided".
 - Unknown things are written as "not decided" or "unknown", never guessed.
+- A statement about a check (a lint rule, a test check, a hook, a workflow) names the forms the
+  check catches and says what is left to the review. An absolute claim about a check ("no X can
+  ...", "every Y is ...") needs a test for each form it covers; without them, the statement names the forms
+  instead.
 
 ## 4. Currency
 
@@ -158,13 +162,15 @@ These rules apply once code exists; they are fixed now so the first code follows
 | Template-owned files unchanged; one project block in `AGENTS.md`; its line budget (sections 2 and 9) | `scripts/check-template.sh`: Stop hook and `docs` workflow | none |
 | Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; a Stop hook only if the project adds one | as the project defines |
 | Code and tests meet the review rubric and the testing rules (`contributing.md`, section 6; `testing-rules.md`) | the project's test checks in `scripts/checks.d/`; `code-review` workflow on pull requests, advisory | reviewer applies the rubric |
-| Merge readiness (`contributing.md`, section 3) | `scripts/check-decisions.sh --ready`: `decisions` workflow; signals, does not block | owner decides whether to merge |
+| Merge readiness (`contributing.md`, section 3) | `scripts/check-decisions.sh --ready`: added records still `proposed` and the items under "Assumptions and open questions"; `decisions` workflow; signals, does not block | the rest of readiness, such as the owner's confirmation of "Owner decisions to confirm"; owner decides whether to merge |
 | Finishing with failing checks | Stop hook in Claude Code | none |
 | Structure and rule changes | protect hook: owner prompt in Claude Code, denied headless | explicit, separate, owner-approved |
 
 Semantic review checklist for any documentation change:
 
-1. Each new statement has a status, and the status matches the evidence.
+1. Each new statement has a status, and the status matches the evidence; a statement about a
+   check names the forms it catches and what is left to the review, and an absolute claim about
+   a check has a test for each form it covers (section 3).
 2. No requirement, default, or decision was invented; gaps are listed as open questions.
 3. No content duplicates another document; links point to the owner.
 4. The map (`docs/README.md`) and all links are updated; `scripts/check.sh` passes.

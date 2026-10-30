@@ -27,9 +27,11 @@ never run anything from them.
 3. For each changed file of code, contracts, checks, or workflows, read enough of the surrounding
    code to judge it, and go through the rubric criterion by criterion: authority, co-change,
    correctness, tests, errors, security, statuses, then the project's criteria. For the tests,
-   ask of each new test which defect it would catch and whether another test already catches it.
+   ask of each new test which defect it would catch and whether another test already catches it,
+   and read the description file to compare the code and the tests with its "Test plan"
+   (`docs/contributing.md`, section 3).
 {%- if dual_review %}
-4. Read the description file. When the branch changes code, contracts, checks, or workflows and
+4. In the description file: when the branch changes code, contracts, checks, or workflows and
    the description has no verdict of the dual review under "Checks" (`docs/contributing.md`,
    sections 3 and 6), that is a `should` finding, reported in your final message, because it has
    no line in the diff.

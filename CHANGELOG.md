@@ -6,6 +6,33 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+### Changed
+
+- `docs/testing-rules.md`, section 4: a threat model of development gates. Gates catch honest
+  mistakes and shortcuts; deliberate evasion is left to the review of the diff; product
+  invariants are not development gates. The protected-paths bullet now says what the protect
+  hook does instead of claiming that no agent loosens a gate.
+- `docs/documentation-rules.md`, section 7: the merge-readiness row names what
+  `scripts/check-decisions.sh --ready` checks and what is left to the owner.
+- `docs/contributing.md`, section 6: a finding that only deliberate evasion can exploit to bypass
+  a development gate is a `nit`, a bypass of a product invariant keeps its severity, and a table
+  of `should` and `nit` examples calibrates every reviewer. The Tests criterion includes the test
+  plan. With `dual_review`, later rounds add the owner's decisions on the branch to the brief, and
+  nothing else.
+- `docs/contributing.md`, section 1: "one logical change" means one mechanism with its tests and
+  owner documents, with examples.
+- `docs/contributing.md`, section 3: the description gains the sections "Test plan" (always,
+  written before the implementation) and "Owner decisions to confirm" (each `Decided by the
+  owner` marker added on a chat instruction, confirmed by the owner with one comment); a pull
+  request is ready to merge only after that confirmation. `scripts/check-decisions.sh --ready`
+  does not check the confirmation.
+- `docs/documentation-rules.md`, sections 3 and 7: a statement about a check names the forms it
+  catches and what is left to the review; an absolute claim needs a test for each form it covers.
+- `create-pr` skill: writes the two new sections and reports unconfirmed owner decisions as
+  waiting on the owner. `review-code` skill: compares the code and tests with the test plan.
+  `dual-review` skill: an author's self-check before the first round, the severity examples and
+  the test plan in the brief, and the owner's decisions from the second round.
+
 ## [0.3.1] - 2026-10-30
 
 ### Changed

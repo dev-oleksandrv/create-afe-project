@@ -57,6 +57,16 @@ documents, which the map (`docs/README.md`) names, and its test checks in `scrip
 - The quality measures the project records (coverage, mutation score) never fall below those of
   the base branch.
 - The configuration of the test runner, coverage, mutation testing, and linters is listed in
-  `.claude/protected-paths`, so that no agent loosens a gate without the owner.
+  `.claude/protected-paths`, so that an ordinary edit of it by an agent in Claude Code asks the owner first
+  (`documentation-rules.md`, section 8).
 - An invariant that must hold everywhere (for example, a secret never appears in output) is an
   executable check, a test or a project check, not only a sentence in a document.
+- Threat model of development gates: a development gate (a lint rule, a test check, a coverage or
+  mutation setting, an agent hook) catches the honest mistakes and shortcuts of an agent. It is
+  not a security boundary. Deliberate evasion, such as an alias, a computed property, or
+  tampering with a gate's own files or state, is left to the review of the diff; the protect
+  hook on the protected paths is a development gate too, and only puts an ordinary edit of them
+  in front of the owner. Review classifies its findings by this model (`contributing.md`, section 6);
+  it never permits loosening a gate, and the rules above still apply. Product invariants
+  (security, secrets, policy enforcement, limits) are not development gates: a bypass of one is
+  a defect, whatever it takes.
