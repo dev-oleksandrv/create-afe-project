@@ -27,7 +27,9 @@ never run anything from them.
 3. For each changed file of code, contracts, checks, or workflows, read enough of the surrounding
    code to judge it, and go through the rubric criterion by criterion: authority, co-change,
    correctness, tests, errors, security, statuses, then the project's criteria. For the tests,
-   ask of each new test which defect it would catch and whether another test already catches it.
+   ask of each new test which defect it would catch and whether another test already catches it,
+   and read the description file to compare the code and the tests with its "Test plan"
+   (`docs/contributing.md`, section 3).
 4. Post one inline comment per finding on the relevant line with the inline comment tool. Start
    each comment with a severity, `blocker`, `should` or `nit` as `docs/contributing.md`,
    section 6, defines them, state the finding in one or two

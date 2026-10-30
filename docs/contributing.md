@@ -20,7 +20,12 @@ requests is in English, without exception.
   - `slug` names the change in two to five lowercase words joined by `-`, for example
     `docs/requirements-platform` or `ci/check-script-timeout`. No ticket numbers: the
     repository has no tracker.
-- One branch carries one logical change and ends in one pull request.
+- One branch carries one logical change and ends in one pull request. A logical change is one
+  mechanism together with its tests and the owner documents it changes: one check, one hook, one
+  rule, one behaviour. For example, a lint rule and the test that proves it are one change; a new
+  hook and an unrelated fix of another hook are two; a rule change and the first code that
+  follows it are two (`AGENTS.md`, section 5). Work that needs several mechanisms is split into
+  branches, opened in the order in which they depend on each other.
 - A branch that a tool created under another name (for example `claude/<name>`) is renamed to
   the convention before it is first pushed. A branch that is already pushed keeps its name, and
   the pull request says so under "Notes for the owner".
@@ -53,9 +58,10 @@ requests is in English, without exception.
 - The title is the subject of the branch's only commit or, with several commits, a new subject
   in the same `<Scope>: <summary>` form that covers the whole branch.
 - The description is the report that `AGENTS.md`, section 6, requires: Summary covers the files
-  changed, the other sections cover the checks, the assumptions, and the open questions. It has
-  these sections, in this order. The first three are always present; a section with nothing to
-  say reads "None".
+  changed, the other sections cover the test plan, the checks, the assumptions, and the open
+  questions. It has these sections, in this order. The first four are always present; a section
+  with nothing to say reads "None". "Owner decisions to confirm" is present when the branch adds
+  a marker that it lists.
 
 ```markdown
 ## Summary
@@ -63,6 +69,12 @@ requests is in English, without exception.
 - What changed and why, one bullet per owner document or area, naming the files. Each new
   statement names its status: `proposed`, `accepted by the owner`, `approved`, `implemented`
   (with its test).
+
+## Test plan
+
+- The plan written before the implementation, one bullet per requirement or behaviour: its
+  cases, failure paths, and edge cases (`docs/testing-rules.md`, sections 2 and 3), each with
+  the test that covers it. "None" when the change adds or changes no behaviour.
 
 ## Checks
 
@@ -73,6 +85,11 @@ requests is in English, without exception.
 ## Assumptions and open questions
 
 - None, or one bullet each, starting with `blocking:`, `recorded:`, or `assumption:`.
+
+## Owner decisions to confirm
+
+- One bullet per `Decided by the owner` marker that the branch adds on an instruction given in
+  chat: the file, the statement, and the instruction, quoted with its date.
 
 ## Notes for the owner
 
@@ -90,10 +107,19 @@ requests is in English, without exception.
     owner document; the item names that file, for example
     `recorded: OQ-1 in docs/requirements/<document>.md`. It does not hold the merge.
   - `assumption:` an assumption the change rests on, also labelled where it is used.
+- The test plan is written before the implementation, together with the tests that come first
+  (`testing-rules.md`, section 3), and the description carries it. A case dropped or added later
+  is named as such with its reason. Reviewers compare the code and the tests with the plan
+  (section 6).
+- A `Decided by the owner` marker rests on the owner's instruction in the pull request
+  (`documentation-rules.md`, section 7, item 6). Each marker the branch adds on an instruction
+  given in chat is listed under "Owner decisions to confirm", and the owner confirms them all
+  with one comment on the pull request.
 - Every comment of the `docs-review` and `code-review` workflows is answered on the pull request before the merge: fixed in a
   follow-up commit, or declined with a reason. The comments are proposals; the owner decides.
 - A pull request is ready to merge when no `blocking` item remains, every decision record it adds
-  is `accepted` or `rejected`, every check passes, and every review comment is answered.
+  is `accepted` or `rejected`, the owner has confirmed every item under "Owner decisions to
+  confirm", every check passes, and every review comment is answered.
   The `decisions` workflow checks the first two; it signals and does
   not block, so a merge while it fails is the owner's deliberate exception. A pull request that
   only waits on the owner stays open for review, not a draft. An agent reports such a pull
@@ -110,8 +136,10 @@ requests is in English, without exception.
    (`docs/documentation-rules.md`, section 5).
 5. The description follows section 3, and every protected file touched is listed under
    "Notes for the owner".
-6. `scripts/check-decisions.sh --ready --base origin/main --pr-body <description file>` gives the
-   readiness verdict that the report states.
+6. `scripts/check-decisions.sh --ready --base origin/main --pr-body <description file>` passes,
+   or its failures are stated. It checks the added records and the items under "Assumptions and
+   open questions"; the report's readiness verdict adds the rest of section 3, such as the
+   owner's confirmation of "Owner decisions to confirm".
 
 In Claude Code the `create-pr` skill (`.claude/skills/create-pr/SKILL.md`) runs this checklist
 and opens the pull request, then waits for the review runs and answers their comments.
@@ -153,11 +181,24 @@ first and arrives here through such an update.
     or it contradicts a source of higher precedence (`AGENTS.md`, section 1).
   - `should`: merged as it is, the change leads a reader or a later change to a wrong result:
     a statement that is false or has the wrong status, a behaviour without the test that
-    proves it, a rule that contradicts its owner document, or a gap that lets a gate be
-    loosened.
+    proves it, a rule that contradicts its owner document, or a gap through which an ordinary
+    edit loosens a gate or an honest mistake passes it.
   - `nit`: anything else that would improve the change: wording, order, a clearer link, a
     detail nobody would act on wrongly. A reviewer who hesitates between `should` and `nit`
     picks `nit` and says why.
+- A finding that only deliberate evasion can exploit to bypass a development gate, by the threat
+  model of `testing-rules.md`, section 4, is a `nit`. A bypass of a product invariant (security,
+  secrets, policy enforcement, limits) keeps its severity, and so does evasion that the diff
+  under review itself commits, such as a test skipped through an aliased import. Every reviewer calibrates by the same
+  examples:
+
+| `should` | `nit` |
+| --- | --- |
+| A document says a check rejects a form that no test exercises, or calls a rule absolute when a counterexample exists | A sentence about the same check could be shorter, or its link could point at the section instead of the file |
+| A new behaviour, or a case of the test plan, has no test that fails without the change | A test proves its case, but its name does not say which case |
+| A gate misses a form an agent writes in ordinary work, for example a hook that sees `>` but not `>>` into a protected file | A gate misses a form that takes deliberate evasion, for example an aliased import of a test function, or a target path built at run time |
+| A statement claims `implemented` without a test, or `decided` without the owner's instruction | A commit body could name the affected document more precisely |
+
 - A review fails on any `blocker` or `should` and passes otherwise; a `nit` never fails it. A
   `nit` is answered like any comment and may be declined with a reason or left to a later
   change.
@@ -170,7 +211,7 @@ first and arrives here through such an update.
 | Authority | every behaviour in the diff serves a named requirement or acceptance criterion, or is listed as an open question; nothing is invented (`AGENTS.md`, section 4) |
 | Co-change | contract, code, tests, and the owner document change together; a breaking contract change is versioned; generated files are regenerated (`documentation-rules.md`, section 6) |
 | Correctness | the logic does what the requirement says, including the edge cases that apply to it |
-| Tests | the tests follow `docs/testing-rules.md`, and each new test fails without the change |
+| Tests | the tests follow `docs/testing-rules.md`, cover every case of the test plan in the description that is not named as dropped (section 3), and each new test fails without the change |
 | Errors | no error is swallowed, no failure hides behind a default, and nothing is substituted silently |
 | Security | external input is validated where it enters; secrets never reach code, logs, errors, or output |
 | Statuses | nothing is called implemented without a test (`documentation-rules.md`, section 3) |

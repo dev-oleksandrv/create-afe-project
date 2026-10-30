@@ -38,7 +38,8 @@ How the template is changed, tested, versioned, and released. Questions and file
 `scripts/checks.d/10-template.sh` renders the template twice (a GitHub-hosted runner with the
 default modules, `docs_review` and `code_review` on and `dual_review` off, and a self-hosted
 runner with the opposite), checks that each module's files and mentions appear only with it, runs `scripts/check.sh` in each
-rendering, proves that the checks reject an edited template-owned file, a damaged project block, a
+rendering, checks the sections of the pull request description template in each rendering and
+that the readiness check accepts a description written in them, proves that the checks reject an edited template-owned file, a damaged project block, a
 decision record with the wrong number, and a stale index, and confirms that this repository's
 template-owned files match `template/`. CI runs it through the `docs` workflow, which sets up
 Node.js and lychee; the test installs uv into `~/.local/bin` when neither Copier nor `uvx` is

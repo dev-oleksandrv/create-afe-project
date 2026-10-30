@@ -55,6 +55,20 @@ grep -q '"self-hosted"' "$b/.github/workflows/docs.yml" || fail "variant B: docs
 ! grep -r -n -i 'code-review\|review-code' "$b/AGENTS.md" "$b/docs" "$b/.claude/skills" > "$work/b-grep.log" || { cat "$work/b-grep.log"; fail "variant B: documents mention code-review"; }
 [ -f "$b/.claude/skills/dual-review/SKILL.md" ] || fail "variant B: the dual-review skill is missing although the module is on"
 
+echo "== pull request description template in both variants"
+# The sections of the description template (docs/contributing.md, section 3), in order; a
+# description built from them, with an unlabelled bullet under "Owner decisions to confirm", passes
+# the readiness check, which reads only "Assumptions and open questions" of a description.
+expected=$'Summary\nTest plan\nChecks\nAssumptions and open questions\nOwner decisions to confirm\nNotes for the owner'
+for v in a b; do
+  d="$work/$v"
+  got=$(awk '/^```markdown$/ {f=1; next} /^```$/ {f=0} f && /^## / {sub(/^## /, ""); print}' "$d/docs/contributing.md")
+  [ "$got" = "$expected" ] || fail "variant $v: description template sections are '$(printf '%s' "$got" | tr '\n' '|')'"
+  printf '%s\n' "$got" | awk '{print "## " $0 "\n"} $0 == "Owner decisions to confirm" {print "- `docs/x.md`: a statement; instruction quoted\n"; next} {print "- None\n"}' > "$work/$v-body.md"
+  (cd "$d" && scripts/check-decisions.sh --ready --base main --pr-body "$work/$v-body.md" > "$work/$v-ready.log" 2>&1) ||
+    { cat "$work/$v-ready.log"; fail "variant $v: readiness rejects a description in the template's sections"; }
+done
+
 echo "== negative tests on variant A"
 expect_fail() { # description, command...
   local what="$1"; shift
