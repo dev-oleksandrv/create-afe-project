@@ -84,7 +84,7 @@ requests is in English, without exception.
 {%- if dual_review %}
 - Dual review (section 6): passed, or escalated after the third round; each reviewer's verdict
   and the model its tool reported; the number of rounds; the findings only one reviewer raised;
-  or why it did not run.
+  or why it did not run, such as "not run: template update to X.Y.Z".
 {%- endif %}
 
 ## Assumptions and open questions
@@ -148,8 +148,9 @@ requests is in English, without exception.
    open questions"; the report's readiness verdict adds the rest of section 3, such as the
    owner's confirmation of "Owner decisions to confirm".
 {%- if dual_review %}
-7. When the branch changes code, contracts, checks, or workflows, the dual review of section 6
-   passed or the owner answered its escalation, and its verdict is in the description.
+7. When the branch changes code, contracts, checks, or workflows and is not an exempt template
+   update, the dual review of section 6 passed or the owner answered its escalation, and its
+   verdict is in the description.
 {%- endif %}
 
 In Claude Code the `create-pr` skill (`.claude/skills/create-pr/SKILL.md`) runs this checklist
@@ -243,6 +244,11 @@ first and arrives here through such an update.
   is not replaced by a second Claude reviewer. Once both pass, the fixes are squashed into the
   branch's commits (section 2), and the verdict goes under "Checks" in the description (section
   3). In Claude Code the `dual-review` skill (`.claude/skills/dual-review/SKILL.md`) runs it.
+  A template update (section 5) that changes only template-owned and generated files
+  (`documentation-rules.md`, section 9) is exempt, because those files are reviewed in the
+  template repository; its description says "Dual review: not run: template update to
+  X.Y.Z" under "Checks". An update that also changes a seeded or project file, including the
+  project block of `AGENTS.md`, is not exempt.
 {%- endif %}
 {%- if code_review %}
 - The `code-review` workflow reviews every such pull request that is not a draft against the same
