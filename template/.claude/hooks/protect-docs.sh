@@ -3,21 +3,27 @@
 # owner instruction (AGENTS.md, section 4; docs/documentation-rules.md, sections 8 and 9). Protected
 # are the template-owned files of .template/owned.txt, the generated ownership manifest, the
 # documentation map, the paths in .claude/protected-paths, ADRs that exist on main, and ADRs that
-# are no longer `proposed`. The hook turns such a change into a permission prompt for the owner
-# (`permissionDecision: ask`); in headless runs Claude Code denies it. DOCS_GUARD=off in the
-# Claude Code environment disables the guard for scripted owner-driven runs, such as a template
-# update. This is a guard against unreviewed changes, not a security boundary: a command that
-# hides the target path (for example inside a script file) is not detected.
+# are no longer `proposed`. A target path is judged by the git repository that holds it when that
+# repository has .template/owned.txt, so a sibling worktree or another generated project is
+# guarded by its own paths; otherwise by the session's project (CLAUDE_PROJECT_DIR) when the path
+# is inside it; any other path is not guarded. A relative path of a shell command resolves
+# against the hook input's `cwd`. The hook turns such a change into a
+# permission prompt for the owner (`permissionDecision: ask`); in headless runs Claude Code denies
+# it. DOCS_GUARD=off in the Claude Code environment disables the guard for scripted owner-driven
+# runs, such as a template update. This is a guard against unreviewed changes, not a security
+# boundary: a command that hides the target path (for example inside a script file, behind a `cd`
+# in the command, or through `git -C`) is not detected.
 set -uo pipefail
 [ "${DOCS_GUARD:-on}" = "off" ] && exit 0
 
-root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
-[ -n "$root" ] || exit 0
-root=$(cd "$root" && pwd -P) || exit 0
 # Without jq the hook cannot read the tool call; block it rather than allow everything.
 command -v jq >/dev/null || { echo "protect-docs: jq is required (README.md, Checks)" >&2; exit 2; }
 input=$(cat)
 tool=$(printf '%s' "$input" | jq -r '.tool_name // empty')
+cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
+[ -n "$cwd" ] && [ -d "$cwd" ] || cwd=$PWD
+project="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
+[ -n "$project" ] && project=$(cd "$project" 2>/dev/null && pwd -P) || project=
 
 # True when $1 matches a line of the list file $2 (shell glob patterns; '#' starts a comment).
 listed() {
@@ -33,10 +39,19 @@ listed() {
 
 # Prints why $1 is protected, or nothing when it is not.
 protected_reason() {
-  local p="$1" abs rel dir
-  case "$p" in /*) abs="$p" ;; *) abs="$PWD/$p" ;; esac
-  # Resolve "..", "//", and symbolic links in the directory part, as far as it exists.
-  dir=$(cd "$(dirname "$abs")" 2>/dev/null && pwd -P) && abs="$dir/$(basename "$abs")"
+  local p="$1" abs rel dir rest root
+  case "$p" in /*) abs="$p" ;; *) abs="$cwd/$p" ;; esac
+  # Resolve "..", "//", and symbolic links in the part of the path that exists.
+  dir=$(dirname "$abs") rest=$(basename "$abs")
+  while [ ! -d "$dir" ]; do rest="$(basename "$dir")/$rest"; dir=$(dirname "$dir"); done
+  dir=$(cd "$dir" && pwd -P) || return 0
+  abs="$dir/$rest"
+  # The generated project that holds the path: its git repository when that has
+  # .template/owned.txt (a sibling worktree, another generated project), otherwise the session's
+  # project when the path is inside it (no git yet, a nested repository, a missing manifest).
+  root=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null) && root=$(cd "$root" && pwd -P) &&
+    [ -f "$root/.template/owned.txt" ] || root=$project
+  [ -n "$root" ] || return 0
   rel="${abs#"$root"/}"
   [ "$rel" != "$abs" ] || return 0
   if [ "$rel" = AGENTS.md ]; then

@@ -6,6 +6,15 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+### Fixed
+
+- `.claude/hooks/protect-docs.sh`: judges a target path by the git repository that holds it when
+  that repository has `.template/owned.txt`, so an edit in a sibling git worktree, or in another
+  generated project, asks the owner like an edit in the session's own checkout. Other paths
+  inside the session's project are judged by the project as before (no git yet, a nested
+  repository); paths elsewhere stay unguarded. A relative path of a shell command resolves
+  against the hook input's `cwd`.
+
 ## [0.3.1] - 2026-10-30
 
 ### Changed
