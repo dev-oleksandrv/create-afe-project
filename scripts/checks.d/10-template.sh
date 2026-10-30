@@ -136,6 +136,7 @@ hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > docs/contributin
 hook ask '{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x '"$sib"'/docs/testing-rules.md"}}' "$work"
 hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$sib"'/gen/new/x.txt"}}' "$work"
 hook allow '{"tool_name":"Write","tool_input":{"file_path":"'"$sib"'/gen/new/../../../out.txt"}}' "$work"
+hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/newdir/../../a-sibling/docs/contributing.md"}}' "$work"
 git -C "$a" worktree remove --force "$sib" && gitc "$a" branch -q -D sibling
 # A worktree inside the main checkout's directory is judged by its own repository too.
 gitc "$a" worktree add -q -b inner "$a/.claude/worktrees/inner"

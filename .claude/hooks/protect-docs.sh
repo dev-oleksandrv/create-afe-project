@@ -39,25 +39,28 @@ listed() {
 
 # Prints why $1 is protected, or nothing when it is not.
 protected_reason() {
-  local p="$1" abs rel dir rest seg norm= root
+  local p="$1" abs rel dir rest seg norm climbed=1 root
   case "$p" in /*) abs="$p" ;; *) abs="$cwd/$p" ;; esac
-  # Resolve "..", "//", and symbolic links in the part of the path that exists.
-  dir=$(dirname "$abs") rest=$(basename "$abs")
-  while [ ! -d "$dir" ]; do rest="$(basename "$dir")/$rest"; dir=$(dirname "$dir"); done
-  dir=$(cd "$dir" && pwd -P) || return 0
-  # Fold "." and "x/.." in the part that does not exist yet; a ".." left over climbs from $dir.
-  while [ -n "$rest" ]; do
-    seg=${rest%%/*}
-    if [ "$seg" = "$rest" ]; then rest=; else rest=${rest#*/}; fi
-    case "$seg" in
-      ''|.) ;;
-      ..) if [ -z "$norm" ]; then dir=$(dirname "$dir")
-          elif [ "${norm%/*}" = "$norm" ]; then norm=
-          else norm=${norm%/*}; fi ;;
-      *) norm=${norm:+$norm/}$seg ;;
-    esac
+  # Resolve "..", "//", and symbolic links in the part of the path that exists. In the part that
+  # does not exist yet, fold "." and "x/.."; a ".." left over climbs from the existing directory,
+  # and then the folded path is resolved once more, as it may enter another existing directory.
+  while [ -n "$climbed" ]; do
+    dir=$(dirname "$abs") rest=$(basename "$abs") norm= climbed=
+    while [ ! -d "$dir" ]; do rest="$(basename "$dir")/$rest"; dir=$(dirname "$dir"); done
+    dir=$(cd "$dir" && pwd -P) || return 0
+    while [ -n "$rest" ]; do
+      seg=${rest%%/*}
+      if [ "$seg" = "$rest" ]; then rest=; else rest=${rest#*/}; fi
+      case "$seg" in
+        ''|.) ;;
+        ..) if [ -z "$norm" ]; then dir=$(dirname "$dir") climbed=1
+            elif [ "${norm%/*}" = "$norm" ]; then norm=
+            else norm=${norm%/*}; fi ;;
+        *) norm=${norm:+$norm/}$seg ;;
+      esac
+    done
+    abs="$dir/$norm"
   done
-  abs="$dir/$norm"
   # The generated project that holds the path: its git repository when that has
   # .template/owned.txt (a sibling worktree, another generated project), otherwise the session's
   # project when the path is inside it (no git yet, a nested repository, a missing manifest).
