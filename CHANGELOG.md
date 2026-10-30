@@ -6,6 +6,8 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-30
+
 ### Changed
 
 - `docs/testing-rules.md`, section 4: a threat model of development gates. Gates catch honest
