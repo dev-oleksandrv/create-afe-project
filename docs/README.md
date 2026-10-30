@@ -14,7 +14,8 @@ One fact has one owner document; every other document links to it instead of rep
 | What changed in each release | [`CHANGELOG.md`](../CHANGELOG.md) | exists |
 | Agent rules: precedence, boundaries, required checks | [`AGENTS.md`](../AGENTS.md) | exists |
 | Documentation statuses, lifecycle, ownership of files, alignment, review checklist | [`documentation-rules.md`](documentation-rules.md) | exists |
-| Branches, commit messages, pull requests, template updates | [`contributing.md`](contributing.md); applied in Claude Code by the skills `.claude/skills/create-pr/` and `.claude/skills/update-template/` | exists |
+| What a test is for and must prove, gates on tests | [`testing-rules.md`](testing-rules.md) | exists |
+| Branches, commit messages, pull requests, template updates, review of pull requests | [`contributing.md`](contributing.md); applied in Claude Code by the skills `.claude/skills/create-pr/` and `.claude/skills/update-template/` | exists |
 | Why a costly-to-reverse decision was made, and its status | [`decisions/README.md`](decisions/README.md), the generated index of short ADRs; other owner decisions are marked in their owner documents ([`documentation-rules.md`](documentation-rules.md), sections 3 and 5) | exists |
 | Checks and enforcement | `scripts/check.sh` and the scripts it runs; Claude Code hooks `.claude/settings.json`, `.claude/hooks/`; workflows `.github/workflows/` ([`documentation-rules.md`](documentation-rules.md), sections 7 and 9) | exists |
 

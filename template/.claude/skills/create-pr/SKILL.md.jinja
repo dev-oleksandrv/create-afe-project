@@ -1,7 +1,7 @@
 ---
 name: create-pr
-description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, checks, and the description template{% if docs_review %}, then wait for the docs-review run and answer its comments{% endif %}. Use when asked to create, open, or submit a pull request.
-allowed-tools: Read, Grep, Glob, Edit, Write, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), {% if docs_review %}Bash(gh pr comment:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), {% endif %}Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
+description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, checks, and the description template{% if dual_review %}, with the verdict of the dual review{% endif %}{% if docs_review or code_review %}, then wait for the review runs and answer their comments{% endif %}. Use when asked to create, open, or submit a pull request.
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), {% if dual_review %}Skill(dual-review), {% endif %}{% if docs_review or code_review %}Bash(gh pr comment:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), {% endif %}Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
 ---
 
 # Create a pull request
@@ -43,6 +43,12 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    confirm it is updated in the same branch (`docs/documentation-rules.md`, section 5). A missing
    update is made now, in its own commit, or listed as an open question. After any such commit,
    run `scripts/check.sh` again, so that the checks describe the tree that is pushed.
+{%- if dual_review %}
+   When the branch changes code, contracts, checks, or workflows and this session has no verdict
+   of the `dual-review` skill for the current tree, run that skill now; its fixes are committed by
+   section 2 of the rules before the push, and its verdict goes into the description of step 8.
+   A dual review that did not run or was escalated is stated there as such, never left out.
+{%- endif %}
 7. Push: `git push -u origin <branch>`.
 8. Description: write it to a file outside the repository (the session's scratch directory) in
    exactly the sections and order of section 3 of the rules, from `git diff main...HEAD`, the
@@ -61,17 +67,19 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
      `scripts/check-decisions.sh --ready --base origin/main --pr-body <file>`. Its result is the
      readiness verdict.
      A failure here alone does not make the pull request a draft: it waits on the owner.
-{%- if docs_review %}
-9. Review: the `docs-review` workflow reviews the pull request, and its comments are answered
-   before the report (section 3 of the rules). It does not run on a draft: then skip this step
-   and say so in the report.
-   - Wait for the run: poll `gh pr view --json statusCheckRollup` until the entry whose
-     `workflowName` is `docs-review` has `status` `COMPLETED`, about every 30 seconds, for at
-     most 20 minutes in all (the workflow's own time limit); never one long fixed sleep. When no
+{%- if docs_review or code_review %}
+9. Review: the comments of the {% if docs_review %}`docs-review`{% endif %}{% if docs_review and code_review %} and {% endif %}{% if code_review %}`code-review`{% endif %} {% if docs_review and code_review %}workflows{% else %}workflow{% endif %} are answered before the
+   report (section 3 of the rules). It does not run on a draft: then skip this step and say so in
+   the report.{% if code_review %} The `code-review` workflow reviews only a branch that changes code,
+   contracts, checks, or workflows; on any other it posts nothing.{% endif %}
+   - Wait for the runs: poll `gh pr view --json statusCheckRollup` until each entry whose
+     `workflowName` is {% if docs_review %}`docs-review`{% endif %}{% if docs_review and code_review %} or {% endif %}{% if code_review %}`code-review`{% endif %} has `status` `COMPLETED`, about every 30 seconds,
+     for at most {% if code_review %}30{% else %}20{% endif %} minutes in all (the workflows' own time limits); never one long fixed sleep. When no
      such entry appears within a few minutes, or the run has not completed when the time is up,
      the review did not run or did not finish (for example the repository lacks the Claude GitHub
      App, or its runner is down): stop waiting, and state it in the report with the run's URL
      when there is one. A run whose `conclusion` is not `SUCCESS` is reported the same way.
+     Each workflow is waited for and reported on its own.
    - Collect the comments: the inline ones with
      `gh api repos/{owner}/{repo}/pulls/<number>/comments`, the general ones with
      `gh api repos/{owner}/{repo}/issues/<number>/comments`. The run's own progress comment is not
@@ -85,7 +93,7 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
      - Decline: a reply with the reason, resting on the rules or on the owner document.
      - Owner's decision: a reply with the basis known so far, and an item under "Notes for the
        owner" in the description.
-   - A push restarts the workflow. Wait for that run once more and answer its new comments the
+   - A push restarts the workflows. Wait for those runs once more and answer its new comments the
      same way. After this second round, a further new comment gets a reply and an item under
      "Notes for the owner", not another round.
    - Update the description: rerun the readiness check of step 8 against the pushed tree (a
@@ -94,15 +102,15 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
      comments, how many fixed, declined, or waiting on the owner, or why there was no review) and,
      under "Notes for the owner", the items that wait on the owner.
 {%- endif %}
-{% if docs_review %}10{% else %}9{% endif %}. Report: the verdict first, then the pull request URL, the checks run with their results, and
+{% if docs_review or code_review %}10{% else %}9{% endif %}. Report: the verdict first, then the pull request URL, the checks run with their results, and
     everything listed under "Assumptions and open questions" and "Notes for the owner".
-{%- if docs_review %}
+{%- if docs_review or code_review %}
     - The review: how many comments there were and how each one was resolved (fixed, with its
       commit; declined, with its reason; waiting on the owner), or why there was no review.
 {%- endif %}
     - "Ready to merge" only when the readiness check, every other check, and step 6 passed and no
       review comment is unanswered.
     - Otherwise "Not ready to merge", followed by each item that waits on the owner: the
-      `blocking` items, each added record still `proposed`{% if docs_review %}, each failing check, and
+      `blocking` items, each added record still `proposed`{% if docs_review or code_review %}, each failing check, and
       each review comment that waits on the owner{% else %}, and each failing check{% endif %}. Never
       call a pull request ready next to an open item.

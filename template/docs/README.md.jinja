@@ -11,7 +11,8 @@ One fact has one owner document; every other document links to it instead of rep
 | Product name and purpose | [`README.md`](../README.md) | exists |
 | Agent rules: precedence, boundaries, required checks | [`AGENTS.md`](../AGENTS.md) | exists |
 | Documentation statuses, lifecycle, ownership of files, alignment, review checklist | [`documentation-rules.md`](documentation-rules.md) | exists |
-| Branches, commit messages, pull requests, template updates | [`contributing.md`](contributing.md); applied in Claude Code by the skills `.claude/skills/create-pr/` and `.claude/skills/update-template/` | exists |
+| Branches, commit messages, pull requests, template updates, review of pull requests | [`contributing.md`](contributing.md); applied in Claude Code by the skills `.claude/skills/create-pr/` and `.claude/skills/update-template/`{% if code_review %}, in CI by `.claude/skills/review-code/`{% endif %}{% if dual_review %}, before a pull request by `.claude/skills/dual-review/`{% endif %} | exists |
+| What a test is for and must prove, gates on tests | [`testing-rules.md`](testing-rules.md) | exists |
 | Why a costly-to-reverse decision was made, and its status | [`decisions/README.md`](decisions/README.md), the generated index of short ADRs; other owner decisions are marked in their owner documents ([`documentation-rules.md`](documentation-rules.md), sections 3 and 5) | exists; the index lists the records |
 | Checks and enforcement | `scripts/check.sh` and the scripts it runs; Claude Code hooks `.claude/settings.json`, `.claude/hooks/`; workflows `.github/workflows/` ([`documentation-rules.md`](documentation-rules.md), sections 7 and 9) | exists |
 
@@ -30,6 +31,7 @@ placeholder files.
 | Active plans | `docs/plans/` | work spans more than one session |
 | Operations: run, deploy, observe, recover | `docs/operations/` | there is something to operate |
 | Implemented behaviour | source code and its tests | the first code is merged |
+| Review criteria: what the project adds to the rubric of [`contributing.md`](contributing.md), section 6 | the project's architecture document on code structure | the first code is proposed |
 
 ## Reading order for a new agent
 

@@ -34,7 +34,8 @@ Read on demand. Do not load the whole `docs/` tree.
   code and contracts, review checklist. Read it before creating or changing any document.
 - `docs/decisions/README.md`: generated index of ADRs; open a record only when the task needs it.
 - `docs/plans/`: active plans only.
-- `docs/contributing.md`: branches, commit messages, pull requests. Read it before you commit.
+- `docs/contributing.md`: branches, commit messages, pull requests, review. Read it before you
+  commit. `docs/testing-rules.md`: what a test must prove. Read it before you write a test.
 
 ## 3. Status of information
 
@@ -48,8 +49,7 @@ Every statement about the system has exactly one status, and the status must be 
 | implemented | behaviour present in merged code with tests | code and tests, never prose |
 
 The repository owner is the only decision-maker. Agents, skills, and subagents propose; they never
-decide.
-Never present a plan, a proposal, or your own design as something that exists
+decide. Never present a plan, a proposal, or your own design as something that exists
 (`documentation-rules.md`, section 3).
 
 ## 4. Boundaries for autonomous decisions
@@ -91,5 +91,5 @@ Not allowed without an explicit user instruction:
   map and links updated. Checklist: `docs/documentation-rules.md`, section 7.
 - In Claude Code, Stop hooks rerun the documentation, decision, and template checks and the
   project's own Stop hooks; a protect hook asks the owner before edits of protected files. Pull
-  requests get a readiness check (`contributing.md`, section 3) and `docs-review` proposals.
+  requests get a readiness check (`contributing.md`, section 3), `docs-review` proposals, `code-review` proposals.
 - Finish with a report: files changed, checks with results, assumptions, open questions, readiness.

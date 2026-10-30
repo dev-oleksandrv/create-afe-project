@@ -1,6 +1,7 @@
 # Contribution rules
 
-Reference for branches, commit messages, pull requests, and template updates in this repository.
+Reference for branches, commit messages, pull requests, template updates, and review in this
+repository.
 `AGENTS.md` holds the short rules and takes precedence if the two ever disagree. This file comes
 from the project template: report such a disagreement to the template instead of editing it. Everything written into git history and pull
 requests is in English, without exception.
@@ -89,10 +90,10 @@ requests is in English, without exception.
     owner document; the item names that file, for example
     `recorded: OQ-1 in docs/requirements/<document>.md`. It does not hold the merge.
   - `assumption:` an assumption the change rests on, also labelled where it is used.
-- Every `docs-review` comment is answered on the pull request before the merge: fixed in a
+- Every comment of the `docs-review` and `code-review` workflows is answered on the pull request before the merge: fixed in a
   follow-up commit, or declined with a reason. The comments are proposals; the owner decides.
 - A pull request is ready to merge when no `blocking` item remains, every decision record it adds
-  is `accepted` or `rejected`, every check passes, and every `docs-review` comment is answered.
+  is `accepted` or `rejected`, every check passes, and every review comment is answered.
   The `decisions` workflow checks the first two; it signals and does
   not block, so a merge while it fails is the owner's deliberate exception. A pull request that
   only waits on the owner stays open for review, not a draft. An agent reports such a pull
@@ -113,7 +114,7 @@ requests is in English, without exception.
    readiness verdict that the report states.
 
 In Claude Code the `create-pr` skill (`.claude/skills/create-pr/SKILL.md`) runs this checklist
-and opens the pull request, then waits for the `docs-review` run and answers its comments.
+and opens the pull request, then waits for the review runs and answers their comments.
 
 ## 5. Template updates
 
@@ -141,3 +142,30 @@ change only through an update:
 In Claude Code the `update-template` skill (`.claude/skills/update-template/SKILL.md`) runs these
 steps. A change the project needs in a template-owned file is made in the template repository
 first and arrives here through such an update.
+
+## 6. Review of pull requests
+
+- A pull request that changes code, contracts, checks, or workflows is reviewed against the
+  rubric below. Reviewers propose; the owner decides. A finding names a file and a line, a
+  severity (`blocker`, `should`, or `nit`), and the rule it rests on. Style, formatting, and
+  naming belong to the linters, and zero findings is a valid result.
+- The project adds its own criteria, for example its dependency rule or its conventions, in one
+  owner document that the map (`docs/README.md`) names under "Review criteria"; every reviewer
+  applies both.
+
+| Criterion | Passes when |
+| --- | --- |
+| Authority | every behaviour in the diff serves a named requirement or acceptance criterion, or is listed as an open question; nothing is invented (`AGENTS.md`, section 4) |
+| Co-change | contract, code, tests, and the owner document change together; a breaking contract change is versioned; generated files are regenerated (`documentation-rules.md`, section 6) |
+| Correctness | the logic does what the requirement says, including the edge cases that apply to it |
+| Tests | the tests follow `docs/testing-rules.md`, and each new test fails without the change |
+| Errors | no error is swallowed, no failure hides behind a default, and nothing is substituted silently |
+| Security | external input is validated where it enters; secrets never reach code, logs, errors, or output |
+| Statuses | nothing is called implemented without a test (`documentation-rules.md`, section 3) |
+
+- A defect found after the merge is fixed after a regression test (`testing-rules.md`, section
+  3), and the pull request that fixes it names what keeps the next one out: a criterion of the
+  project, a check, a rule, or the reason none fits.
+- The `code-review` workflow reviews every such pull request that is not a draft against the same
+  rubric, with Claude Code and the `CLAUDE_CODE_OAUTH_TOKEN` secret, and posts its findings as
+  comments; it changes nothing.

@@ -1,6 +1,7 @@
 # Contribution rules
 
-Reference for branches, commit messages, pull requests, and template updates in this repository.
+Reference for branches, commit messages, pull requests, template updates, and review in this
+repository.
 `AGENTS.md` holds the short rules and takes precedence if the two ever disagree. This file comes
 from the project template: report such a disagreement to the template instead of editing it. Everything written into git history and pull
 requests is in English, without exception.
@@ -68,6 +69,11 @@ requests is in English, without exception.
 - `scripts/check.sh`: documentation, decision records, template integrity, and project checks
   pass; name each failing part and its output.
 - Semantic self-review (`docs/documentation-rules.md`, section 7): what was checked, and the result.
+{%- if dual_review %}
+- Dual review (section 6): passed, or escalated after the third round; each reviewer's verdict
+  and the model its tool reported; the number of rounds; the findings only one reviewer raised;
+  or why it did not run.
+{%- endif %}
 
 ## Assumptions and open questions
 
@@ -89,12 +95,12 @@ requests is in English, without exception.
     owner document; the item names that file, for example
     `recorded: OQ-1 in docs/requirements/<document>.md`. It does not hold the merge.
   - `assumption:` an assumption the change rests on, also labelled where it is used.
-{%- if docs_review %}
-- Every `docs-review` comment is answered on the pull request before the merge: fixed in a
+{%- if docs_review or code_review %}
+- Every comment of the {% if docs_review %}`docs-review`{% endif %}{% if docs_review and code_review %} and {% endif %}{% if code_review %}`code-review`{% endif %} {% if docs_review and code_review %}workflows{% else %}workflow{% endif %} is answered on the pull request before the merge: fixed in a
   follow-up commit, or declined with a reason. The comments are proposals; the owner decides.
 {%- endif %}
 - A pull request is ready to merge when no `blocking` item remains, every decision record it adds
-  is `accepted` or `rejected`, every check passes{% if docs_review %}, and every `docs-review` comment is answered{% endif %}.
+  is `accepted` or `rejected`, every check passes{% if docs_review or code_review %}, and every review comment is answered{% endif %}.
   The `decisions` workflow checks the first two; it signals and does
   not block, so a merge while it fails is the owner's deliberate exception. A pull request that
   only waits on the owner stays open for review, not a draft. An agent reports such a pull
@@ -113,9 +119,13 @@ requests is in English, without exception.
    "Notes for the owner".
 6. `scripts/check-decisions.sh --ready --base origin/main --pr-body <description file>` gives the
    readiness verdict that the report states.
+{%- if dual_review %}
+7. When the branch changes code, contracts, checks, or workflows, the dual review of section 6
+   passed or the owner answered its escalation, and its verdict is in the description.
+{%- endif %}
 
 In Claude Code the `create-pr` skill (`.claude/skills/create-pr/SKILL.md`) runs this checklist
-and opens the pull request{% if docs_review %}, then waits for the `docs-review` run and answers its comments{% endif %}.
+and opens the pull request{% if docs_review or code_review %}, then waits for the review runs and answers their comments{% endif %}.
 
 ## 5. Template updates
 
@@ -143,3 +153,44 @@ change only through an update:
 In Claude Code the `update-template` skill (`.claude/skills/update-template/SKILL.md`) runs these
 steps. A change the project needs in a template-owned file is made in the template repository
 first and arrives here through such an update.
+
+## 6. Review of pull requests
+
+- A pull request that changes code, contracts, checks, or workflows is reviewed against the
+  rubric below. Reviewers propose; the owner decides. A finding names a file and a line, a
+  severity (`blocker`, `should`, or `nit`), and the rule it rests on. Style, formatting, and
+  naming belong to the linters, and zero findings is a valid result.
+- The project adds its own criteria, for example its dependency rule or its conventions, in one
+  owner document that the map (`docs/README.md`) names under "Review criteria"; every reviewer
+  applies both.
+
+| Criterion | Passes when |
+| --- | --- |
+| Authority | every behaviour in the diff serves a named requirement or acceptance criterion, or is listed as an open question; nothing is invented (`AGENTS.md`, section 4) |
+| Co-change | contract, code, tests, and the owner document change together; a breaking contract change is versioned; generated files are regenerated (`documentation-rules.md`, section 6) |
+| Correctness | the logic does what the requirement says, including the edge cases that apply to it |
+| Tests | the tests follow `docs/testing-rules.md`, and each new test fails without the change |
+| Errors | no error is swallowed, no failure hides behind a default, and nothing is substituted silently |
+| Security | external input is validated where it enters; secrets never reach code, logs, errors, or output |
+| Statuses | nothing is called implemented without a test (`documentation-rules.md`, section 3) |
+
+- A defect found after the merge is fixed after a regression test (`testing-rules.md`, section
+  3), and the pull request that fixes it names what keeps the next one out: a criterion of the
+  project, a check, a rule, or the reason none fits.
+{%- if dual_review %}
+- Dual review: before such a pull request is opened, two independent reviewers review the branch
+  against the rubric: a Claude subagent and the Codex CLI in a read-only sandbox, sharing nothing
+  but the rubric. A round starts only when `scripts/check.sh` passes. When either reviewer fails
+  the branch, the author fixes only the findings, in the working tree and without commits, and
+  both review again from a fresh context; after the third failing round the remaining findings
+  go to the owner as `blocking:` items. A Codex run that fails or cannot start is not a pass and
+  is not replaced by a second Claude reviewer. Once both pass, the fixes are squashed into the
+  branch's commits (section 2), and the verdict goes under "Checks" in the description (section
+  3). In Claude Code the `dual-review` skill (`.claude/skills/dual-review/SKILL.md`) runs it.
+{%- endif %}
+{%- if code_review %}
+- The `code-review` workflow reviews every such pull request that is not a draft against the same
+  rubric, with Claude Code and the `CLAUDE_CODE_OAUTH_TOKEN` secret, and posts its findings as
+  comments; it changes nothing.{% if dual_review %} A description without the verdict of the dual review is one of its
+  findings.{% endif %}
+{%- endif %}
