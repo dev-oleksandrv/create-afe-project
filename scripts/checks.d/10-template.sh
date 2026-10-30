@@ -109,6 +109,7 @@ hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$sib"'/docs/plans/x
 hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$sib"'/sibling-only.txt"}}' "$work"
 hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/sibling-only.txt"}}' "$work"
 hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > sibling-only.txt"},"cwd":"'"$sib"'"}' "$work"
+hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > docs/contributing.md"},"cwd":"/nonexistent"}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x '"$sib"'/docs/testing-rules.md"}}' "$work"
 hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$sib"'/gen/new/x.txt"}}' "$work"
 git -C "$a" worktree remove --force "$sib" && gitc "$a" branch -q -D sibling
