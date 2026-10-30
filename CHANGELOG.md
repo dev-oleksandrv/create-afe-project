@@ -6,6 +6,8 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-30
+
 ### Added
 
 - Testing rules (`docs/testing-rules.md`), template-owned: what a test is for, how it proves
