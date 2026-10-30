@@ -147,8 +147,20 @@ first and arrives here through such an update.
 
 - A pull request that changes code, contracts, checks, or workflows is reviewed against the
   rubric below. Reviewers propose; the owner decides. A finding names a file and a line, a
-  severity (`blocker`, `should`, or `nit`), and the rule it rests on. Style, formatting, and
-  naming belong to the linters, and zero findings is a valid result.
+  severity, and the rule it rests on. Style, formatting, and naming belong to the linters, and
+  zero findings is a valid result. The severities:
+  - `blocker`: merged as it is, the change breaks behaviour, a contract, a check, or security,
+    or it contradicts a source of higher precedence (`AGENTS.md`, section 1).
+  - `should`: merged as it is, the change leads a reader or a later change to a wrong result:
+    a statement that is false or has the wrong status, a behaviour without the test that
+    proves it, a rule that contradicts its owner document, or a gap that lets a gate be
+    loosened.
+  - `nit`: anything else that would improve the change: wording, order, a clearer link, a
+    detail nobody would act on wrongly. A reviewer who hesitates between `should` and `nit`
+    picks `nit` and says why.
+- A review fails on any `blocker` or `should` and passes otherwise; a `nit` never fails it. A
+  `nit` is answered like any comment and may be declined with a reason or left to a later
+  change.
 - The project adds its own criteria, for example its dependency rule or its conventions, in one
   owner document that the map (`docs/README.md`) names under "Review criteria"; every reviewer
   applies both.
