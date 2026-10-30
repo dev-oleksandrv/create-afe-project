@@ -78,9 +78,9 @@ expect_pass "record with the next number" bash -c 'record 0001; scripts/gen-deci
 expect_fail "stale decision index" bash -c 'record 0001; scripts/check-decisions.sh --base main'
 
 echo "== hooks on variant A"
-hook() { # expected decision (ask|allow), JSON input
+hook() { # expected decision (ask|allow), JSON input, directory the hook runs in, CLAUDE_PROJECT_DIR (both default: variant A)
   local out
-  out=$(cd "$a" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="$a" .claude/hooks/protect-docs.sh 2>&1)
+  out=$(cd "${3:-$a}" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="${4:-$a}" "$a/.claude/hooks/protect-docs.sh" 2>&1)
   case "$1:$out" in
     ask:*'"permissionDecision":"ask"'*|allow:) ;;
     *) fail "protect hook: expected $1 for $2, got '${out:0:120}'" ;;
@@ -96,6 +96,39 @@ hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/docs/plans/x.m
 hook allow '{"tool_name":"Bash","tool_input":{"command":"cp docs/decisions/adr-template.md docs/decisions/0001-x.md"}}'
 hook allow '{"tool_name":"Bash","tool_input":{"command":"scripts/check.sh 2>&1 | tee /tmp/check.log"}}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x docs/contributing.md"}}'
+# A sibling worktree of the project is guarded by its own protected paths, although
+# CLAUDE_PROJECT_DIR names the main checkout; the hook runs outside both. The sibling lists paths
+# that the main checkout does not, so a hook that read the main checkout's lists, or resolved a
+# relative Bash target against anything but the input's cwd, would allow them.
+sib="$work/a-sibling"
+gitc "$a" worktree add -q -b sibling "$sib"
+printf 'sibling-only.txt\ngen/*\n' >> "$sib/.claude/protected-paths"
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$sib"'/docs/contributing.md"}}' "$work"
+hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$sib"'/AGENTS.md"}}' "$work"
+hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$sib"'/docs/plans/x.md"}}' "$work"
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$sib"'/sibling-only.txt"}}' "$work"
+hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/sibling-only.txt"}}' "$work"
+hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > sibling-only.txt"},"cwd":"'"$sib"'"}' "$work"
+hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > docs/contributing.md"},"cwd":"/nonexistent"}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x '"$sib"'/docs/testing-rules.md"}}' "$work"
+hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$sib"'/gen/new/x.txt"}}' "$work"
+git -C "$a" worktree remove --force "$sib" && gitc "$a" branch -q -D sibling
+# A worktree inside the main checkout's directory is judged by its own repository too.
+gitc "$a" worktree add -q -b inner "$a/.claude/worktrees/inner"
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/.claude/worktrees/inner/docs/contributing.md"}}' "$work"
+git -C "$a" worktree remove --force "$a/.claude/worktrees/inner" && gitc "$a" branch -q -D inner
+# A nested repository without .template/owned.txt inside the project keeps the project's paths.
+git init -q "$a/vendor/lib" && echo 'vendor/*' >> "$a/.claude/protected-paths"
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/vendor/lib/a.c"}}' "$work"
+rm -rf "$a/vendor" && gitc "$a" checkout -q -- .claude/protected-paths
+# The session's project is guarded before its first commit, when it is not a git repository.
+cp -R "$a" "$work/nogit" && rm -rf "$work/nogit/.git"
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$work"'/nogit/docs/contributing.md"}}' "$work" "$work/nogit"
+# Another repository without .template/owned.txt, and a path outside any repository and outside
+# the session's project, are not guarded.
+git init -q "$work/other" && mkdir -p "$work/other/docs" "$work/loose"
+hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$work"'/other/docs/README.md"}}' "$work"
+hook allow '{"tool_name":"Write","tool_input":{"file_path":"'"$work"'/loose/AGENTS.md"}}' "$work"
 gitc "$a" switch -q -c feature
 printf '#Bad heading\n\n[missing](nowhere.md)\n' > "$a/docs/bad.md"
 gitc "$a" add -A && gitc "$a" commit -q -m bad
