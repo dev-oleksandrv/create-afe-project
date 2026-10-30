@@ -42,6 +42,9 @@ All notable changes to the template are listed here, newest first. The format fo
   inside the session's project are judged by the project as before (no git yet, a nested
   repository); paths elsewhere stay unguarded. A relative path of a shell command resolves
   against the hook input's `cwd`.
+- `.claude/hooks/protect-docs.sh`: folds `.` and `..` in the part of a target path that does not
+  exist yet before the match, so a write to `newdir/../AGENTS.md` or `docs/new/../README.md` asks
+  the owner, and a path whose `..` leaves the repository no longer matches a protected glob.
 
 ## [0.3.1] - 2026-10-30
 

@@ -110,6 +110,15 @@ hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/docs/plans/x.m
 hook allow '{"tool_name":"Bash","tool_input":{"command":"cp docs/decisions/adr-template.md docs/decisions/0001-x.md"}}'
 hook allow '{"tool_name":"Bash","tool_input":{"command":"scripts/check.sh 2>&1 | tee /tmp/check.log"}}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x docs/contributing.md"}}'
+# A ".." or "." in the part of the path that does not exist yet is folded before the match; a ".."
+# left over climbs from the nearest existing directory, so the path may leave the repository.
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/newdir/../AGENTS.md"}}'
+hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/docs/new/../README.md"}}'
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/newdir/./sub/../../docs/contributing.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > newdir/../AGENTS.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x docs/new/../contributing.md"}}'
+hook allow '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/newdir/../../AGENTS.md"}}'
+hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/newdir/../../a/AGENTS.md"}}'
 # A sibling worktree of the project is guarded by its own protected paths, although
 # CLAUDE_PROJECT_DIR names the main checkout; the hook runs outside both. The sibling lists paths
 # that the main checkout does not, so a hook that read the main checkout's lists, or resolved a
@@ -126,6 +135,7 @@ hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > sibling-only.txt
 hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > docs/contributing.md"},"cwd":"/nonexistent"}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x '"$sib"'/docs/testing-rules.md"}}' "$work"
 hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$sib"'/gen/new/x.txt"}}' "$work"
+hook allow '{"tool_name":"Write","tool_input":{"file_path":"'"$sib"'/gen/new/../../../out.txt"}}' "$work"
 git -C "$a" worktree remove --force "$sib" && gitc "$a" branch -q -D sibling
 # A worktree inside the main checkout's directory is judged by its own repository too.
 gitc "$a" worktree add -q -b inner "$a/.claude/worktrees/inner"

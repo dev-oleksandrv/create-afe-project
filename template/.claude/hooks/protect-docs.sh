@@ -39,13 +39,25 @@ listed() {
 
 # Prints why $1 is protected, or nothing when it is not.
 protected_reason() {
-  local p="$1" abs rel dir rest root
+  local p="$1" abs rel dir rest seg norm= root
   case "$p" in /*) abs="$p" ;; *) abs="$cwd/$p" ;; esac
   # Resolve "..", "//", and symbolic links in the part of the path that exists.
   dir=$(dirname "$abs") rest=$(basename "$abs")
   while [ ! -d "$dir" ]; do rest="$(basename "$dir")/$rest"; dir=$(dirname "$dir"); done
   dir=$(cd "$dir" && pwd -P) || return 0
-  abs="$dir/$rest"
+  # Fold "." and "x/.." in the part that does not exist yet; a ".." left over climbs from $dir.
+  while [ -n "$rest" ]; do
+    seg=${rest%%/*}
+    if [ "$seg" = "$rest" ]; then rest=; else rest=${rest#*/}; fi
+    case "$seg" in
+      ''|.) ;;
+      ..) if [ -z "$norm" ]; then dir=$(dirname "$dir")
+          elif [ "${norm%/*}" = "$norm" ]; then norm=
+          else norm=${norm%/*}; fi ;;
+      *) norm=${norm:+$norm/}$seg ;;
+    esac
+  done
+  abs="$dir/$norm"
   # The generated project that holds the path: its git repository when that has
   # .template/owned.txt (a sibling worktree, another generated project), otherwise the session's
   # project when the path is inside it (no git yet, a nested repository, a missing manifest).
