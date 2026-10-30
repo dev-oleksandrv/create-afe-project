@@ -6,6 +6,14 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+### Changed
+
+- `docs/contributing.md`, sections 3, 4, and 6 (with `dual_review`): a template update that
+  changes only template-owned and generated files is exempt from the dual review; its
+  description says "Dual review: not run: template update to X.Y.Z". The `create-pr`,
+  `dual-review`, and `review-code` skills apply the exemption: `review-code` takes that line in
+  place of a verdict.
+
 ## [0.4.0] - 2026-10-30
 
 ### Changed

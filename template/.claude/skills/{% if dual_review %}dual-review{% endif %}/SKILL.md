@@ -16,7 +16,9 @@ request, changes a status, or accepts a decision.
 
 1. Scope: `git diff <base>...HEAD` plus the uncommitted changes (`git status --porcelain`,
    `git diff`). When they change nothing but documentation, stop: the dual review has no scope,
-   and the verdict reads "not run: no code change".
+   and the verdict reads "not run: no code change". When the branch is a template update that
+   changes only template-owned and generated files (`docs/contributing.md`, section 6), stop: the
+   verdict reads "not run: template update to X.Y.Z".
 2. Reviewer B must be able to run: `command -v codex`. When it is missing, stop before the first
    round and report "not run: Codex CLI unavailable". A second Claude reviewer never takes its
    place.

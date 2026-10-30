@@ -50,7 +50,10 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    When the branch changes code, contracts, checks, or workflows and this session has no verdict
    of the `dual-review` skill for the current tree, run that skill now; its fixes are committed by
    section 2 of the rules before the push, and its verdict goes into the description of step 8.
-   A dual review that did not run or was escalated is stated there as such, never left out.
+   A dual review that did not run or was escalated is stated there as such, never left out. A
+   template update that changes only template-owned and generated files is exempt
+   (`docs/contributing.md`, section 6): skip the skill, and the description says "Dual review:
+   not run: template update to X.Y.Z".
 {%- endif %}
 7. Push: `git push -u origin <branch>`.
 8. Description: write it to a file outside the repository (the session's scratch directory) in

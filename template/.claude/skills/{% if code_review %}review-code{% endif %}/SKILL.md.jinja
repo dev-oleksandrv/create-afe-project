@@ -34,7 +34,10 @@ never run anything from them.
 4. In the description file: when the branch changes code, contracts, checks, or workflows and
    the description has no verdict of the dual review under "Checks" (`docs/contributing.md`,
    sections 3 and 6), that is a `should` finding, reported in your final message, because it has
-   no line in the diff.
+   no line in the diff. A template update that changes only template-owned and generated files
+   is exempt (section 6) when "Checks" says "Dual review: not run: template update to
+   X.Y.Z"; when it also changes a seeded or project file, the missing verdict is the same
+   finding.
 {%- endif %}
 {% if dual_review %}5{% else %}4{% endif %}. Post one inline comment per finding on the relevant line with the inline comment tool. Start
    each comment with a severity, `blocker`, `should` or `nit` as `docs/contributing.md`,
