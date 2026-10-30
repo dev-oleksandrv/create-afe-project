@@ -6,6 +6,8 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-30
+
 ### Changed
 
 - `docs/contributing.md`, section 6: defines the severities `blocker`, `should`, and `nit`, and
