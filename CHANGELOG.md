@@ -6,6 +6,8 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-30
+
 ### Changed
 
 - `docs/contributing.md`, sections 3, 4, and 6 (with `dual_review`): a template update that
