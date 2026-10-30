@@ -10,8 +10,9 @@ All notable changes to the template are listed here, newest first. The format fo
 
 - `docs/testing-rules.md`, section 4: a threat model of development gates. Gates catch honest
   mistakes and shortcuts; deliberate evasion is left to the review of the diff; product
-  invariants are not development gates. The protected-paths bullet now says what the protect
-  hook does instead of claiming that no agent loosens a gate.
+  invariants are not development gates. The protected-paths bullet now names the forms the
+  protect hook catches and what is left to the review, instead of claiming that no agent loosens
+  a gate.
 - `docs/documentation-rules.md`, section 7: the merge-readiness row names what
   `scripts/check-decisions.sh --ready` checks and what is left to the owner.
 - `docs/contributing.md`, section 6: a finding that only deliberate evasion can exploit to bypass
@@ -32,6 +33,15 @@ All notable changes to the template are listed here, newest first. The format fo
   waiting on the owner. `review-code` skill: compares the code and tests with the test plan.
   `dual-review` skill: an author's self-check before the first round, the severity examples and
   the test plan in the brief, and the owner's decisions from the second round.
+
+### Fixed
+
+- `.claude/hooks/protect-docs.sh`: judges a target path by the git repository that holds it when
+  that repository has `.template/owned.txt`, so an edit in a sibling git worktree, or in another
+  generated project, asks the owner like an edit in the session's own checkout. Other paths
+  inside the session's project are judged by the project as before (no git yet, a nested
+  repository); paths elsewhere stay unguarded. A relative path of a shell command resolves
+  against the hook input's `cwd`.
 
 ## [0.3.1] - 2026-10-30
 
