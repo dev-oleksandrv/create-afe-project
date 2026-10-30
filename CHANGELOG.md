@@ -6,6 +6,16 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+### Changed
+
+- `docs/contributing.md`, section 6: defines the severities `blocker`, `should`, and `nit`, and
+  that a review fails on a `blocker` or `should` only; a reviewer who hesitates picks `nit`. The
+  `review-code`, `docs-review`, and `dual-review` skills apply these definitions, and a `nit` no
+  longer fails a round of the dual review.
+- `review-code` and `docs-review` skills: in a pull request run they read changed files of
+  `.claude/`, `CLAUDE.md`, and `.mcp.json` from the diff and `.claude-pr/`, because
+  `anthropics/claude-code-action` restores those paths from the base branch.
+
 ## [0.3.0] - 2026-10-30
 
 ### Added

@@ -28,7 +28,8 @@ request, changes a status, or accepts a decision.
    of `scripts/check.sh`, and these instructions: you review independently and have seen no
    other review; find problems, do not approve; judge what the checks cannot (whether the tests
    prove the requirement), not whether they pass; report only findings with a file, a line, a
-   severity (`blocker`, `should`, `nit`), and the rule; zero findings is a valid result; answer
+   severity (`blocker`, `should`, `nit`, as section 6 defines them), and the rule; zero
+   findings is a valid result; answer
    only with JSON `{"verdict": "PASS" | "FAIL", "findings": [{"severity", "file", "line",
    "criterion", "finding"}]}`, where any `blocker` or `should` means `FAIL`.
 5. Round: run both reviewers at the same time, each with the brief and nothing else.
@@ -38,8 +39,9 @@ request, changes a status, or accepts a decision.
    - Reviewer B: `codex exec --sandbox read-only -C <repository root> - < <brief file>`, with
      the model of the Codex configuration; this skill pins none. A run that fails, times out,
      or returns no valid JSON is not a pass: stop and report it.
-6. Verdict: both `PASS` ends the loop. Otherwise merge and deduplicate the findings and fix only
-   them, in the working tree, without commits and without changes the findings do not ask for.
+6. Verdict: both `PASS` ends the loop. A `nit` never fails a round: it is fixed or listed for
+   the description, not reviewed again. Otherwise merge and deduplicate the `blocker` and
+   `should` findings and fix only them, in the working tree, without commits and without changes the findings do not ask for.
    A finding you judge wrong is not fixed: it goes to the owner as a question, not argued away.
    Run `scripts/check.sh` until it passes, rewrite the brief from the new diff, and start the
    next round with fresh reviewers that know nothing of earlier rounds.
