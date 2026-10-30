@@ -54,6 +54,16 @@ docs_review:
   help: Review every pull request with Claude (needs the Claude GitHub App and the CLAUDE_CODE_OAUTH_TOKEN secret)
   default: true
 
+code_review:
+  type: bool
+  help: Review pull requests that change code against the review rubric with Claude (needs the Claude GitHub App and the CLAUDE_CODE_OAUTH_TOKEN secret)
+  default: true
+
+dual_review:
+  type: bool
+  help: Review a branch with Claude and the Codex CLI before its pull request opens (needs the Codex CLI where Claude Code runs)
+  default: false
+
 ci_runs_on_default:
   type: str
   default: "{% if ci_runner == 'self-hosted' %}{{ self_hosted_labels }}{% else %}[\"ubuntu-latest\"]{% endif %}"
@@ -67,5 +77,6 @@ template_url:
 _message_after_copy: |
   {{ project_name }} is ready. Next: make the initial commit on main (the one direct commit that
   docs/contributing.md allows), add the remote origin, push, run git remote set-head origin -a,
-  set up the CI runner{% if docs_review %}, the
-  CLAUDE_CODE_OAUTH_TOKEN secret, and the Claude GitHub App{% endif %}, then run scripts/check.sh.
+  set up the CI runner{% if docs_review or code_review %}, the
+  CLAUDE_CODE_OAUTH_TOKEN secret, and the Claude GitHub App{% endif %}{% if dual_review %}, install
+  and sign in to the Codex CLI{% endif %}, then run scripts/check.sh.

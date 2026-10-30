@@ -31,20 +31,29 @@ render() {
   git -C "$d" init -q -b main && gitc "$d" add -A && gitc "$d" commit -q -m init
 }
 
-echo "== variant A: GitHub-hosted runner, docs-review on"
+echo "== variant A: GitHub-hosted runner, the default modules (docs-review and code-review on, dual review off)"
 a="$work/a"
 render "$a" || fail "variant A does not render"
 (cd "$a" && scripts/check.sh > "$work/a.log" 2>&1) || { cat "$work/a.log"; fail "variant A: scripts/check.sh fails"; }
 grep -q 'ubuntu-latest' "$a/.github/workflows/docs.yml" || fail "variant A: docs.yml lacks the GitHub-hosted default"
+[ -f "$a/.github/workflows/code-review.yml" ] && [ -f "$a/.claude/skills/review-code/SKILL.md" ] ||
+  fail "variant A: code-review files are missing although the module is on"
+[ ! -e "$a/.claude/skills/dual-review" ] || fail "variant A: dual-review files exist although the module is off"
+! grep -r -n -i 'dual.review' "$a/AGENTS.md" "$a/docs" "$a/.claude/skills" > "$work/a-grep.log" || { cat "$work/a-grep.log"; fail "variant A: documents mention the dual review"; }
 
-echo "== variant B: self-hosted runner, docs-review off"
+echo "== variant B: self-hosted runner, docs-review and code-review off, dual review on"
 b="$work/b"
-render "$b" --data ci_runner=self-hosted --data docs_review=false || fail "variant B does not render"
+render "$b" --data ci_runner=self-hosted --data docs_review=false --data code_review=false --data dual_review=true ||
+  fail "variant B does not render"
 (cd "$b" && scripts/check.sh > "$work/b.log" 2>&1) || { cat "$work/b.log"; fail "variant B: scripts/check.sh fails"; }
 [ ! -e "$b/.github/workflows/docs-review.yml" ] && [ ! -e "$b/.claude/skills/docs-review" ] ||
   fail "variant B: docs-review files exist although the module is off"
 grep -q '"self-hosted"' "$b/.github/workflows/docs.yml" || fail "variant B: docs.yml lacks the self-hosted default"
 ! grep -r -n -i 'docs-review' "$b/AGENTS.md" "$b/docs" > "$work/b-grep.log" || { cat "$work/b-grep.log"; fail "variant B: documents mention docs-review"; }
+[ ! -e "$b/.github/workflows/code-review.yml" ] && [ ! -e "$b/.claude/skills/review-code" ] ||
+  fail "variant B: code-review files exist although the module is off"
+! grep -r -n -i 'code-review\|review-code' "$b/AGENTS.md" "$b/docs" "$b/.claude/skills" > "$work/b-grep.log" || { cat "$work/b-grep.log"; fail "variant B: documents mention code-review"; }
+[ -f "$b/.claude/skills/dual-review/SKILL.md" ] || fail "variant B: the dual-review skill is missing although the module is on"
 
 echo "== negative tests on variant A"
 expect_fail() { # description, command...

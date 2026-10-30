@@ -4,6 +4,7 @@
 AGENTS.md
 docs/documentation-rules.md
 docs/contributing.md
+docs/testing-rules.md
 docs/decisions/adr-template.md
 scripts/check.sh
 scripts/check-docs.sh
@@ -23,10 +24,19 @@ scripts/lib/git-base.sh
 {%- if docs_review %}
 .claude/skills/docs-review/SKILL.md
 {%- endif %}
+{%- if code_review %}
+.claude/skills/review-code/SKILL.md
+{%- endif %}
+{%- if dual_review %}
+.claude/skills/dual-review/SKILL.md
+{%- endif %}
 .github/workflows/docs.yml
 .github/workflows/decisions.yml
 {%- if docs_review %}
 .github/workflows/docs-review.yml
+{%- endif %}
+{%- if code_review %}
+.github/workflows/code-review.yml
 {%- endif %}
 .markdownlint-cli2.jsonc
 lychee.toml

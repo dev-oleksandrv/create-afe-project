@@ -17,7 +17,7 @@ How the template is changed, tested, versioned, and released. Questions and file
   `scripts/checks.d/`, `.claude/hooks/project/stop/`, `.claude/protected-paths`, the project
   block of `AGENTS.md`, and its own documents. A need that the extension points do not cover is a
   change of the template, not a local edit.
-- Optional parts are modules behind a `copier.yml` question (today: `docs_review`). A module's
+- Optional parts are modules behind a `copier.yml` question (today: `docs_review`, `code_review`, and `dual_review`). A module's
   files use a conditional file name, and the documents mention the module only inside the same
   condition.
 
@@ -36,7 +36,8 @@ How the template is changed, tested, versioned, and released. Questions and file
 ## 3. Tests
 
 `scripts/checks.d/10-template.sh` renders the template twice (a GitHub-hosted runner with the
-`docs_review` module, and a self-hosted runner without it), runs `scripts/check.sh` in each
+default modules, `docs_review` and `code_review` on and `dual_review` off, and a self-hosted
+runner with the opposite), checks that each module's files and mentions appear only with it, runs `scripts/check.sh` in each
 rendering, proves that the checks reject an edited template-owned file, a damaged project block, a
 decision record with the wrong number, and a stale index, and confirms that this repository's
 template-owned files match `template/`. CI runs it through the `docs` workflow, which sets up

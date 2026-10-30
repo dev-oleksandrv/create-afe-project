@@ -1,6 +1,6 @@
 ---
 name: create-pr
-description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, checks, and the description template, then wait for the docs-review run and answer its comments. Use when asked to create, open, or submit a pull request.
+description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, checks, and the description template, then wait for the review runs and answer their comments. Use when asked to create, open, or submit a pull request.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr comment:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
 ---
 
@@ -61,16 +61,18 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
      `scripts/check-decisions.sh --ready --base origin/main --pr-body <file>`. Its result is the
      readiness verdict.
      A failure here alone does not make the pull request a draft: it waits on the owner.
-9. Review: the `docs-review` workflow reviews the pull request, and its comments are answered
-   before the report (section 3 of the rules). It does not run on a draft: then skip this step
-   and say so in the report.
-   - Wait for the run: poll `gh pr view --json statusCheckRollup` until the entry whose
-     `workflowName` is `docs-review` has `status` `COMPLETED`, about every 30 seconds, for at
-     most 20 minutes in all (the workflow's own time limit); never one long fixed sleep. When no
+9. Review: the comments of the `docs-review` and `code-review` workflows are answered before the
+   report (section 3 of the rules). It does not run on a draft: then skip this step and say so in
+   the report. The `code-review` workflow reviews only a branch that changes code,
+   contracts, checks, or workflows; on any other it posts nothing.
+   - Wait for the runs: poll `gh pr view --json statusCheckRollup` until each entry whose
+     `workflowName` is `docs-review` or `code-review` has `status` `COMPLETED`, about every 30 seconds,
+     for at most 30 minutes in all (the workflows' own time limits); never one long fixed sleep. When no
      such entry appears within a few minutes, or the run has not completed when the time is up,
      the review did not run or did not finish (for example the repository lacks the Claude GitHub
      App, or its runner is down): stop waiting, and state it in the report with the run's URL
      when there is one. A run whose `conclusion` is not `SUCCESS` is reported the same way.
+     Each workflow is waited for and reported on its own.
    - Collect the comments: the inline ones with
      `gh api repos/{owner}/{repo}/pulls/<number>/comments`, the general ones with
      `gh api repos/{owner}/{repo}/issues/<number>/comments`. The run's own progress comment is not
@@ -84,7 +86,7 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
      - Decline: a reply with the reason, resting on the rules or on the owner document.
      - Owner's decision: a reply with the basis known so far, and an item under "Notes for the
        owner" in the description.
-   - A push restarts the workflow. Wait for that run once more and answer its new comments the
+   - A push restarts the workflows. Wait for those runs once more and answer its new comments the
      same way. After this second round, a further new comment gets a reply and an item under
      "Notes for the owner", not another round.
    - Update the description: rerun the readiness check of step 8 against the pushed tree (a

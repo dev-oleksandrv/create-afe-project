@@ -10,12 +10,13 @@ Claude Code skills that apply them. Repository: `xandronak/agent-docs-template`.
 | Part | Files |
 | --- | --- |
 | Agent rules | `AGENTS.md` with one project block, `CLAUDE.md` |
+| Testing rules: what a test is for and must prove | `docs/testing-rules.md` |
 | Documentation rules, statuses, and file ownership | `docs/documentation-rules.md`, `docs/README.md` |
-| Branches, commits, pull requests, template updates | `docs/contributing.md` |
+| Branches, commits, pull requests, template updates, review of pull requests | `docs/contributing.md` |
 | Decision records | `docs/decisions/adr-template.md`, a generated `docs/decisions/README.md` |
 | Checks | `scripts/check.sh` and the scripts it runs |
-| Claude Code hooks and skills | `.claude/settings.json`, `.claude/hooks/`, `.claude/skills/` (`create-pr`, `update-template`, optional `docs-review`) |
-| CI | `.github/workflows/` (`docs`, `decisions`, optional `docs-review`) |
+| Claude Code hooks and skills | `.claude/settings.json`, `.claude/hooks/`, `.claude/skills/` (`create-pr`, `update-template`, optional `docs-review`, `review-code`, and `dual-review`) |
+| CI | `.github/workflows/` (`docs`, `decisions`, optional `docs-review` and `code-review`) |
 
 Every file has one owner: the template, the project, or a generator. The rules are in
 [`template/docs/documentation-rules.md.jinja`](template/docs/documentation-rules.md.jinja),
@@ -33,8 +34,9 @@ copier copy --trust git@github.com:xandronak/agent-docs-template.git <directory>
 ```
 
 Copier asks for the project name, a one-sentence description, the GitHub repository, the CI
-runner (GitHub-hosted, or a self-hosted Linux runner), and whether pull requests get the Claude
-review. `--trust` lets the template write its ownership manifest and the decision index after
+runner (GitHub-hosted, or a self-hosted Linux runner), whether pull requests get the Claude
+documentation review and code review, and whether branches get a dual review with Claude and the
+Codex CLI before their pull request. `--trust` lets the template write its ownership manifest and the decision index after
 copying. Then commit, push, and follow the
 message Copier prints.
 

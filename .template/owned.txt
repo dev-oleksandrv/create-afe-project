@@ -4,6 +4,7 @@
 AGENTS.md
 docs/documentation-rules.md
 docs/contributing.md
+docs/testing-rules.md
 docs/decisions/adr-template.md
 scripts/check.sh
 scripts/check-docs.sh
@@ -21,8 +22,10 @@ scripts/lib/git-base.sh
 .claude/skills/create-pr/SKILL.md
 .claude/skills/update-template/SKILL.md
 .claude/skills/docs-review/SKILL.md
+.claude/skills/review-code/SKILL.md
 .github/workflows/docs.yml
 .github/workflows/decisions.yml
 .github/workflows/docs-review.yml
+.github/workflows/code-review.yml
 .markdownlint-cli2.jsonc
 lychee.toml

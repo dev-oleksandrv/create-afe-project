@@ -6,6 +6,36 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+### Added
+
+- Testing rules (`docs/testing-rules.md`), template-owned: what a test is for, how it proves
+  behaviour, tests and the change they cover, and the gates no agent loosens. `AGENTS.md`,
+  section 2, points to it; `docs/documentation-rules.md`, sections 2, 6, and 7, list it.
+- Review of pull requests (`docs/contributing.md`, section 6): a rubric that every reviewer
+  applies, the project's own criteria in an owner document that the map names under "Review
+  criteria", and the rule that a defect found after the merge names what keeps the next one out.
+- Module `code_review` (question `code_review`, default on): the `code-review` workflow
+  (`.github/workflows/code-review.yml`) and the `review-code` skill
+  (`.claude/skills/review-code/SKILL.md`) review pull requests that change code, contracts,
+  checks, or workflows against that rubric with Claude Code, with the same secret and app as
+  `docs-review`, and install no plugin.
+- Module `dual_review` (question `dual_review`, default off): the `dual-review` skill
+  (`.claude/skills/dual-review/SKILL.md`) reviews a branch before its pull request with a Claude
+  subagent and the Codex CLI in a read-only sandbox, after a passing `scripts/check.sh`, for at
+  most three rounds, without commits; its verdict goes under "Checks" in the description
+  (`docs/contributing.md`, sections 3 and 4).
+
+### Changed
+
+- `create-pr` skill: waits for and answers the `code-review` run next to `docs-review`, and with
+  the `dual_review` module runs the dual review when the branch has no verdict for its tree.
+- `docs/contributing.md`, section 3: every review comment is answered before the merge, from
+  either review workflow.
+- Linter configuration (`.markdownlint-cli2.jsonc`): in `CHANGELOG.md`, headings need to be
+  unique among siblings only, so that each version can have its own Added and Changed.
+- Seeded `docs/README.md`: rows for the testing rules and the review of pull requests, and the
+  planned "Review criteria" section. An existing project copies these rows by hand.
+
 ## [0.2.0] - 2026-10-29
 
 ### Changed
