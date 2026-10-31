@@ -192,34 +192,83 @@ write_targets() {
 }
 
 # Prints the first irreversible action in a shell command, or nothing: in any segment, `git push`
-# with --force, --force-with-lease, --force-if-includes, --delete, --mirror, --prune, or --tags,
-# a short option that contains f or d (-f, -uf, -d), a refspec that starts with + or :, or a tag
-# (refs/tags/..., or v followed by a digit, the form of a release);
-# `gh pr merge`; `gh release create` or `gh release delete`; `gh repo delete`.
+# (after git's global options such as -C DIR) with --force, --force-with-lease,
+# --force-if-includes, --delete, --mirror, --prune, or --tags, a short option that contains f or
+# d (-f, -uf, -d), a refspec that starts with + or :, or a tag (refs/tags/..., or v followed by a
+# digit, the form of a release); `gh pr merge`; `gh release create` or `gh release delete`;
+# `gh repo delete`; `gh workflow run`; `gh api` with the method DELETE; and publishing a package
+# or an image: `npm`, `pnpm`, `yarn`, `bun`, `cargo`, `poetry`, or `uv publish`, `twine upload`,
+# `gem push`, `dotnet nuget push`, `docker` or `podman push`.
+# With "push" as $2 it prints instead the words of the first `git push` that are not options:
+# the remote and the refspecs, one per line, or "-" alone when there are none.
 irreversible() {
-  printf '%s\n' "$1" | awk '{
+  printf '%s\n' "$1" | awk -v mode="${2:-}" '{
     n = split($0, segs, /[|;&]+/)
     for (i = 1; i <= n; i++) {
       m = split(segs[i], w, /[ \t]+/); k = 1
       while (k <= m && (w[k] == "" || w[k] ~ /^[A-Za-z_][A-Za-z0-9_]*=/ || w[k] == "sudo" || w[k] == "command")) k++
       cmd = w[k]; sub(/.*\//, "", cmd)
-      if (cmd == "git" && w[k + 1] == "push") {
-        for (j = k + 2; j <= m; j++) {
+      s = k + 1
+      if (cmd == "git") while (s <= m && w[s] ~ /^-/) s += (w[s] == "-C" || w[s] == "-c") ? 2 : 1
+      sub1 = w[s]; sub2 = w[s + 1]
+      if (cmd == "git" && sub1 == "push") {
+        if (mode == "push") {
+          out = ""
+          for (j = s + 1; j <= m; j++) { a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a); if (a != "" && a !~ /^-/) out = out a "\n" }
+          printf "%s", (out == "" ? "-\n" : out); exit
+        }
+        for (j = s + 1; j <= m; j++) {
           a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a)
           if (a ~ /^--(force|force-with-lease|force-if-includes|delete|mirror|prune|tags)(=.*)?$/ || a ~ /^-[A-Za-z]*[fd][A-Za-z]*$/ || a ~ /^[+:]/ || a ~ /^(refs\/tags\/|v[0-9])/) {
             print "git push " a; exit
           }
         }
       }
-      if (cmd == "gh" && ((w[k + 1] == "pr" && w[k + 2] == "merge") || (w[k + 1] == "release" && w[k + 2] ~ /^(create|delete)$/) || (w[k + 1] == "repo" && w[k + 2] == "delete"))) {
-        print "gh " w[k + 1] " " w[k + 2]; exit
+      if (mode == "push") continue
+      if (cmd == "gh" && ((sub1 == "pr" && sub2 == "merge") || (sub1 == "release" && sub2 ~ /^(create|delete)$/) || (sub1 == "repo" && sub2 == "delete") || (sub1 == "workflow" && sub2 == "run"))) {
+        print "gh " sub1 " " sub2; exit
+      }
+      if (cmd == "gh" && sub1 == "api") {
+        for (j = s + 1; j <= m; j++) if ((w[j] ~ /^(-X|--method)$/ && toupper(w[j + 1]) == "DELETE") || toupper(w[j]) ~ /^(-XDELETE|--METHOD=DELETE)$/) { print "gh api DELETE"; exit }
+      }
+      if ((cmd ~ /^(npm|pnpm|yarn|bun|cargo|poetry|uv)$/ && sub1 == "publish") || (cmd == "twine" && sub1 == "upload") || (cmd == "gem" && sub1 == "push") ||
+          (cmd ~ /^(docker|podman)$/ && sub1 == "push") || (cmd == "dotnet" && sub1 == "nuget" && sub2 == "push")) {
+        print cmd " " sub1 (cmd == "dotnet" ? " " sub2 : ""); exit
       }
     }
   }'
 }
 
+# Prints the default branch when the shell command pushes to it, or nothing. Without a refspec,
+# `git push` pushes the current branch. A default branch that the remote does not have yet (the
+# first push of a new repository) is left to the owner's prompt, not denied.
+pushes_default() {
+  local words remote refs r dst def cur
+  words=$(irreversible "$1" push)
+  [ -n "$words" ] || return 0
+  def=$(git -C "$cwd" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null) && def=${def#origin/} || def=main
+  if [ "$words" = - ]; then refs=; remote=origin; else remote=$(printf '%s\n' "$words" | head -n 1); refs=$(printf '%s\n' "$words" | tail -n +2); fi
+  if [ -z "$refs" ]; then
+    cur=$(git -C "$cwd" symbolic-ref --quiet --short HEAD 2>/dev/null) || return 0
+    refs=$cur
+  fi
+  while IFS= read -r r; do
+    dst=${r#+}; dst=${dst##*:}; dst=${dst#refs/heads/}
+    [ "$dst" = HEAD ] && dst=$(git -C "$cwd" symbolic-ref --quiet --short HEAD 2>/dev/null)
+    if [ "$dst" = "$def" ]; then
+      git -C "$cwd" ls-remote --exit-code --heads "$remote" "$def" > /dev/null 2>&1 && echo "$def"
+      return 0
+    fi
+  done <<< "$refs"
+}
+
 ask_owner() {
   node "$json" ask "Protected file: $1 ($2). Changing it needs an explicit owner instruction (AGENTS.md, section 4). Approve only if you asked for this change; otherwise the agent must report it as an open question."
+  exit 0
+}
+
+deny_push() {
+  node "$json" deny "Pushing to the default branch $1 is not allowed: changes reach it only through a pull request (AGENTS.md, section 4; docs/contributing.md, section 1). Push a branch and open a pull request instead."
   exit 0
 }
 
@@ -241,6 +290,8 @@ case "$tool" in
     if printf '%s' "$cmd" | grep -q -E 'check-template\.sh[^|;&]*--write'; then
       ask_owner ".template/owned.sha256" "generated by a template update only, via Bash"
     fi
+    branch=$(pushes_default "$cmd")
+    [ -n "$branch" ] && deny_push "$branch"
     action=$(irreversible "$cmd")
     [ -n "$action" ] && ask_action "$action"
     targets=$(write_targets "$cmd")

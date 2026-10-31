@@ -32,6 +32,10 @@
 - The `docs` workflow also runs on `workflow_dispatch`, so a workflow can start it for a pull
   request opened with `GITHUB_TOKEN`.
 - A second pass over the AFE guide, on the owner's decisions of 2026-10-31; no observed failure.
+  - The protect hook asks before publishing (`npm`, `pnpm`, `yarn`, `bun`, `cargo`, `poetry`, `uv`
+    publish, `twine upload`, `gem push`, `dotnet nuget push`, `docker` or `podman push`),
+    `gh workflow run`, and a `gh api` DELETE, also behind `git -C DIR`; and it denies a push to the
+    default branch once the remote has it.
   - `scripts/protect-branch.sh` (new): creates or updates the GitHub ruleset that protects the
     default branch (pull requests only, the `check` and `integrity` checks, no force push or
     deletion); the owner runs it once.

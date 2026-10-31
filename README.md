@@ -18,7 +18,7 @@ Claude Code skills that apply them. It implements the pillars of
 | Branches, commits, pull requests, template updates, review of pull requests | `docs/contributing.md` |
 | Decision records | `docs/decisions/adr-template.md`, a generated `docs/decisions/README.md` |
 | Checks and environment | `scripts/check.sh` and the scripts it runs, the link check `scripts/check-links.mjs` included; `scripts/env.sh` for the environment commands; `scripts/protect-branch.sh` for the GitHub ruleset of `main`; optional `scripts/check-acceptance.sh` and `scripts/fail-without-change.sh` |
-| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated), `.claude/hooks/`, `.claude/skills/` (`create-pr`, `update-template`, optional `docs-review`, `review-code`, and `dual-review`) |
+| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated): deny rules for secrets and destructive pushes; `.claude/hooks/`: the protect hook (asks before protected edits and publishing; denies a push to `main`) and the Stop hooks; `.claude/skills/`: `create-pr`, `update-template`, optional `docs-review`, `review-code`, and `dual-review` |
 | CI | `.github/workflows/` (`docs`, `decisions`, optional `docs-review`, `code-review`, and `fail-without-change`) |
 
 Every file has one owner: the template, the project, or a generator. The rules are in

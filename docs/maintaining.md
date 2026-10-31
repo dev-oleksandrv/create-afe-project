@@ -79,7 +79,8 @@ names, behind `cd DIR`, `git -C DIR`, or in an interpreter's heredoc) and which 
 (gate, high, and normal paths, an ordinary push, heredoc text); that a Stop hook stops blocking
 at the Ralph cap and counts again afterwards; that a large change only warns; that
 `scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
-settings deny reading secrets. It also checks that a hook command whose script is
+settings deny reading secrets. It also checks that the protect hook asks before publishing a
+package or an image, `gh workflow run`, a `gh api` DELETE, and denies a push to `main` once the remote has it; that a hook command whose script is
 missing fails the template check; that the link check finds a missing file or anchor; that
 `scripts/protect-branch.sh --dry-run` prints the ruleset. It also checks that `update` keeps project content (the project
 block, seeded files, project checks), creates a missing seeded file, removes a file the template

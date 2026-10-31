@@ -6,6 +6,7 @@
 //                            followed by a NUL byte, an empty string when missing
 //   get <path> [default]     read JSON from stdin; print the value at the path, or the default
 //   ask <reason>             print the PreToolUse decision that asks the owner, with the reason
+//   deny <reason>            print the PreToolUse decision that denies the action, with the reason
 //   settings [--check]       merge .claude/settings.template.json and .claude/settings.project.json
 //                            into .claude/settings.json (scripts/gen-settings.sh); with --check,
 //                            write nothing and exit 1 when the file is missing or stale
@@ -109,8 +110,9 @@ switch (command) {
     break;
   }
   case 'ask':
+  case 'deny':
     process.stdout.write(
-      `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: args[0] } })}\n`,
+      `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: command, permissionDecisionReason: args[0] } })}\n`,
     );
     break;
   case 'settings':

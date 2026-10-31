@@ -224,11 +224,11 @@ out=$(cd "$a" && PATH="$work/bin:$PATH" scripts/pr-metrics.sh --since 2026-01-01
 printf '%s\n' "$out" | grep -q 'WARNING: gh listed 3 pull requests' || { printf '%s\n' "$out"; fail "pr-metrics: no warning when --limit cuts the period"; }
 
 echo "== hooks on variant A"
-hook() { # expected decision (ask|allow), JSON input, directory the hook runs in, CLAUDE_PROJECT_DIR (both default: variant A)
+hook() { # expected decision (ask|deny|allow), JSON input, directory the hook runs in, CLAUDE_PROJECT_DIR (both default: variant A)
   local out
   out=$(cd "${3:-$a}" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="${4:-$a}" "$a/.claude/hooks/protect-docs.sh" 2>&1)
   case "$1:$out" in
-    ask:*'"permissionDecision":"ask"'*|allow:) ;;
+    ask:*'"permissionDecision":"ask"'*|deny:*'"permissionDecision":"deny"'*|allow:) ;;
     *) fail "protect hook: expected $1 for $2, got '${out:0:120}'" ;;
   esac
 }
@@ -252,7 +252,9 @@ done
 hook ask '{"tool_name":"Bash","tool_input":{"command":"echo KEY=x >> .env.local"}}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"echo approval x >> .claude/path-classes"}}'
 for c in "git push --force origin main" "git push -uf origin feature" "git push origin +feature" "git push origin --delete feature" \
-  "git push origin v1.2.0" "git push origin refs/tags/x" "gh pr merge 3 --merge" "scripts/check.sh && gh release create v1.0.0" "gh repo delete example/sample --yes"; do
+  "git push origin v1.2.0" "git push origin refs/tags/x" "gh pr merge 3 --merge" "scripts/check.sh && gh release create v1.0.0" "gh repo delete example/sample --yes" \
+  "git -C . push --force origin feature" "gh workflow run release.yml" "gh api -X DELETE repos/o/r/git/refs/heads/x" \
+  "npm publish" "pnpm publish --access public" "cargo publish" "docker push example/app:1" "twine upload dist/*"; do
   hook ask '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 # An approval line of .claude/path-classes asks even where a built-in rule would allow the edit.
@@ -271,6 +273,9 @@ stop; [ $? -eq 2 ] || fail "ralph cap: the count does not restart after the cap"
 gitc "$a" switch -q main && gitc "$a" branch -q -D ralph && rm -f "$(git -C "$a" rev-parse --git-dir)"/ralph-stops-*
 hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
 hook allow '{"tool_name":"Bash","tool_input":{"command":"gh pr view 3 --json state"}}'
+for c in "npm run build" "gh api repos/o/r/pulls" "docker build ." "git push origin main"; do
+  hook allow '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
+done
 # A target behind `cd DIR` or `git -C DIR`, and a file an interpreter's heredoc names, resolve
 # against that directory; the text of another heredoc is not read as commands.
 hook ask '{"tool_name":"Bash","tool_input":{"command":"cd docs && cat > contributing.md"}}'
@@ -341,6 +346,11 @@ gitc "$a" switch -q main && gitc "$a" branch -q -D feature
 # A pushed feature branch must still be compared with main, not with its own upstream.
 git init -q --bare "$work/origin.git"
 git -C "$a" remote add origin "$work/origin.git" && gitc "$a" push -q origin main
+# Once the remote has the default branch, a push to it is denied; a push of another branch is not.
+for c in "git push origin main" "git push" "git push origin HEAD:main" "git -C . push origin feature:refs/heads/main"; do
+  hook deny '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
+done
+hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
 gitc "$a" switch -q -c pushed && printf -- '---\nstatus: proposed\ndate: 2026-01-01\ndecision-makers: test\nscope: stack\nsummary: "Test."\nsupersedes: []\n---\n\n# Test\n' > "$a/docs/decisions/0001-test.md"
 (cd "$a" && scripts/gen-decisions-index.sh > docs/decisions/README.md) && gitc "$a" add -A && gitc "$a" commit -q -m record
 gitc "$a" push -q -u origin pushed
