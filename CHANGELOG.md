@@ -6,6 +6,8 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-31
+
 A second pass over the Agent-Friendly Engineering field guide, on the owner's decisions of
 2026-10-31, and the follow-ups of 0.5.0. Observed failures: the protect hook let two writes into
 rule files through, behind `cd` and in a Python heredoc (pull request #14); the review workflows
