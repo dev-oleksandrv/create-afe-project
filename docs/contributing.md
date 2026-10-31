@@ -121,7 +121,8 @@ Everything written into git history and pull requests is in English, without exc
   `scripts/pr-metrics.sh` aggregates merged pull requests. A sensor is a check or a reviewer; an
   owner intervention is anything the owner answered, approved, or corrected besides the merge.
 - Ready to merge: `scripts/check-decisions.sh --ready` and every other check pass, no `blocker`
-  is open, every finding is answered. Readiness fails on an added record still `proposed`; an
+  is open, every finding is answered. Readiness fails on a missing "Acceptance and test plan" or
+  "Metrics" section, a missing or repeated measure; an added record still `proposed`; an
   open `blocking:` item or one without a label; an Acceptance item that is neither "None" with a
   reason nor names an existing path in backticks; an added marker in a Markdown file or a touched
   gate file that its section does not name; a Metrics table outside its forms, whose answers do
@@ -132,10 +133,8 @@ Everything written into git history and pull requests is in English, without exc
 
 ## 4. Before opening a pull request
 
-Sections 1 to 3 hold, `scripts/check.sh` and the readiness check pass or their failures are
-stated, and every owner document the change affects is updated in the same branch
-(`documentation-rules.md`, section 5). In Claude Code the `create-pr` skill
-(`.claude/skills/create-pr/SKILL.md`) runs this and opens the pull request.
+Sections 1 to 3 hold, the checks pass or their failures are stated, and every affected owner
+document is updated in the same branch. The `create-pr` skill runs this and opens it.
 
 ## 5. Template updates
 
@@ -149,7 +148,8 @@ version. Template-owned files (`documentation-rules.md`, section 9) change only 
    the template's side, except the project block of `AGENTS.md`; generated files are never
    merged by hand but regenerated; project files keep the project's content and take the
    template's change only when it is clearly additive, otherwise ask the owner. Seeded files are
-   never touched by an update: the template's changelog says what to copy by hand.
+   not touched by an update, except by a migration that the changelog names, and the changelog
+   says what to copy by hand.
 3. Run `scripts/check.sh`, then open a pull request titled `Template: update to <version>`, with
    the template's changelog entries since the previous version under "Summary".
 

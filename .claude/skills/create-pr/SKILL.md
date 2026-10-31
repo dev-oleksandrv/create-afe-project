@@ -1,7 +1,7 @@
 ---
 name: create-pr
 description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, the Ralph loop on the checks, and the description with its evidence, gate files, and metrics, then wait once for the review runs and answer each finding. Use when asked to create, open, or submit a pull request.
-allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr comment:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
+allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr comment:*), Bash(gh run view:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
 ---
 
 # Create a pull request
@@ -66,7 +66,10 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    - Wait once: poll `gh pr view --json statusCheckRollup` about every 30 seconds until each
      entry of `docs-review` or `code-review` is `COMPLETED`, for at most 30 minutes; never one long sleep.
      A run that does not appear within a few minutes, does not finish, or does not end in
-     `SUCCESS` is reported with its URL.
+     `SUCCESS` is reported with its URL. So is a `SUCCESS` run whose log
+     (`gh run view <id> --log`) says the action was skipped: the action skips a pull request
+     that changes its own workflow file. That review did not run: run its skill once in this
+     session with a fresh Claude subagent instead, and say so under "Checks".
    - Findings: the inline comments (`gh api repos/{owner}/{repo}/pulls/<number>/comments`) and
      the general ones (`gh api repos/{owner}/{repo}/issues/<number>/comments`); the run's own
      progress comment is not a finding.

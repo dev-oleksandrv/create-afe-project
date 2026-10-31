@@ -70,7 +70,7 @@ documents, which the map (`docs/README.md`) names, and its test checks in `scrip
 - An invariant that must hold everywhere (for example, a secret never appears in output) is an
   executable check, a test or a project check, and the register `docs/invariants.md` names it
   with that check (`documentation-rules.md`, section 2); its invariants are criteria of the
-  Santa loop (`contributing.md`, section 6).
+  review of class high (`contributing.md`, section 6).
 - Threat model of development gates: a gate (a lint rule, a test check, a coverage or mutation
   setting, an agent hook) catches honest mistakes and shortcuts; it is not a security boundary.
   It decides which bypass is a `blocker` (`contributing.md`, section 6): a diff that itself

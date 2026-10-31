@@ -66,20 +66,23 @@ class_of() {
 
 # review_level <base commit> <path>...: the review before the pull request that the paths need,
 # by their highest content class: santa (high), one (gate, normal), or none (low). A template
-# update, whose paths are all template-owned or generated, needs none: the template repository
-# reviewed it.
+# update needs none, because the template repository reviewed it: a change of
+# .copier-answers.yml whose other paths are all template-owned, generated, or seeded.
 review_level() {
-  local mb="$1" p c best=1 update=1
+  local mb="$1" p c best=1 update=1 answers=0
   shift
   for p in "$@"; do
     case "$p" in
-      AGENTS.md|.template/owned.sha256|.copier-answers.yml|.claude/settings.json|docs/decisions/README.md) ;;
+      .copier-answers.yml) answers=1 ;;
+      AGENTS.md|.template/owned.sha256|.claude/settings.json|docs/decisions/README.md) ;;
+      README.md|CLAUDE.md|.gitignore|docs/README.md|.claude/path-classes|.claude/harness.conf|\
+      .claude/settings.project.json|.claude/protected-paths) ;;
       *) glob_listed "$p" .template/owned.txt || update=0 ;;
     esac
     c=$(class_rank "$(class_of "$p" "$mb" content)")
     [ "$c" -gt "$best" ] && best=$c
   done
-  if [ "$#" -eq 0 ] || [ "$update" = 1 ] || [ "$best" -le 1 ]; then echo none
+  if [ "$#" -eq 0 ] || { [ "$update" = 1 ] && [ "$answers" = 1 ]; } || [ "$best" -le 1 ]; then echo none
   elif [ "$best" -ge 4 ]; then echo santa
   else echo one; fi
 }

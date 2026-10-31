@@ -13,6 +13,7 @@ if [ -n "$(git ls-files -u 2>/dev/null)" ]; then
   echo "Unresolved merge conflicts: checks resume once they are resolved (docs/contributing.md, section 5)." >&2
   exit 0
 fi
+RALPH_SESSION=$(jq -r '.session_id // "none"' 2>/dev/null || echo none)
 # shellcheck source=scripts/lib/harness-conf.sh
 . scripts/lib/harness-conf.sh 2>/dev/null || { ralph_block() { printf '%s\n' "$2" >&2; exit 2; }; ralph_pass() { :; }; }
 if out=$(scripts/check-template.sh 2>&1); then

@@ -49,9 +49,9 @@ never decide or present a plan or their own design as something that exists.
 
 ## 4. Autonomy by risk and reversibility (`documentation-rules.md`, section 8)
 
-- Every path has a class in `.claude/path-classes`. Classes low, normal, and high (code, tests,
+- Every path has a class, by built-in rules and `.claude/path-classes`. Low, normal, high (code, tests,
   documents in a branch; routine choices; fixing typos, links, lint errors; updating the owner
-  document; proposing a `proposed` ADR) need no approval; high gets the Santa loop.
+  document; proposing a `proposed` ADR) need no approval{% if dual_review %}; high gets the Santa loop{% endif %}.
 - Class gate (gate configurations, workflows, dependencies): no prompt; list it under "Gate
   files" in the pull request; the owner reviews it after the merge.
 - Class approval (rules, the map and the structure, ADRs on `main`, `.mcp.json`, credentials) and

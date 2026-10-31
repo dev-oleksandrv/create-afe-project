@@ -148,13 +148,13 @@ Governance follows risk and reversibility: every path a change touches takes the
 that applies, from the template's built-in rules and the project's `.claude/path-classes`
 (section 9); `scripts/check-decisions.sh --classes` prints them and the review they need.
 
-| Class | Paths (defaults; the project adds its own) | Before the edit | Review (`contributing.md`, section 6) |
+| Class | Paths (defaults; the project adds its own) | Before the edit | Review before the pull request, when its module is on (`contributing.md`, section 6) |
 | --- | --- | --- | --- |
-| low | Markdown outside the rules, generated files, a template update | nothing | none before the pull request |
+| low | Markdown outside the rules, the decision index, a template update | nothing | none |
 | normal | code, tests, scripts: every path no other class takes | nothing | one reviewer |
 | gate | workflows, project checks and Stop hooks, `.claude/harness.conf`, dependency manifests and lock files, linter, test, coverage, and mutation configuration | nothing; listed under "Gate files", reviewed by the owner after the merge | one reviewer |
 | high | security, secrets, access and authentication, data migrations, money and billing | nothing | Santa loop |
-| approval | `AGENTS.md`, the template-owned files, generated files, the map, `.claude/path-classes`, `.claude/settings.project.json`, `.mcp.json`, credentials, ADRs on `main` or not `proposed` | the protect hook asks the owner; a headless run is denied | by the class of the content |
+| approval | `AGENTS.md`, the template-owned files, the generated manifest, answers file, and `.claude/settings.json`, the map, `.claude/path-classes`, `.claude/settings.project.json`, `.mcp.json`, credentials, ADRs on `main` or not `proposed` | the protect hook asks the owner; a headless run is denied | by the class of the content |
 
 The protect hook (`.claude/hooks/protect-docs.sh`) asks on an Edit, Write, or MultiEdit call and
 on a shell command of a form its comments name (a redirect, `cp`, `mv`, `tee`, `rm`, `sed -i`,

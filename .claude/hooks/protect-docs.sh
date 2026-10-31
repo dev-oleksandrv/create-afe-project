@@ -113,7 +113,7 @@ protected_reason() {
 approval_listed() {
   local cls pat
   [ -f "$2" ] || return 1
-  while read -r cls pat; do
+  while read -r cls pat || [ -n "$cls" ]; do
     [ "$cls" = approval ] && [ -n "$pat" ] || continue
     # shellcheck disable=SC2254
     case "$1" in $pat) return 0 ;; esac

@@ -10,7 +10,7 @@ One fact has one owner document; every other document links to it instead of rep
 | --- | --- | --- |
 | Product name and purpose | [`README.md`](../README.md) | exists |
 | Agent rules: precedence, autonomy by risk, when a change is done, required checks | [`AGENTS.md`](../AGENTS.md) | exists |
-| Environment commands: set up, check, fast check, end-to-end tests, reset | check: `scripts/check.sh`; setup, fast check, end-to-end tests, reset: not decided, named here when the project first needs them | check exists |
+| Environment commands: set up, check, fast check, end-to-end tests, reset | check: `scripts/check.sh`; fast check: `scripts/check-docs.sh`, documents only; setup, end-to-end tests, reset: not decided, named here when the project first needs them | check and fast check exist |
 | Documentation statuses, lifecycle, path classes and access, ownership of files, alignment, review checklist | [`documentation-rules.md`](documentation-rules.md) | exists |
 | Branches, commit messages, pull requests, template updates, review of pull requests | [`contributing.md`](contributing.md); applied in Claude Code by the skills `.claude/skills/create-pr/` and `.claude/skills/update-template/`{% if code_review %}, in CI by `.claude/skills/review-code/`{% endif %}{% if dual_review %}, before a pull request by `.claude/skills/dual-review/`{% endif %} | exists |
 | What a test is for and must prove, gates on tests | [`testing-rules.md`](testing-rules.md) | exists |

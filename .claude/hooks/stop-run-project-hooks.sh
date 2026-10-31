@@ -9,6 +9,7 @@ root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 cd "$root" || exit 0
 shopt -s nullglob
 input=$(cat)
+RALPH_SESSION=$(printf '%s' "$input" | jq -r '.session_id // "none"' 2>/dev/null || echo none)
 # shellcheck source=scripts/lib/harness-conf.sh
 . scripts/lib/harness-conf.sh 2>/dev/null || { ralph_block() { printf '%s\n' "$2" >&2; exit 2; }; ralph_pass() { :; }; }
 for h in "$root"/.claude/hooks/project/stop/*.sh; do

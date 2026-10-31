@@ -154,7 +154,8 @@ expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/pl
     printf "%s\n" "$out" | grep -qx "$l" || { echo "missing: $l"; printf "%s\n" "$out"; exit 1; }; done'
 expect_pass "review: none for documents only" bash -c 'mkdir -p docs/plans && echo x > docs/plans/x.md && classes | grep -qx "review	none"'
 expect_pass "review: one for code" bash -c 'mkdir -p src && echo x > src/app.py && classes | grep -qx "review	one"'
-expect_pass "review: none for a template update of template-owned files" bash -c 'echo x >> docs/contributing.md && echo x >> scripts/check.sh && classes | grep -qx "review	none"'
+expect_pass "review: none for a template update" bash -c 'echo x >> docs/contributing.md && echo x >> scripts/check.sh && echo "# x" >> .copier-answers.yml && echo x >> .claude/harness.conf && classes | grep -qx "review	none"'
+expect_pass "review: one for template-owned edits without an update" bash -c 'echo x >> docs/contributing.md && echo x >> scripts/check.sh && classes | grep -qx "review	one"'
 
 echo "== metrics of merged pull requests on variant A"
 # A stand-in for gh that answers `gh pr list` with three merged pull requests: two in the period,
@@ -365,6 +366,20 @@ grep -q 'Project note.' "$u/README.md" || fail "update test: the seeded README w
 grep -q 'added by the next template version' "$u/docs/contributing.md" || fail "update test: the template change did not arrive"
 grep -q '_commit: v0.0.2' "$u/.copier-answers.yml" || fail "update test: the answers file does not record v0.0.2"
 (cd "$u" && scripts/check-template.sh > "$work/ut.log" 2>&1) || { cat "$work/ut.log"; fail "update test: template check fails after the update"; }
+# The 0.5.0 migration: an update from a release before 0.5.0 that seeded .claude/protected-paths
+# keeps its glob lines as class approval in .claude/path-classes.
+mt="$work/mtpl"
+mkdir -p "$mt" && cp -R copier.yml template "$mt/" && printf '# Protected paths.\n' > "$mt/template/.claude/protected-paths"
+git -C "$mt" init -q -b main && gitc "$mt" add -A && gitc "$mt" commit -q -m old && gitc "$mt" tag v0.4.9
+mu="$work/mu"
+copier copy -q --trust --defaults --vcs-ref v0.4.9 --data project_name=sample \
+  --data 'project_description=A sample project.' --data github_repo=example/sample "$mt" "$mu" > "$work/mu.log" 2>&1 ||
+  { cat "$work/mu.log"; fail "migration test: copy fails"; }
+git -C "$mu" init -q -b main && printf 'vendor/*\n' >> "$mu/.claude/protected-paths" && gitc "$mu" add -A && gitc "$mu" commit -q -m init
+rm "$mt/template/.claude/protected-paths" && gitc "$mt" add -A && gitc "$mt" commit -q -m new && gitc "$mt" tag v0.5.0
+(cd "$mu" && copier update -q --trust --defaults --vcs-ref v0.5.0 > "$work/mup.log" 2>&1) || { cat "$work/mup.log"; fail "migration test: update fails"; }
+grep -qx 'approval vendor/\*' "$mu/.claude/path-classes" && [ ! -e "$mu/.claude/protected-paths" ] && [ ! -e "$mu/.claude/protected-paths.pre-0.5" ] ||
+  fail "migration test: the glob lines of .claude/protected-paths are not class approval in .claude/path-classes"
 
 echo "== this repository matches template/"
 self="$work/self"

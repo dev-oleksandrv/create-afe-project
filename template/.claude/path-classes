@@ -1,13 +1,14 @@
 # Path classes of this project (docs/documentation-rules.md, sections 8 and 9): one
 # "<class> <glob>" per line, a shell glob relative to the repository root, in which * also matches
 # /. A path takes the highest class among the lines that match it and the template's built-in
-# ones (approval for the rules, the map, ADRs on main, and generated files). A path that nothing
+# ones (approval for the rules, the map, ADRs on main, and the generated manifest, answers file,
+# and settings). A path that nothing
 # matches is low when it is Markdown, otherwise normal. This file belongs to the project; a
 # change to it is class approval.
 #   approval  the owner approves the edit first: the protect hook asks, a headless run is denied
-#   high      Santa loop before the pull request: two reviewers until neither finds a blocker
+#   high      with the dual_review module, the Santa loop before the pull request
 #   gate      listed under "Gate files" in the pull request, reviewed by the owner after the merge
-#   normal    one reviewer before the pull request
+#   normal    with the dual_review module, one reviewer before the pull request
 #   low       no reviewer before the pull request
 
 # Secrets and tools with irreversible effects.

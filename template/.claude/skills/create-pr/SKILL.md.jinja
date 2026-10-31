@@ -1,7 +1,7 @@
 ---
 name: create-pr
 description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, the Ralph loop on the checks, and the description with its evidence, gate files, and metrics{% if dual_review %}, with the review before the pull request by path class{% endif %}{% if docs_review or code_review %}, then wait once for the review runs and answer each finding{% endif %}. Use when asked to create, open, or submit a pull request.
-allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), {% if dual_review %}Skill(dual-review), {% endif %}{% if docs_review or code_review %}Bash(gh pr comment:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), {% endif %}Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*){% if fail_without_change %}, Bash(scripts/fail-without-change.sh:*){% endif %}
+allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), {% if dual_review %}Skill(dual-review), {% endif %}{% if docs_review or code_review %}Bash(gh pr comment:*), Bash(gh run view:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), {% endif %}Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*){% if fail_without_change %}, Bash(scripts/fail-without-change.sh:*){% endif %}
 ---
 
 # Create a pull request
@@ -74,7 +74,10 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    - Wait once: poll `gh pr view --json statusCheckRollup` about every 30 seconds until each
      entry of {% if docs_review %}`docs-review`{% endif %}{% if docs_review and code_review %} or {% endif %}{% if code_review %}`code-review`{% endif %} is `COMPLETED`, for at most {% if code_review %}30{% else %}20{% endif %} minutes; never one long sleep.
      A run that does not appear within a few minutes, does not finish, or does not end in
-     `SUCCESS` is reported with its URL.
+     `SUCCESS` is reported with its URL. So is a `SUCCESS` run whose log
+     (`gh run view <id> --log`) says the action was skipped: the action skips a pull request
+     that changes its own workflow file. That review did not run: run its skill once in this
+     session with a fresh Claude subagent instead, and say so under "Checks".
    - Findings: the inline comments (`gh api repos/{owner}/{repo}/pulls/<number>/comments`) and
      the general ones (`gh api repos/{owner}/{repo}/issues/<number>/comments`); the run's own
      progress comment is not a finding.

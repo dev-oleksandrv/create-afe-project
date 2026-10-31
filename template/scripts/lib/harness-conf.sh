@@ -28,8 +28,9 @@ matching_files() {
 # exits 2, which sends the agent back to fix it; at the cap, prints the message and that the cap
 # is reached, resets the count, and exits 0, so the agent stops and reports the failure.
 # ralph_pass <name>: resets the count when the hook's check passes. The counts live in the git
-# directory, one file per hook.
-ralph_count_file() { printf '%s/ralph-stops-%s' "$(git rev-parse --git-dir 2>/dev/null || echo /tmp)" "$1"; }
+# directory, one file per hook and Claude Code session (RALPH_SESSION, the hook input's
+# session_id), so an interrupted loop does not shorten the next one.
+ralph_count_file() { printf '%s/ralph-stops-%s-%s' "$(git rev-parse --git-dir 2>/dev/null || echo /tmp)" "${RALPH_SESSION:-none}" "$1"; }
 ralph_block() {
   local f n cap
   f=$(ralph_count_file "$1")

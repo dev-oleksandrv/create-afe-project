@@ -31,8 +31,8 @@ How the template is changed, tested, versioned, and released. Questions and file
 2. Add an entry under `## [Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md), in the section
    that matches its effect (Added, Changed, Fixed, Removed), naming the files a project sees
    change. An entry that adds a rule or a check names the recurring failure it addresses, with
-   the pull requests where that failure occurred; a rule or check without one is not added
-   (section 6).
+   the pull requests where that failure occurred; a rule or check without one is added only on
+   the owner's decision, and the entry says so (section 6).
 3. Run `scripts/check.sh`. Its project part, `scripts/checks.d/10-template.sh`, is the template
    test suite (section 3).
 4. Open the pull request with the `create-pr` skill, as in any generated project.
