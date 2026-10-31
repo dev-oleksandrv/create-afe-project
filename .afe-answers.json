@@ -8,6 +8,7 @@
   "docs_review": true,
   "code_review": true,
   "dual_review": false,
+  "secret_scan": true,
   "acceptance_check": false,
   "fail_without_change": false
 }

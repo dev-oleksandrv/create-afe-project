@@ -35,4 +35,5 @@ scripts/lib/json.mjs
 .github/workflows/decisions.yml
 .github/workflows/docs-review.yml
 .github/workflows/code-review.yml
+.github/workflows/secret-scan.yml
 .markdownlint-cli2.jsonc

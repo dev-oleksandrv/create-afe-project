@@ -90,6 +90,12 @@ export const QUESTIONS = [
     default: false,
   },
   {
+    name: 'secret_scan',
+    type: 'bool',
+    help: 'Scan every pull request and push to main for secrets with gitleaks in CI (downloaded at a pinned version; nothing to install)',
+    default: true,
+  },
+  {
     name: 'acceptance_check',
     type: 'bool',
     help: "Check that every identifier of a pull request's Acceptance section appears in a test file (set TEST_GLOBS in .claude/harness.conf)",
@@ -116,6 +122,7 @@ export function messageAfterCreate(a) {
   const steps = ['protect main with scripts/protect-branch.sh', 'set up the CI runner'];
   if (a.docs_review || a.code_review) steps.push('the CLAUDE_CODE_OAUTH_TOKEN secret, and the Claude GitHub App');
   if (a.dual_review) steps.push('install and sign in to the Codex CLI');
+  steps.push('turn on secret scanning and push protection (Settings, Code security)');
   return (
     `${a.project_name} is ready. Next: make the initial commit on main (the one direct commit that ` +
     'docs/contributing.md allows), add the remote origin, push, run git remote set-head origin -a, ' +

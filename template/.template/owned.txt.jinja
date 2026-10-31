@@ -52,6 +52,9 @@ scripts/lib/json.mjs
 {%- if code_review %}
 .github/workflows/code-review.yml
 {%- endif %}
+{%- if secret_scan %}
+.github/workflows/secret-scan.yml
+{%- endif %}
 {%- if fail_without_change %}
 .github/workflows/fail-without-change.yml
 {%- endif %}

@@ -24,7 +24,7 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   its own documents. A need that the extension points do not cover is a
   change of the template, not a local edit.
 - Optional parts are modules behind a question of `src/config.js` (today: `docs_review`, `code_review`,
-  `dual_review`, `acceptance_check`, and `fail_without_change`). A module's
+  `dual_review`, `secret_scan`, `acceptance_check`, and `fail_without_change`). A module's
   files use a conditional file name, and the documents mention the module only inside the same
   condition.
 
@@ -80,9 +80,11 @@ names, behind `cd DIR`, `git -C DIR`, or in an interpreter's heredoc) and which 
 at the Ralph cap and counts again afterwards; that a large change only warns; that
 `scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
 settings deny reading secrets. It also checks that the protect hook asks before publishing a
-package or an image, `gh workflow run`, a `gh api` DELETE, and denies a push to `main` once the remote has it; that a hook command whose script is
+package or an image, `gh workflow run`, a `gh api` DELETE, and an edit or command with a known
+token format, and denies a push to `main` once the remote has it; that a hook command whose script is
 missing fails the template check; that the link check finds a missing file or anchor; that
-`scripts/protect-branch.sh --dry-run` prints the ruleset. It also checks that `update` keeps project content (the project
+`scripts/protect-branch.sh --dry-run` prints the ruleset; and that the `secret-scan` workflow
+appears only with its module. It also checks that `update` keeps project content (the project
 block, seeded files, project checks), creates a missing seeded file, removes a file the template
 no longer owns, refuses a dirty working tree and a downgrade, reports and replaces a local edit
 of a template-owned file, converts a Copier answers file, and runs the 0.5.0 migration; and that

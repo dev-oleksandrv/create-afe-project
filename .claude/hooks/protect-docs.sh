@@ -22,8 +22,8 @@ set -uo pipefail
 # Without Node.js the hook cannot read the tool call; block it rather than allow everything.
 command -v node >/dev/null || { echo "protect-docs: Node.js is required (README.md, Checks)" >&2; exit 2; }
 json="$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib/json.mjs"
-{ IFS= read -r -d '' tool; IFS= read -r -d '' cwd; IFS= read -r -d '' file_path; IFS= read -r -d '' cmd; } < <(
-  node "$json" fields tool_name cwd tool_input.file_path tool_input.command)
+{ IFS= read -r -d '' tool; IFS= read -r -d '' cwd; IFS= read -r -d '' file_path; IFS= read -r -d '' cmd
+  IFS= read -r -d '' secret; } < <(node "$json" fields tool_name cwd tool_input.file_path tool_input.command @secret)
 [ -n "$cwd" ] && [ -d "$cwd" ] || cwd=$PWD
 project="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$project" ] && project=$(cd "$project" 2>/dev/null && pwd -P) || project=
@@ -276,6 +276,12 @@ ask_action() {
   node "$json" ask "Irreversible action: $1. It needs an explicit owner instruction (AGENTS.md, section 4; docs/documentation-rules.md, section 8). Approve only if you asked for it."
   exit 0
 }
+
+# A known token format in what the call writes: secrets never go into the repository.
+if [ -n "$secret" ] && [[ "$tool" =~ ^(Edit|Write|MultiEdit|Bash)$ ]]; then
+  node "$json" ask "Possible secret ($secret) in this change. Secrets never go into the repository or a command line; use an environment variable or the CI secret store. Approve only if it is a placeholder or a test fixture."
+  exit 0
+fi
 
 case "$tool" in
   Edit|Write|MultiEdit)

@@ -112,6 +112,7 @@ These rules apply once code exists; they are fixed now so the first code follows
 | --- | --- | --- |
 | Markdown syntax and structure | markdownlint-cli2 | none |
 | Broken internal links and anchors | `scripts/check-links.mjs`, offline, with anchors | none |
+| Secrets in a change | gitleaks in the `secret-scan` workflow; the protect hook asks when an edit contains a known token format | none |
 | External links | not checked automatically | author verifies when adding; spot check on review |
 | Status correctness | none | status matches the evidence (section 3) |
 | Invented facts | none | every new fact has a source or is marked unknown |

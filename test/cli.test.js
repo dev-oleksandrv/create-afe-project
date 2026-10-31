@@ -17,7 +17,7 @@ test('questions take their defaults and skip the runner labels on a GitHub-hoste
   const { answers, context } = await answer({});
   assert.deepEqual(Object.keys(answers), [
     'project_name', 'project_description', 'github_repo', 'ci_runner', 'docs_review', 'code_review',
-    'dual_review', 'acceptance_check', 'fail_without_change',
+    'dual_review', 'secret_scan', 'acceptance_check', 'fail_without_change',
   ]);
   assert.equal(context.ci_runs_on_default, '["ubuntu-latest"]');
 });
@@ -81,7 +81,7 @@ test('conditional names drop files and directories, .jinja is stripped, _gitigno
 
 test('every rendered file is template-owned or seeded, with every module on and off', async () => {
   for (const on of [true, false]) {
-    const flags = Object.fromEntries(['docs_review', 'code_review', 'dual_review', 'acceptance_check', 'fail_without_change'].map((k) => [k, on]));
+    const flags = Object.fromEntries(['docs_review', 'code_review', 'dual_review', 'secret_scan', 'acceptance_check', 'fail_without_change'].map((k) => [k, on]));
     const { context } = await answer(flags);
     const out = renderTemplate(TEMPLATE_DIR, context);
     const owned = String(out.get('.template/owned.txt').content).split('\n').filter((l) => l && !l.startsWith('#'));

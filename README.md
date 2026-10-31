@@ -18,8 +18,8 @@ Claude Code skills that apply them. It implements the pillars of
 | Branches, commits, pull requests, template updates, review of pull requests | `docs/contributing.md` |
 | Decision records | `docs/decisions/adr-template.md`, a generated `docs/decisions/README.md` |
 | Checks and environment | `scripts/check.sh` and the scripts it runs, the link check `scripts/check-links.mjs` included; `scripts/env.sh` for the environment commands; `scripts/protect-branch.sh` for the GitHub ruleset of `main`; optional `scripts/check-acceptance.sh` and `scripts/fail-without-change.sh` |
-| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated): deny rules for secrets and destructive pushes; `.claude/hooks/`: the protect hook (asks before protected edits and publishing; denies a push to `main`) and the Stop hooks; `.claude/skills/`: `create-pr`, `update-template`, optional `docs-review`, `review-code`, and `dual-review` |
-| CI | `.github/workflows/` (`docs`, `decisions`, optional `docs-review`, `code-review`, and `fail-without-change`) |
+| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated): deny rules for secrets and destructive pushes; `.claude/hooks/`: the protect hook (asks before protected edits, publishing, and a known token format; denies a push to `main`) and the Stop hooks; `.claude/skills/`: `create-pr`, `update-template`, optional `docs-review`, `review-code`, and `dual-review` |
+| CI | `.github/workflows/` (`docs`, `decisions`, optional `secret-scan`, `docs-review`, `code-review`, and `fail-without-change`) |
 
 Every file has one owner: the template, the project, or a generator. The rules are in
 [`template/docs/documentation-rules.md.jinja`](template/docs/documentation-rules.md.jinja),
@@ -41,7 +41,7 @@ npx create-afe-project@latest <directory>
 The wizard asks for the project name, a one-sentence description, the GitHub repository, the CI
 runner (GitHub-hosted, or a self-hosted Linux runner), whether pull requests get the Claude
 documentation review and code review, whether the review before a pull request adds the Codex CLI
-and the Santa loop (it runs with a Claude subagent either way), and whether to add the Acceptance
+and the Santa loop (it runs with a Claude subagent either way), whether CI scans every change for secrets with gitleaks, and whether to add the Acceptance
 check and the fail-without-change driver. It then writes the generated files and prints the next
 steps. Without a terminal, or with `--defaults`, it takes answers from `--data key=value` and
 `--data-file answers.json`, then the defaults:

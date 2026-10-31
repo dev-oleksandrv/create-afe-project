@@ -35,6 +35,8 @@ a="$work/a"
 render "$a" || fail "variant A does not render"
 (cd "$a" && scripts/check.sh > "$work/a.log" 2>&1) || { cat "$work/a.log"; fail "variant A: scripts/check.sh fails"; }
 grep -q 'ubuntu-latest' "$a/.github/workflows/docs.yml" || fail "variant A: docs.yml lacks the GitHub-hosted default"
+grep -q 'GITLEAKS_VERSION: [0-9]' "$a/.github/workflows/secret-scan.yml" && grep -q 'runs-on: ${{ fromJSON(vars.CI_RUNS_ON' "$a/.github/workflows/secret-scan.yml" ||
+  fail "variant A: the secret-scan workflow is missing or not rendered"
 [ -f "$a/.github/workflows/code-review.yml" ] && [ -f "$a/.claude/skills/review-code/SKILL.md" ] ||
   fail "variant A: code-review files are missing although the module is on"
 [ ! -e "$a/.claude/skills/dual-review" ] || fail "variant A: dual-review files exist although the module is off"
@@ -273,6 +275,14 @@ stop; [ $? -eq 2 ] || fail "ralph cap: the count does not restart after the cap"
 gitc "$a" switch -q main && gitc "$a" branch -q -D ralph && rm -f "$(git -C "$a" rev-parse --git-dir)"/ralph-stops-*
 hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
 hook allow '{"tool_name":"Bash","tool_input":{"command":"gh pr view 3 --json state"}}'
+# A known token format in written content or a command asks; the tokens are assembled here, so
+# this file holds none.
+aws="AKIA""IOSFODNN7EXAMPLE" ghp="ghp_""$(printf 'a%.0s' $(seq 1 36))" pk="-----BEGIN ""RSA PRIVATE KEY-----"
+hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/src/config.py","content":"KEY = \"'"$aws"'\""}}'
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/src/x.js","old_string":"a","new_string":"token: '"$ghp"'"}}'
+hook ask '{"tool_name":"MultiEdit","tool_input":{"file_path":"'"$a"'/k.pem","edits":[{"old_string":"a","new_string":"'"$pk"'"}]}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"echo '"$ghp"' > .token"}}'
+hook allow '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/src/config.py","content":"KEY = os.environ[\"AWS_ACCESS_KEY_ID\"]"}}'
 for c in "npm run build" "gh api repos/o/r/pulls" "docker build ." "git push origin main"; do
   hook allow '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
@@ -361,10 +371,11 @@ gitc "$a" switch -q main && gitc "$a" branch -q -D pushed && git -C "$a" remote 
 
 echo "== smoke: a documentation-only project, every module off"
 c="$work/c"
-render "$c" --data docs_review=false --data code_review=false --data dual_review=false \
+render "$c" --data docs_review=false --data code_review=false --data dual_review=false --data secret_scan=false \
   --data acceptance_check=false --data fail_without_change=false || fail "the documentation-only project does not render"
 (cd "$c" && scripts/check.sh > "$work/c.log" 2>&1) || { cat "$work/c.log"; fail "documentation-only: scripts/check.sh fails"; }
-[ ! -e "$c/scripts/check-acceptance.sh" ] && [ ! -e "$c/scripts/fail-without-change.sh" ] && [ ! -e "$c/.github/workflows/fail-without-change.yml" ] ||
+[ ! -e "$c/scripts/check-acceptance.sh" ] && [ ! -e "$c/scripts/fail-without-change.sh" ] && [ ! -e "$c/.github/workflows/fail-without-change.yml" ] &&
+  [ ! -e "$c/.github/workflows/secret-scan.yml" ] && ! grep -q gitleaks "$c/docs/documentation-rules.md" ||
   fail "documentation-only: module scripts exist although the modules are off"
 mkdir -p "$c/docs/plans" && echo x > "$c/docs/plans/x.md"
 (cd "$c" && scripts/check-decisions.sh --ready --base main --pr-body "$work/r-none.md" > "$work/c-ready.log" 2>&1 &&

@@ -34,8 +34,12 @@
 - A second pass over the AFE guide, on the owner's decisions of 2026-10-31; no observed failure.
   - The protect hook asks before publishing (`npm`, `pnpm`, `yarn`, `bun`, `cargo`, `poetry`, `uv`
     publish, `twine upload`, `gem push`, `dotnet nuget push`, `docker` or `podman push`),
-    `gh workflow run`, and a `gh api` DELETE, also behind `git -C DIR`; and it denies a push to the
-    default branch once the remote has it.
+    `gh workflow run`, and a `gh api` DELETE, also behind `git -C DIR`; it denies a push to the
+    default branch once the remote has it; and it asks when an edit or a command contains a known
+    token format (AWS, GitHub, GitLab, Slack, Stripe, Google, Anthropic, OpenAI, npm, private keys).
+  - `secret_scan` module (new, default on): `.github/workflows/secret-scan.yml` runs gitleaks,
+    downloaded at a pinned version with its checksum, on the commits of every pull request and
+    push to `main`. The message after create also names GitHub's secret scanning and push protection.
   - `scripts/protect-branch.sh` (new): creates or updates the GitHub ruleset that protects the
     default branch (pull requests only, the `check` and `integrity` checks, no force push or
     deletion); the owner runs it once.
