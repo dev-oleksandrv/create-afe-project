@@ -13,7 +13,7 @@ One fact has one owner document; every other document links to it instead of rep
 | How the template is changed, tested, versioned, and released | [`maintaining.md`](maintaining.md) | exists |
 | What changed in each release | [`CHANGELOG.md`](../CHANGELOG.md) | exists |
 | Agent rules: precedence, autonomy by risk, when a change is done, required checks | [`AGENTS.md`](../AGENTS.md) | exists |
-| Environment commands: set up, check, fast check, end-to-end tests, reset | check: `scripts/check.sh`; fast check: `scripts/check-docs.sh`; end-to-end tests: the template tests `scripts/checks.d/10-template.sh` ([`maintaining.md`](maintaining.md), section 3); setup and reset: not decided | check, fast check, and end-to-end tests exist |
+| Environment commands: set up, check, fast check, end-to-end tests, reset | `scripts/env.sh` with `setup`, `check`, `fast`, `e2e`, or `reset` runs `.claude/harness.conf`: check `scripts/check.sh`, fast check `scripts/check-docs.sh`, end-to-end tests the template tests `scripts/checks.d/10-template.sh` ([`maintaining.md`](maintaining.md), section 3); setup and reset: not decided | check, fast check, and end-to-end tests exist |
 | Documentation statuses, lifecycle, path classes and access, ownership of files, alignment, review checklist | [`documentation-rules.md`](documentation-rules.md) | exists |
 | What a test is for and must prove, gates on tests | [`testing-rules.md`](testing-rules.md) | exists |
 | Branches, commit messages, pull requests, template updates, review of pull requests | [`contributing.md`](contributing.md); applied in Claude Code by the skills `.claude/skills/create-pr/` and `.claude/skills/update-template/`, in CI by `.claude/skills/review-code/` | exists |
@@ -30,10 +30,10 @@ placeholder files.
 | Kind of fact | Planned owner | Created when |
 | --- | --- | --- |
 | Requirements: what the system must do | `docs/requirements/`, one `REQ-NNN` per statement | the owner states the first requirement |
-| Architecture: components, boundaries, runtime, code structure | `docs/architecture/` | the first design is proposed |
+| Architecture: the system map, components, domain ownership, boundaries and dependency rules, runtime | `docs/architecture/` | the first design is proposed |
 | Contracts: APIs, schemas, events | `contracts/` at the repository root, machine-readable and authoritative | the first interface is designed |
 | Active plans | `docs/plans/` | work spans more than one session |
-| Operations: run, deploy, observe, recover | `docs/operations/` | there is something to operate |
+| Operations: run, deploy, observe (logs, traces, metrics, scenario replay), recover | `docs/operations/` | there is something to operate |
 | Implemented behaviour | source code and its tests | the first code is merged |
 
 ## Reading order for a new agent

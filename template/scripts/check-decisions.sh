@@ -39,6 +39,8 @@ skip() { printf 'SKIP: %s\n' "$*"; }
 . scripts/lib/git-base.sh
 # shellcheck source=scripts/lib/classes.sh
 . scripts/lib/classes.sh
+# shellcheck source=scripts/lib/harness-conf.sh
+. scripts/lib/harness-conf.sh
 mb=$(resolve_base "$base") || exit 2
 base="${base:-the default base}"
 
@@ -247,8 +249,9 @@ table_rows() {
 # "Metrics": the two tables of docs/contributing.md, section 3. A sensor row has six cells: the
 # sensor, the class (blocker or suggestion), and the numbers found, fixed, limit, and declined,
 # which add up; a blocker is never a limit. The measure table has each measure once: First
-# check.sh (pass or fail), and Ralph iterations, Santa rounds, Owner interventions, and Files
-# outside the scope, each a number, optionally followed by details.
+# check.sh (pass or fail); Ralph iterations, Santa rounds, Owner interventions, and Files outside
+# the scope, each a number, optionally followed by details; and Regression of (none, or the #N of
+# the pull request whose behaviour the change repairs).
 check_metrics() {
   local sec n a b c d e f m measures=
   sec=$(section_of Metrics "$1") || {
@@ -269,6 +272,7 @@ check_metrics() {
       case "$a:$b" in
         'First check.sh:pass'*|'First check.sh:fail'*) ;;
         'Ralph iterations:'[0-9]*|'Santa rounds:'[0-9]*|'Owner interventions:'[0-9]*|'Files outside the scope:'[0-9]*) ;;
+        'Regression of:none'*|'Regression of:#'[0-9]*) ;;
         *) fail "Metrics: measure '$a' with value '$b' is outside the forms of docs/contributing.md, section 3"; continue ;;
       esac
       case "$measures|" in *"|$a|"*) fail "Metrics: measure '$a' appears twice" ;; esac
@@ -277,7 +281,7 @@ check_metrics() {
       fail "Metrics: a table row with $n cells; sensor rows have 6, measure rows 2"
     fi
   done < <(printf '%s\n' "$sec" | table_rows)
-  for m in 'First check.sh' 'Ralph iterations' 'Santa rounds' 'Owner interventions' 'Files outside the scope'; do
+  for m in 'First check.sh' 'Ralph iterations' 'Santa rounds' 'Owner interventions' 'Files outside the scope' 'Regression of'; do
     case "$measures|" in *"|$m|"*) ;; *) fail "Metrics: no '$m' row" ;; esac
   done
 }
@@ -306,6 +310,18 @@ check_markers() {
     [ "$have" -ge "$need" ] ||
       fail "$f: the change adds $need 'Decided by the owner' marker(s) and 'Owner decisions' names the file in $have item(s) (docs/contributing.md, section 3)"
   done <<< "$markers"
+}
+
+# A small diff (docs/contributing.md, section 1): a warning, never a failure, when the lines the
+# change adds and deletes, generated files left out, exceed DIFF_WARN_LINES of .claude/harness.conf.
+check_size() {
+  local limit n
+  limit=$(conf_get DIFF_WARN_LINES)
+  [ -n "$limit" ] || return 0
+  n=$(git diff --numstat "$mb" -- . ':(exclude).template/owned.sha256' ':(exclude).copier-answers.yml' \
+        ':(exclude).claude/settings.json' ':(exclude)docs/decisions/README.md' | awk '{a += $1 + $2} END {print a + 0}')
+  n=$((n + $(git ls-files -z --others --exclude-standard | xargs -0 cat 2>/dev/null | wc -l | tr -d ' ')))
+  [ "$n" -le "$limit" ] || echo "WARNING: the change has $n changed lines, more than DIFF_WARN_LINES ($limit); split it, or say in the description why it is one change"
 }
 
 # "Gate files": names every path of class gate the change touches; prints them.
@@ -350,6 +366,7 @@ else
     check_markers "$body"
     check_gate_files "$body"
     check_metrics "$body"
+    check_size
     if [ -x scripts/check-acceptance.sh ]; then
       scripts/check-acceptance.sh --pr-body "$body" || fail "scripts/check-acceptance.sh failed (above)"
     fi

@@ -14,8 +14,8 @@
 # permission prompt for the owner (`permissionDecision: ask`); in headless runs Claude Code denies
 # it. DOCS_GUARD=off in the Claude Code environment disables the guard for scripted owner-driven
 # runs, such as a template update. This is a guard against unreviewed changes, not a security
-# boundary: a command that hides the target path (for example inside a script file, behind a `cd`
-# in the command, or through `git -C`) is not detected.
+# boundary: a command that hides the target path (for example inside a script file, behind a
+# variable, or in a directory changed by a script) is not detected.
 set -uo pipefail
 [ "${DOCS_GUARD:-on}" = "off" ] && exit 0
 
@@ -124,35 +124,70 @@ approval_listed() {
 # Prints the paths a shell command can write, one per line: redirect targets in every segment, the
 # destination of cp, mv, install, and ln, the files of tee, rm, truncate, and touch, dd's of=, the
 # files of sed -i, perl -i, and git checkout, restore, rm, mv, and apply, and file-like tokens of an
-# interpreter (python, node, ruby, perl, bash, sh). Input files (<) and sources are not targets.
+# interpreter (python, node, ruby, perl, bash, sh), also in the heredoc a python, node, ruby, or
+# perl reads; a heredoc on a line where a shell runs (`bash <<EOF`, `cat <<EOF | sh`,
+# `source /dev/stdin <<EOF`) is parsed as commands. A relative target is joined to
+# the directory of an earlier `cd DIR` with a literal DIR, and a git path argument to a literal
+# `git -C DIR`. The body of any other heredoc is text, not commands; `<<<`, `$((1 << n))`, and
+# `<<` inside quotes start no heredoc. Input files (<) and sources are not targets.
 write_targets() {
   printf '%s\n' "$1" | awk '
-    function emit_all(from,   x, na, A) { na = split(args, A, " "); for (x = from; x <= na; x++) print A[x] }
+    function out(t) { if (t == "") return; if (t !~ /^\// && pre != "") t = pre "/" t; print t }
+    function emit_all(from,   x, na, A) { na = split(args, A, " "); for (x = from; x <= na; x++) out(A[x]) }
+    function files(text,   tmp) {
+      tmp = text
+      while (match(tmp, /[A-Za-z0-9_.\/-]*(\.(md|json|jsonc|toml|yml|yaml|sh|txt|sha256|jinja|conf|pem|key)|\.claude\/(protected-paths|path-classes)|\.env[A-Za-z0-9_.]*)/)) {
+        out(substr(tmp, RSTART, RLENGTH)); tmp = substr(tmp, RSTART + RLENGTH)
+      }
+    }
+    BEGIN { dir = "" }
+    hd != "" { l = $0; gsub(/^[ \t]+|[ \t]+$/, "", l); if (l == hd) { hd = ""; next }; if (hdint) { pre = dir; files($0) }; next }
     {
-      n = split($0, segs, /[|;&]+/)
-      for (i = 1; i <= n; i++) {
-        s = segs[i]; tmp = s
-        while (match(tmp, />>?[ \t]*["\047]?[A-Za-z0-9_.\/-]+/)) {
-          t = substr(tmp, RSTART, RLENGTH); sub(/^>>?[ \t]*["\047]?/, "", t); print t
-          tmp = substr(tmp, RSTART + RLENGTH)
-        }
-        gsub(/[0-9]*>>?[ \t]*["\047]?[^ \t]*/, "", s); gsub(/<[ \t]*[^ \t]*/, "", s)
-        m = split(s, w, /[ \t]+/); k = 1
-        while (k <= m && (w[k] == "" || w[k] ~ /^[A-Za-z_][A-Za-z0-9_]*=/ || w[k] == "sudo" || w[k] == "command")) k++
-        cmd = w[k]; sub(/.*\//, "", cmd); args = ""
-        for (j = k + 1; j <= m; j++) { a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a); if (a !~ /^-/) args = args " " a }
-        if (cmd ~ /^(cp|mv|install|ln)$/) { na = split(args, A, " "); if (na) print A[na] }
-        else if (cmd ~ /^(tee|rm|truncate|touch)$/) emit_all(1)
-        else if (cmd == "dd") { na = split(args, A, " "); for (x = 1; x <= na; x++) if (sub(/^of=/, "", A[x])) print A[x] }
-        else if (cmd ~ /^(sed|perl)$/ && s ~ /[ \t]-[a-zA-Z]*i/) emit_all(1)
-        else if (cmd == "git" && w[k + 1] ~ /^(checkout|restore|rm|mv|apply)$/) emit_all(2)
-        if (cmd ~ /^(python3?|node|ruby|perl|bash|sh|zsh)$/) {
-          tmp = s
-          while (match(tmp, /[A-Za-z0-9_.\/-]*(\.(md|json|jsonc|toml|yml|yaml|sh|txt|sha256)|\.claude\/(protected-paths|path-classes))/)) {
-            print substr(tmp, RSTART, RLENGTH); tmp = substr(tmp, RSTART + RLENGTH)
-          }
+      line = $0; delim = ""
+      if (match(line, /<<-?[ \t]*["\047]?[A-Za-z_][A-Za-z0-9_]*/)) {
+        before = substr(line, 1, RSTART - 1); cand = substr(line, RSTART, RLENGTH)
+        dq = gsub(/"/, "\"", before); sq = gsub(/\047/, "\047", before)
+        if (before !~ /<$/ && before !~ /\$\(\([^)]*$/ && dq % 2 == 0 && sq % 2 == 0) {
+          delim = cand; sub(/^<<-?[ \t]*["\047]?/, "", delim)
         }
       }
+      n = split(line, segs, /[|;&]+/)
+      for (i = 1; i <= n; i++) {
+        s = segs[i]; tmp = s; pre = dir
+        m = split(s, w, /[ \t]+/); k = 1
+        while (k <= m && (w[k] == "" || w[k] ~ /^[A-Za-z_][A-Za-z0-9_]*=/ || w[k] == "sudo" || w[k] == "command")) k++
+        cmd = w[k]; sub(/.*\//, "", cmd)
+        if (cmd == "cd") {
+          d = w[k + 1]; gsub(/^["\047]+|["\047]+$/, "", d)
+          if (d ~ /[$`~*?]/ || d == "" || d == "-") { }
+          else if (d ~ /^\//) dir = d; else dir = (dir == "" ? d : dir "/" d)
+          continue
+        }
+        while (match(tmp, />>?[ \t]*["\047]?[A-Za-z0-9_.\/-]+/)) {
+          t = substr(tmp, RSTART, RLENGTH); sub(/^>>?[ \t]*["\047]?/, "", t); out(t)
+          tmp = substr(tmp, RSTART + RLENGTH)
+        }
+        if (cmd == "git" && w[k + 1] == "-C") {
+          d = w[k + 2]; gsub(/^["\047]+|["\047]+$/, "", d)
+          if (d !~ /[$`~*?]/) pre = (d ~ /^\// || dir == "") ? d : dir "/" d
+          for (x = k + 1; x + 2 <= m; x++) w[x] = w[x + 2]; m -= 2
+        }
+        gsub(/[0-9]*>>?[ \t]*["\047]?[^ \t]*/, "", s); gsub(/<<?-?[ \t]*[^ \t]*/, "", s)
+        if (cmd != "git") { m = split(s, w, /[ \t]+/); k = 1
+          while (k <= m && (w[k] == "" || w[k] ~ /^[A-Za-z_][A-Za-z0-9_]*=/ || w[k] == "sudo" || w[k] == "command")) k++ }
+        args = ""
+        for (j = k + 1; j <= m; j++) { a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a); if (a !~ /^-/) args = args " " a }
+        if (cmd ~ /^(cp|mv|install|ln)$/) { na = split(args, A, " "); if (na) out(A[na]) }
+        else if (cmd ~ /^(tee|rm|truncate|touch)$/) emit_all(1)
+        else if (cmd == "dd") { na = split(args, A, " "); for (x = 1; x <= na; x++) if (sub(/^of=/, "", A[x])) out(A[x]) }
+        else if (cmd ~ /^(sed|perl)$/ && s ~ /[ \t]-[a-zA-Z]*i/) emit_all(1)
+        else if (cmd == "git" && w[k + 1] ~ /^(checkout|restore|rm|mv|apply)$/) emit_all(2)
+        if (cmd ~ /^(python3?|node|ruby|perl|bash|sh|zsh)$/) files(segs[i])
+        if (delim != "" && segs[i] ~ /<</) hdint = (cmd ~ /^(python3?|node|ruby|perl)$/)
+        if (cmd ~ /^(bash|sh|zsh|source|\.)$/) hdsh = 1
+      }
+      if (delim != "" && !hdsh) hd = delim
+      hdsh = 0
     }'
 }
 

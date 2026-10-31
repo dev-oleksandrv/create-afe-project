@@ -13,6 +13,7 @@ scripts/check-template.sh
 scripts/check-project.sh
 scripts/gen-decisions-index.sh
 scripts/gen-settings.sh
+scripts/env.sh
 scripts/pr-metrics.sh
 scripts/lib/git-base.sh
 scripts/lib/classes.sh

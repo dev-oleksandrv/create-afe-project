@@ -6,6 +6,58 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+A second pass over the Agent-Friendly Engineering field guide, on the owner's decisions of
+2026-10-31, and the follow-ups of 0.5.0. Observed failures: the protect hook let two writes into
+rule files through, behind `cd` and in a Python heredoc (pull request #14); the review workflows
+skipped #14 and reported success. The other additions come from the owner's decisions on the
+guide, without an observed failure.
+
+### Added
+
+- Environment contract: `scripts/env.sh setup|check|fast|e2e|reset` runs the project's commands
+  `SETUP`, `CHECK_FAST` (default `scripts/check-docs.sh`), `E2E`, and `RESET` of
+  `.claude/harness.conf`, and `scripts/check.sh` for `check`; an unset command is SKIP, and the
+  exit code is the command's. `AGENTS.md`, section 2, and the map point at it.
+- `fail_without_change` module: `.github/workflows/fail-without-change.yml` runs
+  `scripts/env.sh setup` and the driver on every pull request; the label `tests-pass-on-base`
+  allows a pass. The driver installs with `SETUP` when `FWC_INSTALL` is empty, and a test must
+  now also pass with the change, so a missing toolchain is no longer evidence.
+- Access control: `.claude/settings.json` denies reading `.env`, `.env.*`, `*.pem`, and `*.key`
+  (also through `cat` and the like); a project that needs one, such as `.env.example`, takes the
+  rule out with `"remove": {"permissions": {"deny": ["Read(**/.env.*)"]}}` in
+  `.claude/settings.project.json`, which `scripts/gen-settings.sh` now supports.
+- Metrics: the measure "Regression of" (`none` or `#N`), required by readiness;
+  `scripts/pr-metrics.sh` adds the regression rate, the hours to merge, and the median and
+  maximum of each measure.
+- A small diff: readiness warns, without failing, above `DIFF_WARN_LINES` (default 400) changed
+  lines, generated files left out.
+- `contracts/*` is class high by default in `.claude/path-classes`.
+
+### Changed
+
+- Review before the pull request runs without the `dual_review` module too: one pass by a fresh
+  Claude subagent, which `create-pr` runs, for classes normal, gate, and high; the module adds
+  the Codex CLI and the Santa loop. `review-code` always checks that "Checks" names it.
+- `.claude/hooks/protect-docs.sh`: a target behind `cd DIR` or `git -C DIR` resolves against
+  that directory; the file names in an interpreter's heredoc are targets; the body of another
+  heredoc is not read as commands.
+- `docs/contributing.md`: section 1, a session that stops unfinished leaves a checkpoint
+  (commits pushed, progress and blockers in the plan or the description), and GitHub deletes
+  merged branches; section 5, shorter; section 6, a defect fix gives the evidence pack.
+- `docs/documentation-rules.md`, section 2: acceptance criteria as Given, When, Then with their
+  checks; architecture holds the system map with domain ownership and dependency rules.
+  `docs/testing-rules.md`: the project names the levels of its verification ladder.
+
+### Seeded files: what an existing project does by hand
+
+- `.claude/harness.conf`: add `SETUP=`, `CHECK_FAST=scripts/check-docs.sh` (or the project's
+  fast check), `E2E=`, `RESET=`, and `DIFF_WARN_LINES=400`.
+- `.claude/path-classes`: add `high contracts/*` when the project has contracts.
+- `docs/README.md`: the row "Environment commands" names `scripts/env.sh`; the planned rows of
+  architecture and operations name the system map, domain ownership, and dependency rules, and
+  logs, traces, metrics, and scenario replay.
+- On GitHub, turn on "Automatically delete head branches" in the repository settings.
+
 ## [0.5.0] - 2026-10-31
 
 The process follows the Agent-Friendly Engineering principles: the owner sets outcomes and
