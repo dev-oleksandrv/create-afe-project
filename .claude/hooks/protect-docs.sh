@@ -125,7 +125,8 @@ approval_listed() {
 # destination of cp, mv, install, and ln, the files of tee, rm, truncate, and touch, dd's of=, the
 # files of sed -i, perl -i, and git checkout, restore, rm, mv, and apply, and file-like tokens of an
 # interpreter (python, node, ruby, perl, bash, sh), also in the heredoc a python, node, ruby, or
-# perl reads; a heredoc that a shell reads is parsed as commands. A relative target is joined to
+# perl reads; a heredoc on a line where a shell runs (`bash <<EOF`, `cat <<EOF | sh`,
+# `source /dev/stdin <<EOF`) is parsed as commands. A relative target is joined to
 # the directory of an earlier `cd DIR` with a literal DIR, and a git path argument to a literal
 # `git -C DIR`. The body of any other heredoc is text, not commands; `<<<`, `$((1 << n))`, and
 # `<<` inside quotes start no heredoc. Input files (<) and sources are not targets.
@@ -182,7 +183,8 @@ write_targets() {
         else if (cmd ~ /^(sed|perl)$/ && s ~ /[ \t]-[a-zA-Z]*i/) emit_all(1)
         else if (cmd == "git" && w[k + 1] ~ /^(checkout|restore|rm|mv|apply)$/) emit_all(2)
         if (cmd ~ /^(python3?|node|ruby|perl|bash|sh|zsh)$/) files(segs[i])
-        if (delim != "" && segs[i] ~ /<</) { hdint = (cmd ~ /^(python3?|node|ruby|perl)$/); hdsh = (cmd ~ /^(bash|sh|zsh)$/) }
+        if (delim != "" && segs[i] ~ /<</) hdint = (cmd ~ /^(python3?|node|ruby|perl)$/)
+        if (cmd ~ /^(bash|sh|zsh|source|\.)$/) hdsh = 1
       }
       if (delim != "" && !hdsh) hd = delim
       hdsh = 0

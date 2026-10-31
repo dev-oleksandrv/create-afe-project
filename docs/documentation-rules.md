@@ -166,9 +166,10 @@ review of the diff.
 
 Access control comes before prompts: an agent gets no credentials or tools for irreversible or
 production actions outside its task. `.claude/settings.json` denies force pushes and deletions
-of remote branches in the forms its rules spell out; the project adds deny rules, for example for
-the destructive tools of an MCP server (`mcp__<server>__<tool>`), in
-`.claude/settings.project.json`. For scripted, owner-driven changes the owner starts Claude Code
+of remote branches in the forms its rules spell out, and reading `.env`, `.env.*`, `*.pem`, and
+`*.key`; in `.claude/settings.project.json` the project adds deny rules, for example for the
+destructive tools of an MCP server (`mcp__<server>__<tool>`), and takes a template entry out
+with `"remove"`. For scripted, owner-driven changes the owner starts Claude Code
 with `DOCS_GUARD=off`, which also lifts the Stop hooks for decisions and template integrity.
 Other agents are bound by `AGENTS.md` and the review only.
 

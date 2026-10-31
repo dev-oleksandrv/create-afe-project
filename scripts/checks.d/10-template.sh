@@ -259,6 +259,8 @@ hook ask '{"tool_name":"Bash","tool_input":{"command":"cd \"$REPO\" && echo x > 
 hook ask '{"tool_name":"Bash","tool_input":{"command":"git -C /tmp log > AGENTS.md"}}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"bash <<EOF\necho SECRET=1 > .env\nEOF"}}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"grep x <<< foo\necho x > AGENTS.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"cat <<EOF | bash\necho x > AGENTS.md\nEOF"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"source /dev/stdin <<EOF\necho x > AGENTS.md\nEOF"}}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"echo $((1<<n))\necho x > AGENTS.md"}}'
 hook ask '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"see <<EOF\"\necho x > AGENTS.md"}}'
 # A ".." or "." in the part of the path that does not exist yet is folded before the match; a ".."

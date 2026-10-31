@@ -30,10 +30,10 @@ placeholder files.
 | Kind of fact | Planned owner | Created when |
 | --- | --- | --- |
 | Requirements: what the system must do | `docs/requirements/`, one `REQ-NNN` per statement | the owner states the first requirement |
-| Architecture: components, boundaries, runtime, code structure | `docs/architecture/` | the first design is proposed |
+| Architecture: the system map, components, domain ownership, boundaries and dependency rules, runtime | `docs/architecture/` | the first design is proposed |
 | Contracts: APIs, schemas, events | `contracts/` at the repository root, machine-readable and authoritative | the first interface is designed |
 | Active plans | `docs/plans/` | work spans more than one session |
-| Operations: run, deploy, observe, recover | `docs/operations/` | there is something to operate |
+| Operations: run, deploy, observe (logs, traces, metrics, scenario replay), recover | `docs/operations/` | there is something to operate |
 | Implemented behaviour | source code and its tests | the first code is merged |
 
 ## Reading order for a new agent
