@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   integrity:
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","linux","ARM64"]') }}
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -30,7 +30,7 @@ jobs:
         run: scripts/check-decisions.sh --base "origin/$BASE_REF"
 
   readiness:
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","linux","ARM64"]') }}
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:

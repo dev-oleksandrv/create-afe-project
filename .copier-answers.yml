@@ -1,9 +1,0 @@
-# Written by copier; never edit by hand (docs/documentation-rules.md, section 9).
-_src_path: https://github.com/xandronak/agent-docs-template
-ci_runner: self-hosted
-docs_review: true
-github_repo: xandronak/agent-docs-template
-project_description: 'A copier template for agent-friendly repositories: documentation
-    rules, decision records, checks, and Claude Code hooks and skills.'
-project_name: agent-docs-template
-self_hosted_labels: '["self-hosted","linux","ARM64"]'

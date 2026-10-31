@@ -1,31 +1,36 @@
 # Maintaining the template
 
-How the template is changed, tested, versioned, and released. Questions and file lists are in
-[`copier.yml`](../copier.yml); the rules a generated project follows are in
-[`template/`](../template/).
+How the template is changed, tested, versioned, and released. Questions, seeded files, tasks,
+and migrations are in [`src/config.js`](../src/config.js); the command line that creates and
+updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) with
+[`src/`](../src/); the rules a generated project follows are in [`template/`](../template/).
 
 ## 1. Model
 
 - `template/` is the product. Every file in it is template-owned (listed in
   [`template/.template/owned.txt.jinja`](../template/.template/owned.txt.jinja)), seeded (listed
-  under `_skip_if_exists` in `copier.yml`), or generated: the answers file by Copier itself, the
-  ownership manifest and the decision index by the `_tasks` of `copier.yml`. The classes are
+  as `SEEDED` in `src/config.js`), or generated: the answers file by the command line, the
+  ownership manifest and the decision index by the `TASKS` of `src/config.js`. Files render
+  with Nunjucks, which reads the Jinja syntax: a `.jinja` file is rendered and loses the suffix,
+  a path segment that renders empty drops the file, and `_gitignore` becomes `.gitignore`,
+  because npm never publishes a `.gitignore`. The classes are
   defined in the generated `docs/documentation-rules.md`, section 9.
-- This repository's own `.copier-answers.yml` has no `_commit`: its template-owned files come from
-  the working tree of `template/` through `scripts/sync-self.sh`, not from a release.
+- This repository's own `.afe-answers.json` records the version of `package.json`: its
+  template-owned files come from the working tree of `template/` through `scripts/sync-self.sh`,
+  which runs the `update` command of this working tree, not from a release.
 - A project extends the template only at the extension points of that section:
   `scripts/checks.d/`, `.claude/hooks/project/stop/`, `.claude/path-classes`,
   `.claude/harness.conf`, `.claude/settings.project.json`, the project block of `AGENTS.md`, and
   its own documents. A need that the extension points do not cover is a
   change of the template, not a local edit.
-- Optional parts are modules behind a `copier.yml` question (today: `docs_review`, `code_review`,
+- Optional parts are modules behind a question of `src/config.js` (today: `docs_review`, `code_review`,
   `dual_review`, `acceptance_check`, and `fail_without_change`). A module's
   files use a conditional file name, and the documents mention the module only inside the same
   condition.
 
 ## 2. Changing the template
 
-1. Edit `template/` and `copier.yml` only. This repository is itself generated from the
+1. Edit `template/`, `src/`, and `bin/` only. This repository is itself generated from the
    template: run `scripts/sync-self.sh` to regenerate its template-owned files from the working
    tree, never edit those copies.
 2. Add an entry under `## [Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md), in the section
@@ -39,8 +44,11 @@ How the template is changed, tested, versioned, and released. Questions and file
 
 ## 3. Tests
 
-`scripts/checks.d/10-template.sh` is the template test suite. It renders the template in four
-projects and runs `scripts/check.sh` in each, the line budgets of the rule documents included:
+`scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/`: the questions,
+their validators and defaults, the Jinja rendering and conditional names, that every rendered
+file is template-owned or seeded, and the reading of a Copier answers file.
+`scripts/checks.d/10-template.sh` is the template test suite. It renders the template with the
+command line of the working tree in four projects and runs `scripts/check.sh` in each, the line budgets of the rule documents included:
 
 - variant A, a GitHub-hosted runner with the default modules (`docs_review` and `code_review`
   on), and variant B, a self-hosted runner with the opposite and `dual_review` on; each module's
@@ -69,14 +77,20 @@ names, behind `cd DIR`, `git -C DIR`, or in an interpreter's heredoc) and which 
 (gate, high, and normal paths, an ordinary push, heredoc text); that a Stop hook stops blocking
 at the Ralph cap and counts again afterwards; that a large change only warns; that
 `scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
-settings deny reading secrets. It also checks that `copier update` keeps project content
-and that this repository's template-owned files match `template/`. CI runs it through the `docs`
-workflow, which sets up Node.js and lychee; the test installs uv into `~/.local/bin` when
-neither Copier nor `uvx` is present, so the runner needs only Git, curl, and jq.
+settings deny reading secrets. It also checks that `update` keeps project content (the project
+block, seeded files, project checks), creates a missing seeded file, removes a file the template
+no longer owns, refuses a dirty working tree and a downgrade, reports and replaces a local edit
+of a template-owned file, converts a Copier answers file, and runs the 0.5.0 migration; and that
+this repository's template-owned files match `template/`. CI runs both through the `docs`
+workflow, which sets up Node.js and lychee; the checks run `npm ci` when `node_modules` is
+missing, and the Python test installs uv into `~/.local/bin` when `uvx` is missing, so the runner
+needs only Git, curl, and jq besides.
 
 ## 4. Versions
 
-Releases are Git tags `vMAJOR.MINOR.PATCH` on `main`. Copier offers projects the highest tag.
+Releases are versions of the npm package `create-afe-project`, each with the Git tag
+`vMAJOR.MINOR.PATCH` on `main`; `npx create-afe-project@latest update` offers projects the
+highest.
 
 | Change | Version part | Examples |
 | --- | --- | --- |
@@ -84,9 +98,9 @@ Releases are Git tags `vMAJOR.MINOR.PATCH` on `main`. Copier offers projects the
 | New capability that existing projects can adopt without action | MINOR | a new module, a new check that existing content passes, a new skill |
 | Correction without new capability | PATCH | wording, a broken link, a script bug |
 
-A MAJOR release that needs a mechanical change in projects ships a `_migrations` entry in
-`copier.yml` that performs it, and its changelog entry says what the project must check by hand.
-An update never touches seeded files (`_skip_if_exists`): a change to them reaches new projects
+A MAJOR release that needs a mechanical change in projects ships a `MIGRATIONS` entry in
+`src/config.js` that performs it, and its changelog entry says what the project must check by hand.
+An update never changes an existing seeded file (`SEEDED`): a change to them reaches new projects
 only, so its changelog entry says what an existing project should copy by hand.
 Before 1.0.0, MINOR takes the role of MAJOR.
 
@@ -94,11 +108,15 @@ Before 1.0.0, MINOR takes the role of MAJOR.
 
 1. Before the release, the measurement of section 6 runs, and its proposals go to the owner.
    A release pull request renames `## [Unreleased]` in `CHANGELOG.md` to
-   `## [X.Y.Z] - YYYY-MM-DD`, adds a fresh empty `## [Unreleased]`, and is merged by the owner.
+   `## [X.Y.Z] - YYYY-MM-DD`, adds a fresh empty `## [Unreleased]`, sets `version` in
+   `package.json` and `package-lock.json` to `X.Y.Z` (`npm version X.Y.Z --no-git-tag-version`),
+   runs `scripts/sync-self.sh`, and is merged by the owner.
 2. The owner, or an agent on the owner's instruction, tags the merge commit and pushes the tag:
    `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
-3. The `release` workflow checks that `CHANGELOG.md` has the section `## [X.Y.Z]` and that the
-   tag is on `main`, then publishes a GitHub release with that section as its notes.
+3. The `release` workflow checks that `CHANGELOG.md` has the section `## [X.Y.Z]`, that the
+   tag is on `main`, and that `package.json` has the version `X.Y.Z`; it publishes a GitHub
+   release with that section as its notes, then the package to npm with the repository secret
+   `NPM_TOKEN`.
 4. Projects update with their `update-template` skill (the generated `docs/contributing.md`,
    section 5).
 

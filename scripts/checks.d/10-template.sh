@@ -1,21 +1,14 @@
 #!/usr/bin/env bash
-# Template tests (docs/maintaining.md, section 3): render the template in two variants and run the
+# Template tests (docs/maintaining.md, section 3): render the template in four projects and run the
 # generated project's checks, prove that the checks catch violations, and confirm that this
 # repository's own template-owned files match template/.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
-# This check provisions Copier itself (documentation-rules.md, section 9): through uvx, and on a
-# CI runner without uv by installing uv into ~/.local/bin first.
-if ! command -v copier >/dev/null; then
-  if ! command -v uvx >/dev/null; then
-    echo "== installing uv for the template tests"
-    curl -LsSf https://astral.sh/uv/install.sh |
-      env UV_INSTALL_DIR="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 INSTALLER_NO_MODIFY_PATH=1 sh > /dev/null 2>&1 ||
-      { echo "FAIL: copier is missing and uv could not be installed"; exit 1; }
-    export PATH="$HOME/.local/bin:$PATH"
-  fi
-  copier() { uvx --quiet --from 'copier>=9.4' copier "$@"; }
-fi
+# The templates render with the CLI of this working tree (bin/create-afe-project.js); its
+# dependencies come from npm ci when node_modules is missing.
+root=$PWD
+[ -d node_modules ] || npm ci --silent > /dev/null 2>&1 || { echo "FAIL: npm ci fails"; exit 1; }
+cli() { node "$root/bin/create-afe-project.js" "$@"; }
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -25,8 +18,8 @@ gitc() { git -C "$1" -c user.name=test -c user.email=test@example.com "${@:2}"; 
 
 render() {
   local d="$1"; shift
-  copier copy -q --trust --defaults --vcs-ref HEAD --data project_name=sample \
-    --data 'project_description=A sample project.' --data github_repo=example/sample "$@" . "$d" \
+  cli "$d" --defaults --quiet --data project_name=sample \
+    --data 'project_description=A sample project.' --data github_repo=example/sample "$@" \
     > "$work/render.log" 2>&1 || { cat "$work/render.log"; return 1; }
   git -C "$d" init -q -b main && gitc "$d" add -A && gitc "$d" commit -q -m init
 }
@@ -164,7 +157,7 @@ expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/pl
     printf "%s\n" "$out" | grep -qx "$l" || { echo "missing: $l"; printf "%s\n" "$out"; exit 1; }; done'
 expect_pass "review: none for documents only" bash -c 'mkdir -p docs/plans && echo x > docs/plans/x.md && classes | grep -qx "review	none"'
 expect_pass "review: one for code" bash -c 'mkdir -p src && echo x > src/app.py && classes | grep -qx "review	one"'
-expect_pass "review: none for a template update" bash -c 'echo x >> docs/contributing.md && echo x >> scripts/check.sh && echo "# x" >> .copier-answers.yml && echo x >> .claude/harness.conf && classes | grep -qx "review	none"'
+expect_pass "review: none for a template update" bash -c 'echo x >> docs/contributing.md && echo x >> scripts/check.sh && echo " " >> .afe-answers.json && echo x >> .claude/harness.conf && classes | grep -qx "review	none"'
 expect_pass "review: one for template-owned edits without an update" bash -c 'echo x >> docs/contributing.md && echo x >> scripts/check.sh && classes | grep -qx "review	one"'
 
 echo "== metrics of merged pull requests on variant A"
@@ -343,6 +336,12 @@ render "$d" --data docs_review=true --data code_review=true --data dual_review=t
 (cd "$d" && scripts/check.sh > "$work/d.log" 2>&1) || { cat "$work/d.log"; fail "Python, all modules: scripts/check.sh fails (line budgets included)"; }
 grep -q 'scripts/fail-without-change.sh --base "origin/$BASE_REF" --allow-pass-on-base' "$d/.github/workflows/fail-without-change.yml" ||
   fail "Python: the fail-without-change workflow does not run the driver"
+# uvx provisions pytest; on a CI runner without uv, uv is installed into ~/.local/bin first.
+if ! command -v uvx >/dev/null; then
+  curl -LsSf https://astral.sh/uv/install.sh |
+    env UV_INSTALL_DIR="$HOME/.local/bin" UV_NO_MODIFY_PATH=1 INSTALLER_NO_MODIFY_PATH=1 sh > /dev/null 2>&1 &&
+    export PATH="$HOME/.local/bin:$PATH"
+fi
 if command -v uvx >/dev/null; then
   printf 'def add(a, b):\n    return a + b\n' > "$d/calc.py"
   mkdir -p "$d/tests" && printf 'from calc import add\n\n\ndef test_add():  # REQ-001\n    assert add(2, 3) == 5\n' > "$d/tests/test_add.py"
@@ -377,50 +376,77 @@ if command -v uvx >/dev/null; then
   (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc4.log" 2>&1) && grep -q "ok: tests/test_sum.py passes with the change and fails on the base" "$work/d-fwc4.log" ||
     { cat "$work/d-fwc4.log"; fail "Python: fail-without-change misses a renamed test file"; }
 else
-  echo "SKIP: uvx is missing, so pytest cannot be provisioned for the Python smoke test"
+  echo "SKIP: uv could not be installed, so pytest cannot be provisioned for the Python smoke test"
 fi
 
-echo "== copier update keeps project content"
+echo "== update keeps project content"
+# pkg <dir> <version>: a copy of this package at another version, sharing node_modules.
+pkg() {
+  mkdir -p "$1" && cp -R bin src template package.json "$1/" && ln -s "$root/node_modules" "$1/node_modules"
+  node -e 'const f=process.argv[1]+"/package.json",fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version=process.argv[2];fs.writeFileSync(f,JSON.stringify(p))' "$1" "$2"
+}
+sample=(--defaults --quiet --data project_name=sample --data 'project_description=A sample project.' --data github_repo=example/sample)
 tpl="$work/tpl"
-mkdir -p "$tpl" && cp -R copier.yml template "$tpl/"
-git -C "$tpl" init -q -b main && gitc "$tpl" add -A && gitc "$tpl" commit -q -m v1 && gitc "$tpl" tag v0.0.1
+pkg "$tpl" 0.0.1
 u="$work/u"
-copier copy -q --trust --defaults --vcs-ref v0.0.1 --data project_name=sample \
-  --data 'project_description=A sample project.' --data github_repo=example/sample "$tpl" "$u" > "$work/u.log" 2>&1 ||
-  { cat "$work/u.log"; fail "update test: copy fails"; }
+node "$tpl/bin/create-afe-project.js" "$u" "${sample[@]}" > "$work/u.log" 2>&1 || { cat "$work/u.log"; fail "update test: create fails"; }
 git -C "$u" init -q -b main
 awk '{print} /<!-- project:start -->/ {print "Project line one."; print "Project line two."}' "$u/AGENTS.md" > "$work/ag" && mv "$work/ag" "$u/AGENTS.md"
 echo "Project note." >> "$u/README.md"
 mkdir -p "$u/scripts/checks.d" && printf '#!/usr/bin/env bash\necho project check\n' > "$u/scripts/checks.d/10-sample.sh" && chmod +x "$u/scripts/checks.d/10-sample.sh"
+rm "$u/.claude/harness.conf"
 gitc "$u" add -A && gitc "$u" commit -q -m init
 printf '\nA line added by the next template version.\n' >> "$tpl/template/docs/contributing.md.jinja"
-gitc "$tpl" commit -q -am v2 && gitc "$tpl" tag v0.0.2
-(cd "$u" && copier update -q --trust --defaults --vcs-ref v0.0.2 > "$work/up.log" 2>&1) || { cat "$work/up.log"; fail "update test: update fails"; }
+sed -i.bak '/^lychee.toml$/d' "$tpl/template/.template/owned.txt.jinja" && rm "$tpl/template/lychee.toml" "$tpl/template/.template/owned.txt.jinja.bak"
+node -e 'const f=process.argv[1],fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version="0.0.2";fs.writeFileSync(f,JSON.stringify(p))' "$tpl/package.json"
+(cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up.log" 2>&1) || { cat "$work/up.log"; fail "update test: update fails"; }
 grep -q 'Project line two.' "$u/AGENTS.md" || fail "update test: the project block was lost"
 grep -q 'Project note.' "$u/README.md" || fail "update test: the seeded README was overwritten"
+[ -f "$u/.claude/harness.conf" ] || fail "update test: a missing seeded file was not created"
 [ -x "$u/scripts/checks.d/10-sample.sh" ] || fail "update test: the project check was lost"
 grep -q 'added by the next template version' "$u/docs/contributing.md" || fail "update test: the template change did not arrive"
-grep -q '_commit: v0.0.2' "$u/.copier-answers.yml" || fail "update test: the answers file does not record v0.0.2"
+[ ! -e "$u/lychee.toml" ] || fail "update test: a file the template no longer owns was kept"
+grep -q '"_version": "0.0.2"' "$u/.afe-answers.json" || fail "update test: the answers file does not record 0.0.2"
 (cd "$u" && scripts/check-template.sh > "$work/ut.log" 2>&1) || { cat "$work/ut.log"; fail "update test: template check fails after the update"; }
+gitc "$u" add -A && gitc "$u" commit -q -m update
+echo "local edit" >> "$u/docs/testing-rules.md" && echo "dirty" > "$u/scratch.txt"
+(cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > /dev/null 2>&1) &&
+  fail "update test: update runs on a working tree with uncommitted changes"
+rm "$u/scratch.txt" && gitc "$u" commit -q -am "edit a template-owned file"
+(cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up2.log" 2>&1) || { cat "$work/up2.log"; fail "update test: second update fails"; }
+grep -q 'Replaced local edits of template-owned files.*docs/testing-rules.md' "$work/up2.log" && ! grep -q 'local edit' "$u/docs/testing-rules.md" ||
+  { cat "$work/up2.log"; fail "update test: a local edit of a template-owned file is not replaced and reported"; }
+pkg "$work/new" 0.0.3
+(cd "$u" && node "$work/new/bin/create-afe-project.js" update --defaults --allow-dirty > /dev/null 2>&1) || fail "update test: update to a newer version fails"
+(cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults --allow-dirty > "$work/down.log" 2>&1) &&
+  fail "update test: an older package downgrades the project"
+
+echo "== update converts a project generated by Copier"
+v="$work/v"
+node "$tpl/bin/create-afe-project.js" "$v" "${sample[@]}" --data ci_runner=self-hosted > /dev/null 2>&1 || fail "adoption test: create fails"
+rm "$v/.afe-answers.json"
+printf '# Written by copier\n_commit: v0.0.1\n_src_path: https://github.com/xandronak/agent-docs-template\nci_runner: self-hosted\ndocs_review: false\ngithub_repo: example/sample\nproject_description: '"'"'A sample\n    project.'"'"'\nproject_name: sample\nself_hosted_labels: '"'"'["self-hosted","linux"]'"'"'\n' > "$v/.copier-answers.yml"
+(cd "$v" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/v.log" 2>&1) || { cat "$work/v.log"; fail "adoption test: update fails"; }
+[ ! -e "$v/.copier-answers.yml" ] && grep -q '"project_description": "A sample project."' "$v/.afe-answers.json" &&
+  grep -q '"self_hosted_labels": "\[\\"self-hosted\\",\\"linux\\"\]"' "$v/.afe-answers.json" && [ ! -e "$v/.github/workflows/docs-review.yml" ] ||
+  { cat "$v/.afe-answers.json"; fail "adoption test: the Copier answers are not converted"; }
+
 # The 0.5.0 migration: an update from a release before 0.5.0 that seeded .claude/protected-paths
 # keeps its glob lines as class approval in .claude/path-classes.
 mt="$work/mtpl"
-mkdir -p "$mt" && cp -R copier.yml template "$mt/" && printf '# Protected paths.\n' > "$mt/template/.claude/protected-paths"
-git -C "$mt" init -q -b main && gitc "$mt" add -A && gitc "$mt" commit -q -m old && gitc "$mt" tag v0.4.9
+pkg "$mt" 0.4.9 && printf '# Protected paths.\n' > "$mt/template/.claude/protected-paths"
 mu="$work/mu"
-copier copy -q --trust --defaults --vcs-ref v0.4.9 --data project_name=sample \
-  --data 'project_description=A sample project.' --data github_repo=example/sample "$mt" "$mu" > "$work/mu.log" 2>&1 ||
-  { cat "$work/mu.log"; fail "migration test: copy fails"; }
+node "$mt/bin/create-afe-project.js" "$mu" "${sample[@]}" > "$work/mu.log" 2>&1 || { cat "$work/mu.log"; fail "migration test: create fails"; }
 git -C "$mu" init -q -b main && printf 'vendor/*\n' >> "$mu/.claude/protected-paths" && gitc "$mu" add -A && gitc "$mu" commit -q -m init
-rm "$mt/template/.claude/protected-paths" && gitc "$mt" add -A && gitc "$mt" commit -q -m new && gitc "$mt" tag v0.5.0
-(cd "$mu" && copier update -q --trust --defaults --vcs-ref v0.5.0 > "$work/mup.log" 2>&1) || { cat "$work/mup.log"; fail "migration test: update fails"; }
+rm "$mt/template/.claude/protected-paths"
+node -e 'const f=process.argv[1],fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version="0.5.0";fs.writeFileSync(f,JSON.stringify(p))' "$mt/package.json"
+(cd "$mu" && node "$mt/bin/create-afe-project.js" update --defaults > "$work/mup.log" 2>&1) || { cat "$work/mup.log"; fail "migration test: update fails"; }
 grep -qx 'approval vendor/\*' "$mu/.claude/path-classes" && [ ! -e "$mu/.claude/protected-paths" ] && [ ! -e "$mu/.claude/protected-paths.pre-0.5" ] ||
   fail "migration test: the glob lines of .claude/protected-paths are not class approval in .claude/path-classes"
 
 echo "== this repository matches template/"
 self="$work/self"
-grep -v -E '^(_|#)' .copier-answers.yml > "$work/answers.yml"
-copier copy -q --trust --defaults --vcs-ref HEAD --data-file "$work/answers.yml" . "$self" > "$work/self.log" 2>&1 ||
+cli "$self" --defaults --quiet --data-file .afe-answers.json > "$work/self.log" 2>&1 ||
   { cat "$work/self.log"; fail "this repository's answers do not render"; }
 strip() { awk '$0=="<!-- project:start -->" {print; s=1; next} $0=="<!-- project:end -->" {s=0} !s' "$1"; }
 while IFS= read -r p; do

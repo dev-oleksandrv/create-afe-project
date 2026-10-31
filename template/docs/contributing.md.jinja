@@ -146,14 +146,14 @@ document is updated in the same branch. The `create-pr` skill runs this and open
 ## 5. Template updates
 
 The template-owned files (`documentation-rules.md`, section 9) change only through an update to a
-template version, which `.copier-answers.yml` records; the `update-template` skill runs it:
+template version, which `.afe-answers.json` records; the `update-template` skill runs it:
 
-1. From an up-to-date `main`, on the branch `chore/template-update`: `copier update --trust
-   --defaults`, or with `--vcs-ref=<tag>`; `--trust` lets it regenerate the generated files.
-2. Resolve each conflict marker and `.rej` file by class: template-owned takes the template's
-   side, except the project block of `AGENTS.md`; generated files are regenerated, never merged
-   by hand; project files keep their content and take a clearly additive change, otherwise ask
-   the owner. An update changes seeded files only by a migration the changelog names.
+1. From an up-to-date `main`, on the branch `chore/template-update`: `npx create-afe-project@latest
+   update --defaults`, or `@<version>`. It replaces the template-owned files, keeps the project
+   block of `AGENTS.md`, never changes an existing seeded file, and regenerates generated files.
+2. Review its report: a replaced local edit of a template-owned file is lost unless it moves to
+   the template; project files are untouched. An update changes seeded files only by a migration
+   the changelog names.
 3. `scripts/check.sh`, then a pull request `Template: update to <version>` with the changelog
    entries since the previous version under "Summary". A change the project needs in a
    template-owned file is made in the template first.

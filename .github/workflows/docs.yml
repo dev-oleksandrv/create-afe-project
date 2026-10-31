@@ -15,7 +15,7 @@ jobs:
   check:
     # Set the repository variable CI_RUNS_ON (a JSON array of runner labels) to run elsewhere
     # without editing this template-owned file.
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","linux","ARM64"]') }}
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v7.0.1
 

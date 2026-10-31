@@ -24,7 +24,7 @@ permissions:
 jobs:
   review:
     if: ${{ !github.event.pull_request.draft }}
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","linux","ARM64"]') }}
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7.0.1

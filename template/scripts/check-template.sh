@@ -5,8 +5,8 @@
 # .claude/settings.json is current. The hash of AGENTS.md ignores the content of its project block.
 #
 # Usage: scripts/check-template.sh [--write]
-#   --write  record the current hashes; the template runs it after `copier copy` and
-#            `copier update`. Never run it to make a local edit of a template-owned file pass.
+#   --write  record the current hashes; the template runs it after `create-afe-project` and
+#            `create-afe-project update`. Never run it to make a local edit of a template-owned file pass.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

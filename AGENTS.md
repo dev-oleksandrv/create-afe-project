@@ -4,11 +4,12 @@ Instructions for AI coding agents in this repository; people start at `README.md
 comes from the project template: change it in the template, except the project block below.
 
 <!-- project:start -->
-The project is **agent-docs-template**: the Copier template for agent-friendly repositories
-(`xandronak/agent-docs-template`). The product is `template/` with `copier.yml`. This repository's
-own template-owned files are generated from `template/` by `scripts/sync-self.sh`: edit
-`template/`, then sync; never edit the generated copies. `docs/contributing.md`, section 5, and the
-`update-template` skill do not apply here. Maintainer rules: `docs/maintaining.md`.
+The project is **create-afe-project**: the npm package that creates and updates agent-friendly
+repositories (`dev-oleksandrv/create-afe-project`). The product is `template/` with the CLI in
+`bin/` and `src/` (questions in `src/config.js`). This repository's own template-owned files are
+generated from `template/` by `scripts/sync-self.sh`: edit `template/`, then sync; never edit the
+generated copies. `docs/contributing.md`, section 5, and the `update-template` skill do not apply
+here. Maintainer rules: `docs/maintaining.md`.
 <!-- project:end -->
 
 ## 1. Sources of truth and precedence
