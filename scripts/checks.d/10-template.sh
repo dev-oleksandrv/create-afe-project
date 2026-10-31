@@ -101,7 +101,7 @@ echo "== merge readiness on variant A"
 # body <file> <acceptance item> [<sensor table>] [<extra sections>]: a description in the
 # template's sections; the change under test is the working tree of variant A against main.
 sensors=$'| Sensor | Class | Found | Fixed | Limit | Declined |\n| --- | --- | --- | --- | --- | --- |\n| code-review | blocker | 1 | 1 | 0 | 0 |\n| code-review | suggestion | 2 | 1 | 1 | 0 |\n\n'
-measures=$'| Measure | Value |\n| --- | --- |\n| First check.sh | fail |\n| Ralph iterations | 2 |\n| Santa rounds | 0 |\n| Owner interventions | 1 (answered a question) |\n| Files outside the scope | 0 |\n'
+measures=$'| Measure | Value |\n| --- | --- |\n| First check.sh | fail |\n| Ralph iterations | 2 |\n| Santa rounds | 0 |\n| Owner interventions | 1 (answered a question) |\n| Files outside the scope | 0 |\n| Regression of | none |\n'
 body() {
   printf '## Summary\n\n- x\n\n## Acceptance and test plan\n\n%s\n\n## Checks\n\n- x\n\n## Assumptions and open questions\n\n- limit: a code-review suggestion, left for later\n\n%s## Metrics\n\n%s%s' \
     "$2" "${4:-}" "${3-$sensors}" "$measures" > "$1"
@@ -145,6 +145,16 @@ expect_pass "a marker already on the base is not listed again" bash -c 'marker &
 expect_pass "a marker in a file that is not Markdown is not a decision" bash -c 'printf "x=\"Decided by the owner, 2026-10-30.\"\n" > fixture.sh && ready "$work/r-none.md"'
 expect_pass "a root-level test file in Acceptance, a version that is no path" bash -c 'echo x > calc_test.go && sed "s#^- None: documentation only#- REQ-001: \`calc_test.go\` for \`v1.2.0\`; failed on the base#" "$work/r-none.md" > "$work/r-root.md" && ready "$work/r-root.md"'
 expect_fail "a measure twice" bash -c '{ cat "$work/r-none.md"; printf "| Santa rounds | 1 |\n"; } > "$work/r-twice.md" && ready "$work/r-twice.md"'
+expect_pass "a change at the limit, or in generated files, does not warn" bash -c 'seq 1 400 > big.txt && seq 1 500 >> docs/decisions/README.md && ! ready "$work/r-none.md" | grep -q WARNING'
+expect_fail "no Regression of row" bash -c 'grep -v "Regression of" "$work/r-none.md" > "$work/r-noreg.md" && ready "$work/r-noreg.md"'
+expect_fail "a Regression of value outside its forms" bash -c 'sed "s/| Regression of | none |/| Regression of | maybe |/" "$work/r-none.md" > "$work/r-badreg.md" && ready "$work/r-badreg.md"'
+expect_pass "the project takes a template deny entry out" bash -c 'printf "{\"remove\":{\"permissions\":{\"deny\":[\"Read(**/.env.*)\"]}}}\n" > .claude/settings.project.json && scripts/gen-settings.sh &&
+  ! jq -e ".permissions.deny | index(\"Read(**/.env.*)\")" .claude/settings.json > /dev/null && jq -e ".permissions.deny | index(\"Read(**/.env)\")" .claude/settings.json > /dev/null && ! jq -e "has(\"remove\")" .claude/settings.json > /dev/null'
+expect_pass "a large change warns and still passes" bash -c 'seq 1 500 > big.txt && out=$(ready "$work/r-none.md") && printf "%s\n" "$out" | grep -q "WARNING: the change has 500 changed lines, more than DIFF_WARN_LINES (400)"'
+expect_pass "a public contract is class high" bash -c 'mkdir -p contracts && echo x > contracts/api.yaml && classes | grep -qx "high	contracts/api.yaml"'
+expect_pass "env.sh: an unset command is SKIP, a set one runs with its exit code" bash -c 'out=$(scripts/env.sh setup) && [ "$out" = "SKIP: SETUP is not set in .claude/harness.conf" ] &&
+  scripts/env.sh fast > /dev/null && sed -i.bak "s/^E2E=.*/E2E=exit 3/" .claude/harness.conf && rm .claude/harness.conf.bak; scripts/env.sh e2e > /dev/null; [ $? -eq 3 ] && { scripts/env.sh nope 2> /dev/null; [ $? -eq 2 ]; }'
+expect_pass "settings deny reading secrets" bash -c 'for r in "Read(**/.env)" "Read(**/.env.*)" "Read(**/*.pem)" "Read(**/*.key)"; do jq -e --arg r "$r" ".permissions.deny | index(\$r)" .claude/settings.json > /dev/null || exit 1; done'
 expect_fail "a touched gate file not listed" bash -c 'gatefile && ready "$work/r-none.md"'
 expect_pass "a touched gate file listed under Gate files" bash -c 'gatefile && ready "$work/r-gate.md"'
 expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/plans src/auth && echo x > docs/plans/x.md && echo x >> docs/README.md &&
@@ -167,14 +177,16 @@ cat > "$work/bin/gh" <<'EOF'
 t='| Sensor | Class | Found | Fixed | Limit | Declined |\n| --- | --- | --- | --- | --- | --- |\n'
 m='| Measure | Value |\n| --- | --- |\n'
 jq -n --arg t "$t" --arg m "$m" '[
-  {number: 3, mergedAt: "2026-10-20T10:00:00Z", body: ("## Summary\n\n- x\n\n## Metrics\n\n" + ($t | gsub("\\\\n"; "\n")) + "| code-review | blocker | 1 | 1 | 0 | 0 |\n| code-review | suggestion | 2 | 1 | 1 | 0 |\n| docs-review | suggestion | 0 | 0 | 0 | 0 |\n\n" + ($m | gsub("\\\\n"; "\n")) + "| First check.sh | fail |\n| Ralph iterations | 3 |\n| Santa rounds | 0 |\n| Owner interventions | 1 (a question) |\n| Files outside the scope | 2 (a, b) |\n\n## Notes for the owner\n\n| code-review | blocker | 9 | 9 | 0 | 0 |\n")},
-  {number: 2, mergedAt: "2026-10-10T10:00:00Z", body: "## Summary\n\n- x\n"},
+  {number: 3, createdAt: "2026-10-20T04:00:00Z", mergedAt: "2026-10-20T10:00:00Z", body: ("## Summary\n\n- x\n\n## Metrics\n\n" + ($t | gsub("\\\\n"; "\n")) + "| code-review | blocker | 1 | 1 | 0 | 0 |\n| code-review | suggestion | 2 | 1 | 1 | 0 |\n| docs-review | suggestion | 0 | 0 | 0 | 0 |\n\n" + ($m | gsub("\\\\n"; "\n")) + "| First check.sh | fail |\n| Ralph iterations | 3 |\n| Santa rounds | 0 |\n| Owner interventions | 1 (a question) |\n| Files outside the scope | 2 (a, b) |\n| Regression of | #1 |\n\n## Notes for the owner\n\n| code-review | blocker | 9 | 9 | 0 | 0 |\n")},
+  {number: 2, createdAt: "2026-10-10T08:00:00Z", mergedAt: "2026-10-10T10:00:00Z", body: "## Summary\n\n- x\n"},
   {number: 1, mergedAt: "2026-09-01T10:00:00Z", body: ("## Metrics\n\n| code-review | blocker | 5 | 5 | 0 | 0 |\n")}]'
 EOF
 chmod +x "$work/bin/gh"
 if out=$(cd "$a" && PATH="$work/bin:$PATH" scripts/pr-metrics.sh --since 2026-10-01 2>&1); then
   for l in 'merged pull requests since 2026-10-01: 2, with a Metrics section: 1' 'first check.sh passed: 0 of 1 pull requests' \
-    'Ralph iterations: 3 in 1 pull requests' 'owner interventions: 1 in 1 pull requests' 'files outside the scope: 2 in 1 pull requests' \
+    'ralph iterations: total 3, median 3, max 3, in 1 pull requests' 'owner interventions: total 1, median 1, max 1, in 1 pull requests' \
+    'files outside the scope: total 2, median 2, max 2, in 1 pull requests' 'regression rate: 1 of 1 pull requests repair another one' \
+    'hours to merge: total 8, median 4, max 6, in 2 pull requests' \
     'sensors without a finding in the period: docs-review'; do
     printf '%s\n' "$out" | grep -q -F "$l" || { printf '%s\n' "$out"; fail "pr-metrics: no line '$l'"; }
   done
@@ -234,6 +246,21 @@ stop; [ $? -eq 2 ] || fail "ralph cap: the count does not restart after the cap"
 gitc "$a" switch -q main && gitc "$a" branch -q -D ralph && rm -f "$(git -C "$a" rev-parse --git-dir)"/ralph-stops-*
 hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
 hook allow '{"tool_name":"Bash","tool_input":{"command":"gh pr view 3 --json state"}}'
+# A target behind `cd DIR` or `git -C DIR`, and a file an interpreter's heredoc names, resolve
+# against that directory; the text of another heredoc is not read as commands.
+hook ask '{"tool_name":"Bash","tool_input":{"command":"cd docs && cat > contributing.md"}}'
+hook allow '{"tool_name":"Bash","tool_input":{"command":"cd docs && echo x >> plans/x.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"git -C docs checkout -- testing-rules.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"cd docs && python3 - <<EOF\np = \"contributing.md\"\nopen(p, \"w\").write(\"x\")\nEOF"}}'
+hook allow '{"tool_name":"Bash","tool_input":{"command":"cat > /tmp/notes.txt <<EOF\nrm AGENTS.md\nEOF"}}'
+# What the resolution must not loosen: a non-literal cd, a redirect on git -C, a shell's heredoc,
+# and forms that look like a heredoc.
+hook ask '{"tool_name":"Bash","tool_input":{"command":"cd \"$REPO\" && echo x > AGENTS.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"git -C /tmp log > AGENTS.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"bash <<EOF\necho SECRET=1 > .env\nEOF"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"grep x <<< foo\necho x > AGENTS.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"echo $((1<<n))\necho x > AGENTS.md"}}'
+hook ask '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"see <<EOF\"\necho x > AGENTS.md"}}'
 # A ".." or "." in the part of the path that does not exist yet is folded before the match; a ".."
 # left over climbs from the nearest existing directory, so the path may leave the repository.
 hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/newdir/../AGENTS.md"}}'
@@ -300,7 +327,7 @@ c="$work/c"
 render "$c" --data docs_review=false --data code_review=false --data dual_review=false \
   --data acceptance_check=false --data fail_without_change=false || fail "the documentation-only project does not render"
 (cd "$c" && scripts/check.sh > "$work/c.log" 2>&1) || { cat "$work/c.log"; fail "documentation-only: scripts/check.sh fails"; }
-[ ! -e "$c/scripts/check-acceptance.sh" ] && [ ! -e "$c/scripts/fail-without-change.sh" ] ||
+[ ! -e "$c/scripts/check-acceptance.sh" ] && [ ! -e "$c/scripts/fail-without-change.sh" ] && [ ! -e "$c/.github/workflows/fail-without-change.yml" ] ||
   fail "documentation-only: module scripts exist although the modules are off"
 mkdir -p "$c/docs/plans" && echo x > "$c/docs/plans/x.md"
 (cd "$c" && scripts/check-decisions.sh --ready --base main --pr-body "$work/r-none.md" > "$work/c-ready.log" 2>&1 &&
@@ -312,6 +339,8 @@ d="$work/d"
 render "$d" --data docs_review=true --data code_review=true --data dual_review=true \
   --data acceptance_check=true --data fail_without_change=true || fail "the Python project does not render"
 (cd "$d" && scripts/check.sh > "$work/d.log" 2>&1) || { cat "$work/d.log"; fail "Python, all modules: scripts/check.sh fails (line budgets included)"; }
+grep -q 'scripts/fail-without-change.sh --base "origin/$BASE_REF" --allow-pass-on-base' "$d/.github/workflows/fail-without-change.yml" ||
+  fail "Python: the fail-without-change workflow does not run the driver"
 if command -v uvx >/dev/null; then
   printf 'def add(a, b):\n    return a + b\n' > "$d/calc.py"
   mkdir -p "$d/tests" && printf 'from calc import add\n\n\ndef test_add():  # REQ-001\n    assert add(2, 3) == 5\n' > "$d/tests/test_add.py"
@@ -327,8 +356,13 @@ if command -v uvx >/dev/null; then
     { cat "$work/d-ready.log"; fail "Python: readiness with the acceptance check rejects REQ-002, which a test carries"; }
   (cd "$d" && scripts/check-decisions.sh --ready --base main --pr-body "$d-missing.md" > /dev/null 2>&1) &&
     fail "Python: the acceptance check misses REQ-003, which no test carries"
-  (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc.log" 2>&1) && grep -q "ok: tests/test_mul.py fails on the base" "$work/d-fwc.log" ||
+  (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc.log" 2>&1) && grep -q "ok: tests/test_mul.py passes with the change and fails on the base" "$work/d-fwc.log" ||
     { cat "$work/d-fwc.log"; fail "Python: fail-without-change rejects a new test that fails on the base"; }
+  printf 'from calc import mul\n\n\ndef test_broken():\n    assert mul(2, 3) == 7\n' > "$d/tests/test_broken.py"
+  (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc0.log" 2>&1) &&
+    { cat "$work/d-fwc0.log"; fail "Python: fail-without-change accepts a test that fails with the change too"; }
+  grep -q "tests/test_broken.py does not pass with the change" "$work/d-fwc0.log" || { cat "$work/d-fwc0.log"; fail "Python: no reason for a test that fails with the change"; }
+  rm "$d/tests/test_broken.py"
   printf '\n\ndef test_add_again():\n    assert add(1, 1) == 2\n' >> "$d/tests/test_add.py"
   (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc2.log" 2>&1) &&
     { cat "$work/d-fwc2.log"; fail "Python: fail-without-change misses a changed test that passes on the base"; }
@@ -338,7 +372,7 @@ if command -v uvx >/dev/null; then
   gitc "$d" checkout -q -- tests/test_add.py && gitc "$d" add -A && gitc "$d" commit -q -m mul
   gitc "$d" mv tests/test_add.py tests/test_sum.py && printf '\n\ndef test_mul_sum():\n    from calc import mul\n    assert mul(2, 2) + 1 == 5\n' >> "$d/tests/test_sum.py"
   gitc "$d" add -A && gitc "$d" commit -q -m rename
-  (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc4.log" 2>&1) && grep -q "ok: tests/test_sum.py fails on the base" "$work/d-fwc4.log" ||
+  (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc4.log" 2>&1) && grep -q "ok: tests/test_sum.py passes with the change and fails on the base" "$work/d-fwc4.log" ||
     { cat "$work/d-fwc4.log"; fail "Python: fail-without-change misses a renamed test file"; }
 else
   echo "SKIP: uvx is missing, so pytest cannot be provisioned for the Python smoke test"

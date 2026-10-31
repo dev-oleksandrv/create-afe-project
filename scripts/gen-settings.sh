@@ -2,7 +2,9 @@
 # Generates .claude/settings.json (docs/documentation-rules.md, section 9) from the template's
 # .claude/settings.template.json and the project's .claude/settings.project.json: objects merge
 # key by key, arrays are joined without duplicates (the template's entries first), and for any
-# other value the project's wins. Claude Code reads only the generated file.
+# other value the project's wins. The project's top-level "remove" holds entries to take out of
+# the template's arrays, such as {"remove": {"permissions": {"deny": ["Read(**/.env.*)"]}}}.
+# Claude Code reads only the generated file.
 #
 # Usage: scripts/gen-settings.sh [--check]
 #   --check  write nothing; fail when .claude/settings.json differs from the merge.
@@ -21,7 +23,12 @@ merged=$(jq -n --slurpfile t .claude/settings.template.json --slurpfile p "$proj
     elif (a | type) == "array" and (b | type) == "array" then
       reduce (a + b)[] as $x ([]; if any(.[]; . == $x) then . else . + [$x] end)
     else b end;
-  merge($t[0]; ($p[0] // {}))')
+  def drop(a; r):
+    if (a | type) == "object" and (r | type) == "object" then
+      reduce (r | keys_unsorted[]) as $k (a; if has($k) then .[$k] = drop(.[$k]; r[$k]) else . end)
+    elif (a | type) == "array" and (r | type) == "array" then a - r
+    else a end;
+  ($p[0] // {}) as $proj | drop(merge($t[0]; $proj | del(.remove)); $proj.remove // {})')
 
 if [ "${1:-}" = --check ]; then
   [ -f .claude/settings.json ] && [ "$(jq -S . .claude/settings.json)" = "$(printf '%s' "$merged" | jq -S .)" ] || {

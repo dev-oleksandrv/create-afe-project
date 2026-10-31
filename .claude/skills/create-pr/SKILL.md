@@ -42,6 +42,13 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    classes: note the gate files, and each approval path with the instruction that allowed it.
    The last run of `scripts/check.sh` before each push is on the tree that is pushed: after any
    change once the loop of step 5 passed, run the loop again.
+   Review the tree once before the push, unless this session already did: for `review<TAB>none`
+   write "Review: not run: class low"; otherwise give one fresh Claude subagent the brief of
+   section 6 (the rubric and classes, the project's criteria, `docs/testing-rules.md`, the task,
+   "Acceptance and test plan", the diff) and ask for JSON findings with a file, a line, a class,
+   and the rule. Answer each finding once by section 6, commit the fixes, and have a fresh
+   subagent check each fixed blocker once with only the finding and the fix diff. "Checks" names
+   the review or why it did not run, and Metrics get its rows by class.
 7. Push: `git push -u origin <branch>`.
 8. Description: write it to a file in the session's scratch directory, in the sections and order
    of section 3, from `git diff main...HEAD`, the commit messages, and the conversation. Then
@@ -55,7 +62,8 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    - Metrics: the two tables of section 3: a row per sensor and class that ran, also with zero
      findings (a failing check fixed during the Ralph loop is a blocker of that check), the
      first result of `scripts/check.sh`, the Ralph iterations, the Santa rounds, the owner
-     interventions of this session, and the files changed outside the task.
+     interventions of this session, the files changed outside the task, and "Regression of": the
+     pull request whose behaviour this one repairs, or none.
    - Every item under "Assumptions and open questions" carries a label of section 3; a question
      the branch can still answer is resolved now. A finding is `blocking:` only from a Santa loop.
    - Run `scripts/check-decisions.sh --ready --base origin/main --pr-body <file>` and fix the

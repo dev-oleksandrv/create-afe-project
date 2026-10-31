@@ -50,7 +50,8 @@ projects and runs `scripts/check.sh` in each, the line budgets of the rule docum
   pytest and every module on, where the Acceptance check finds an identifier in a test and misses
   one that no test carries, and the fail-without-change driver accepts a new test that fails on
   the base, rejects a changed test that passes there unless `--allow-pass-on-base` is given,
-  checks a renamed test file, and leaves no worktree behind. The Python part needs `uvx` to provision pytest and says SKIP
+  checks a renamed test file, and leaves no worktree behind; the module's workflow runs the
+  driver. The Python part needs `uvx` to provision pytest and says SKIP
   without it.
 
 On variant A it proves that the checks reject an edited template-owned file, a damaged project
@@ -58,13 +59,17 @@ block, a rule document over its budget, a stale `.claude/settings.json`, a decis
 the wrong number, and a stale index; that a description in the template's sections passes
 readiness, and the forms readiness rejects (no Acceptance, an Acceptance item without an
 existing path (a root-level test file counts, a version does not), no Metrics, a Metrics row
-outside its forms, unanswered findings, a blocker as a limit, a missing or repeated measure, an added owner marker in a Markdown file or a touched gate file that
+outside its forms, unanswered findings, a blocker as a limit, a missing or repeated measure (`Regression of` included), an added owner marker in a Markdown file or a touched gate file that
 the description does not name); the class of each kind of path and the review level of
-`--classes`; the totals of `scripts/pr-metrics.sh` against a stand-in for `gh`, and its warning
-when `--limit` cuts the period; and which edits and commands the protect hook asks for (class
+`--classes` (`contracts/` is high); the totals, distributions, regression rate, and hours to
+merge of `scripts/pr-metrics.sh` against a stand-in for `gh`, and its warning when `--limit`
+cuts the period; and which edits and commands the protect hook asks for (class
 approval, an `approval` line over a built-in allowance, secrets, the irreversible commands it
-names) and which it lets through (gate, high, and normal paths, an ordinary push); and that a
-Stop hook stops blocking at the Ralph cap and counts again afterwards. It also checks that `copier update` keeps project content
+names, behind `cd DIR`, `git -C DIR`, or in an interpreter's heredoc) and which it lets through
+(gate, high, and normal paths, an ordinary push, heredoc text); that a Stop hook stops blocking
+at the Ralph cap and counts again afterwards; that a large change only warns; that
+`scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
+settings deny reading secrets. It also checks that `copier update` keeps project content
 and that this repository's template-owned files match `template/`. CI runs it through the `docs`
 workflow, which sets up Node.js and lychee; the test installs uv into `~/.local/bin` when
 neither Copier nor `uvx` is present, so the runner needs only Git, curl, and jq.

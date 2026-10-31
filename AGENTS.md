@@ -28,8 +28,9 @@ higher item below wins; the lower one is wrong and must be fixed or flagged:
 
 Read on demand. Do not load the whole `docs/` tree.
 
-- `docs/README.md`: documentation map, what exists and what is planned. Read it first. Its row
-  "Environment commands" names how to set up, check, test end to end, and reset; use those.
+- `docs/README.md`: documentation map, what exists and what is planned. Read it first. Its rows
+  name the system map with domain ownership, and the environment commands that `scripts/env.sh`
+  runs (setup, check, fast, e2e, reset); use those.
 - `docs/documentation-rules.md`: statuses, lifecycle, path classes, ownership of files, review
   checklist. Read it before creating or changing any document.
 - `docs/decisions/README.md`: generated index of ADRs. `docs/plans/`: active plans only.

@@ -17,13 +17,15 @@ approval .env.*
 approval *.pem
 approval *.key
 
-# Security, access, data migrations, money. Add the project's own, such as policy or limits.
+# Security, access, data migrations, money, public contracts. Add the project's own, such as
+# policy or limits.
 high *auth/*
 high *security/*
 high *secrets/*
 high *migrations/*
 high *billing/*
 high *payments/*
+high contracts/*
 
 # Gates: workflows, the project's checks and Stop hooks, harness settings, dependency manifests
 # and lock files, and the configuration of linters, test runners, coverage, and mutation testing.

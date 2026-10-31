@@ -13,6 +13,7 @@ scripts/check-template.sh
 scripts/check-project.sh
 scripts/gen-decisions-index.sh
 scripts/gen-settings.sh
+scripts/env.sh
 scripts/pr-metrics.sh
 {%- if acceptance_check %}
 scripts/check-acceptance.sh
@@ -47,6 +48,9 @@ scripts/lib/harness-conf.sh
 {%- endif %}
 {%- if code_review %}
 .github/workflows/code-review.yml
+{%- endif %}
+{%- if fail_without_change %}
+.github/workflows/fail-without-change.yml
 {%- endif %}
 .markdownlint-cli2.jsonc
 lychee.toml

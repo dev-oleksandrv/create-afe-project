@@ -32,12 +32,15 @@ never run anything from them.
    test plan" (`docs/contributing.md`, section 3). Whether a `Decided by the owner` marker matches
    the owner's words is not yours to judge: the readiness check verifies the listing, and the
    owner's merge decides.
-4. Post one inline comment per finding on the relevant line with the inline comment tool. Start
+4. In the description file: when "Checks" names neither the review before the pull request nor
+   the reason it did not run (`docs/contributing.md`, sections 3 and 6), that is a `suggestion`,
+   reported in your final message, because it has no line in the diff.
+5. Post one inline comment per finding on the relevant line with the inline comment tool. Start
    each comment with its class, `blocker` or `suggestion` as `docs/contributing.md`, section 6,
    defines them, state the finding in one or two sentences, and name the rule or owner document
    it rests on. When there are no findings, post nothing and say so in the log. This is the only
    pass: do not hold back a finding for a later one.
-5. Report only what you can point at with a file and a line and a rule. Do not report style,
+6. Report only what you can point at with a file and a line and a rule. Do not report style,
    formatting, or naming, do not repeat linter or check output (the readiness check already
    checks the sections of the description), do not invent requirements, and do not write the
    fix: name what is wrong and why. Zero findings is a valid result.

@@ -1,0 +1,40 @@
+# Each new or changed test fails on the base (docs/testing-rules.md, section 3), the
+# fail_without_change module: scripts/env.sh setup prepares the project's toolchain on the
+# runner, then scripts/fail-without-change.sh runs the project's test command with the change and
+# on the base. The label `tests-pass-on-base` allows a test that passes on the base; the
+# description gives the reason. A runner without the toolchain fails the test with the change
+# too, which the driver reports; the project then sets SETUP in .claude/harness.conf.
+name: fail-without-change
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+concurrency:
+  group: fail-without-change-{{ '${{' }} github.event.pull_request.number {{ '}}' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  base:
+    runs-on: {{ '${{' }} fromJSON(vars.CI_RUNS_ON || '{{ ci_runs_on_default }}') {{ '}}' }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: set up the project
+        run: scripts/env.sh setup
+
+      - name: new and changed tests fail on the base
+        env:
+          BASE_REF: {{ '${{' }} github.base_ref {{ '}}' }}
+          ALLOW: {{ '${{' }} contains(github.event.pull_request.labels.*.name, 'tests-pass-on-base') {{ '}}' }}
+        run: |
+          if [ "$ALLOW" = true ]; then
+            scripts/fail-without-change.sh --base "origin/$BASE_REF" --allow-pass-on-base
+          else
+            scripts/fail-without-change.sh --base "origin/$BASE_REF"
+          fi

@@ -3,9 +3,9 @@
 Rules that every test in this repository follows, whatever its language or tools. `AGENTS.md`
 holds the short rules and takes precedence if the two ever disagree. This file comes from the
 project template: report such a disagreement to the template instead of editing it. The project
-adds its test levels, tools, commands, thresholds, and the edge cases of its domain in its own
-documents, which the map (`docs/README.md`) names, and its test checks in `scripts/checks.d/`
-(`documentation-rules.md`, section 9).
+adds the levels of its verification ladder (static checks, unit, integration, user journeys),
+tools, commands, thresholds, and the edge cases of its domain in documents the map names, and
+its test checks in `scripts/checks.d/` (`documentation-rules.md`, section 9).
 
 ## 1. What a test is for
 

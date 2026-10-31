@@ -14,9 +14,9 @@ Claude Code skills that apply them. Repository: `xandronak/agent-docs-template`.
 | Documentation rules, statuses, and file ownership | `docs/documentation-rules.md`, `docs/README.md` |
 | Branches, commits, pull requests, template updates, review of pull requests | `docs/contributing.md` |
 | Decision records | `docs/decisions/adr-template.md`, a generated `docs/decisions/README.md` |
-| Checks | `scripts/check.sh` and the scripts it runs |
-| Claude Code hooks and skills | `.claude/settings.json`, `.claude/hooks/`, `.claude/skills/` (`create-pr`, `update-template`, optional `docs-review`, `review-code`, and `dual-review`) |
-| CI | `.github/workflows/` (`docs`, `decisions`, optional `docs-review` and `code-review`) |
+| Checks and environment | `scripts/check.sh` and the scripts it runs; `scripts/env.sh` for the environment commands; optional `scripts/check-acceptance.sh` and `scripts/fail-without-change.sh` |
+| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated), `.claude/hooks/`, `.claude/skills/` (`create-pr`, `update-template`, optional `docs-review`, `review-code`, and `dual-review`) |
+| CI | `.github/workflows/` (`docs`, `decisions`, optional `docs-review`, `code-review`, and `fail-without-change`) |
 
 Every file has one owner: the template, the project, or a generator. The rules are in
 [`template/docs/documentation-rules.md.jinja`](template/docs/documentation-rules.md.jinja),
@@ -35,9 +35,10 @@ copier copy --trust git@github.com:xandronak/agent-docs-template.git <directory>
 
 Copier asks for the project name, a one-sentence description, the GitHub repository, the CI
 runner (GitHub-hosted, or a self-hosted Linux runner), whether pull requests get the Claude
-documentation review and code review, and whether branches get a dual review with Claude and the
-Codex CLI before their pull request. `--trust` lets the template write its ownership manifest and the decision index after
-copying. Then commit, push, and follow the
+documentation review and code review, whether the review before a pull request adds the Codex CLI
+and the Santa loop (it runs with a Claude subagent either way), and whether to add the Acceptance
+check and the fail-without-change driver. `--trust` lets the template write its generated files
+after copying. Then commit, push, and follow the
 message Copier prints.
 
 ## Update a project

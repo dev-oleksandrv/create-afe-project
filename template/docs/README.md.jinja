@@ -10,7 +10,7 @@ One fact has one owner document; every other document links to it instead of rep
 | --- | --- | --- |
 | Product name and purpose | [`README.md`](../README.md) | exists |
 | Agent rules: precedence, autonomy by risk, when a change is done, required checks | [`AGENTS.md`](../AGENTS.md) | exists |
-| Environment commands: set up, check, fast check, end-to-end tests, reset | check: `scripts/check.sh`; fast check: `scripts/check-docs.sh`, documents only; setup, end-to-end tests, reset: not decided, named here when the project first needs them | check and fast check exist |
+| Environment commands: set up, check, fast check, end-to-end tests, reset | `scripts/env.sh` with `setup`, `check`, `fast`, `e2e`, or `reset`, which runs the commands of `.claude/harness.conf`: check is `scripts/check.sh`, fast check `scripts/check-docs.sh` until the project sets its own; setup, end-to-end tests, reset: not decided until the project sets them | check and fast check exist |
 | Documentation statuses, lifecycle, path classes and access, ownership of files, alignment, review checklist | [`documentation-rules.md`](documentation-rules.md) | exists |
 | Branches, commit messages, pull requests, template updates, review of pull requests | [`contributing.md`](contributing.md); applied in Claude Code by the skills `.claude/skills/create-pr/` and `.claude/skills/update-template/`{% if code_review %}, in CI by `.claude/skills/review-code/`{% endif %}{% if dual_review %}, before a pull request by `.claude/skills/dual-review/`{% endif %} | exists |
 | What a test is for and must prove, gates on tests | [`testing-rules.md`](testing-rules.md) | exists |
@@ -28,10 +28,10 @@ placeholder files.
 | --- | --- | --- |
 | Requirements: what the system must do | `docs/requirements/`, one `REQ-NNN` per statement | the owner states the first requirement |
 | Invariants: what must hold everywhere, each with the check that enforces it | `docs/invariants.md`, one `INV-NN` per invariant | the owner names the first invariant |
-| Architecture: components, boundaries, runtime, code structure | `docs/architecture/` | the first design is proposed |
+| Architecture: the system map, components, domain ownership, boundaries and dependency rules, runtime | `docs/architecture/` | the first design is proposed |
 | Contracts: APIs, schemas, events | `contracts/` at the repository root, machine-readable and authoritative | the first interface is designed |
 | Active plans | `docs/plans/` | work spans more than one session |
-| Operations: run, deploy, observe, recover | `docs/operations/` | there is something to operate |
+| Operations: run, deploy, observe (logs, traces, metrics, scenario replay), recover | `docs/operations/` | there is something to operate |
 | Implemented behaviour | source code and its tests | the first code is merged |
 | Review criteria: what the project adds to the rubric of [`contributing.md`](contributing.md), section 6 | not decided: the owner document the project chooses | the project adds its first criterion |
 

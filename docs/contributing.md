@@ -14,12 +14,15 @@ Everything written into git history and pull requests is in English, without exc
   lowercase words joined by `-`, such as `ci/check-script-timeout`; no ticket numbers.
 - One branch carries one logical change and ends in one pull request: one mechanism with its
   tests and the owner documents it changes (one check, one hook, one rule, one behaviour). A rule
-  change and the first code that follows it are two changes (`AGENTS.md`, section 5). An
-  exception needs the owner's instruction, named under "Notes for the owner".
-- Each session that works in parallel with another works in its own git worktree
-  (`git worktree add`) on its own branch; two sessions never share a working tree.
+  change and the first code that follows it are two changes (`AGENTS.md`, section 5); readiness
+  warns above `DIFF_WARN_LINES` changed lines. An exception needs the owner's instruction, named
+  under "Notes for the owner".
+- Each parallel session works in its own git worktree (`git worktree add`) on its own branch. A
+  session that stops unfinished leaves a checkpoint: its commits pushed, and its progress and
+  blockers in the plan or the pull request description, where the next session starts.
 - A branch that a tool named otherwise (`claude/<name>`) is renamed before its first push; a
-  pushed one keeps its name, noted under "Notes for the owner". After the merge it is deleted.
+  pushed one keeps its name, noted under "Notes for the owner". After the merge GitHub deletes it ("Automatically delete head
+  branches" in the repository settings).
 
 ## 2. Commits
 
@@ -91,6 +94,7 @@ Everything written into git history and pull requests is in English, without exc
 | Santa rounds | 0 |
 | Owner interventions | 0 |
 | Files outside the scope | 0 |
+| Regression of | none |
 
 ## Notes for the owner
 
@@ -118,8 +122,9 @@ Everything written into git history and pull requests is in English, without exc
 - An agent writes a `Decided by the owner` marker only on the owner's instruction and lists each
   one it adds under "Owner decisions"; the owner's merge confirms them.
 - Metrics measure the sensors, so that a rule or check that never fires is removed;
-  `scripts/pr-metrics.sh` aggregates merged pull requests. A sensor is a check or a reviewer; an
-  owner intervention is anything the owner answered, approved, or corrected besides the merge.
+  `scripts/pr-metrics.sh` aggregates merged pull requests, with the time to merge. A sensor is a
+  check or a reviewer; an owner intervention is anything the owner answered, approved, or
+  corrected besides the merge; "Regression of" names the pull request whose behaviour this repairs.
 - Ready to merge: `scripts/check-decisions.sh --ready` and every other check pass, no `blocker`
   is open, every finding is answered. Readiness fails on a missing "Acceptance and test plan" or
   "Metrics" section, a missing or repeated measure; an added record still `proposed`; an
@@ -138,31 +143,29 @@ document is updated in the same branch. The `create-pr` skill runs this and open
 
 ## 5. Template updates
 
-This repository is generated from the project template; `.copier-answers.yml` records the
-version. Template-owned files (`documentation-rules.md`, section 9) change only through an update:
+The template-owned files (`documentation-rules.md`, section 9) change only through an update to a
+template version, which `.copier-answers.yml` records; the `update-template` skill runs it:
 
-1. From an up-to-date `main` with a clean working tree, on the branch `chore/template-update`,
-   run `copier update --trust --defaults`, or add `--vcs-ref=<tag>` for a version. `--trust`
-   lets the template regenerate its generated files.
-2. Resolve every conflict marker and `.rej` file by the class of the file: template-owned takes
-   the template's side, except the project block of `AGENTS.md`; generated files are never
-   merged by hand but regenerated; project files keep the project's content and take the
-   template's change only when it is clearly additive, otherwise ask the owner. Seeded files are
-   not touched by an update, except by a migration that the changelog names, and the changelog
-   says what to copy by hand.
-3. Run `scripts/check.sh`, then open a pull request titled `Template: update to <version>`, with
-   the template's changelog entries since the previous version under "Summary".
-
-In Claude Code the `update-template` skill (`.claude/skills/update-template/SKILL.md`) runs these
-steps. A change the project needs in a template-owned file is made in the template first.
+1. From an up-to-date `main`, on the branch `chore/template-update`: `copier update --trust
+   --defaults`, or with `--vcs-ref=<tag>`; `--trust` lets it regenerate the generated files.
+2. Resolve each conflict marker and `.rej` file by class: template-owned takes the template's
+   side, except the project block of `AGENTS.md`; generated files are regenerated, never merged
+   by hand; project files keep their content and take a clearly additive change, otherwise ask
+   the owner. An update changes seeded files only by a migration the changelog names.
+3. `scripts/check.sh`, then a pull request `Template: update to <version>` with the changelog
+   entries since the previous version under "Summary". A change the project needs in a
+   template-owned file is made in the template first.
 
 ## 6. Review of pull requests
 
 - AI review is a sensor, not a gate: the checks decide by themselves, and a reviewer judges what
   they cannot. Reviewers propose; the owner decides. The review follows the highest class of the
   changed paths (`documentation-rules.md`, section 8), as `scripts/check-decisions.sh --classes`
-  prints it. No
-  review runs before the pull request.
+  prints it. Before the pull request the `create-pr` skill runs it:
+  - low (documents, generated files, a template update): no reviewer;
+  - normal and gate: one pass by one reviewer, a fresh
+    Claude subagent; only the fix of a blocker is checked again;
+  - high: one pass as for normal; the Santa loop comes with the review module and the Codex CLI.
 - In the pull request, `docs-review` reviews every pull request and `code-review` every one that changes code, contracts, checks, or workflows, once, when it
   opens or leaves draft; a push does not run them again.
 - A finding names a file, a line, a class, and the rule it rests on; zero findings is a valid
@@ -187,5 +190,6 @@ steps. A change the project needs in a template-owned file is made in the templa
 | Security | external input is validated where it enters; secrets never reach code, logs, or output |
 | Statuses | nothing is called implemented without a test (`documentation-rules.md`, section 3) |
 
-- A defect found after the merge is fixed after a regression test, and its pull request names
-  what keeps the next one out: a criterion, a check, a rule, or why none fits.
+- A defect found after the merge is fixed after a regression test; its pull request gives the
+  evidence pack (the reproduction, the root cause, the regression test failing then passing) and
+  names what keeps the next one out: a criterion, a check, a rule, or why none fits.
