@@ -81,6 +81,13 @@ expect_pass() {
   (cd "$a" && "$@" > "$work/pass.log" 2>&1) || { cat "$work/pass.log"; fail "wrongly rejected: $what"; }
   gitc "$a" checkout -q -- . && gitc "$a" clean -q -fd
 }
+cat > "$work/hook-settings.json" <<'JSON'
+{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/project/stop/10-x.sh"}]}]}}
+JSON
+expect_fail "a hook command whose script is missing" bash -c 'cp "$work/hook-settings.json" .claude/settings.project.json && scripts/gen-settings.sh && scripts/check-template.sh'
+expect_pass "a hook command whose script exists" bash -c 'cp "$work/hook-settings.json" .claude/settings.project.json && mkdir -p .claude/hooks/project/stop &&
+  printf "#!/bin/sh\nexit 0\n" > .claude/hooks/project/stop/10-x.sh && chmod +x .claude/hooks/project/stop/10-x.sh && scripts/gen-settings.sh && scripts/check-template.sh'
+expect_pass "protect-branch prints the ruleset of the default branch" bash -c 'scripts/protect-branch.sh --dry-run | node -e "const r=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); process.exit(r.conditions.ref_name.include[0]===\"~DEFAULT_BRANCH\" && r.rules.some(x=>x.type===\"pull_request\") && r.rules.some(x=>x.type===\"non_fast_forward\") ? 0 : 1)"'
 expect_fail "a link to a missing file" bash -c 'printf "# Note\n\nSee [x](docs/nope.md).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](docs/testing-rules.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of the same document" bash -c 'printf "# Note\n\n## Part\n\nSee [x](#parts).\n" > note.md && node scripts/check-links.mjs'

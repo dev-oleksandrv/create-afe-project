@@ -113,7 +113,7 @@ export function computed(answers) {
 }
 
 export function messageAfterCreate(a) {
-  const steps = ['set up the CI runner'];
+  const steps = ['protect main with scripts/protect-branch.sh', 'set up the CI runner'];
   if (a.docs_review || a.code_review) steps.push('the CLAUDE_CODE_OAUTH_TOKEN secret, and the Claude GitHub App');
   if (a.dual_review) steps.push('install and sign in to the Codex CLI');
   return (

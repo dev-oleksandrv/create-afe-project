@@ -9,6 +9,7 @@
 //   settings [--check]       merge .claude/settings.template.json and .claude/settings.project.json
 //                            into .claude/settings.json (scripts/gen-settings.sh); with --check,
 //                            write nothing and exit 1 when the file is missing or stale
+//   hooks                    print the command of every hook in .claude/settings.json, one per line
 //   prs <since> <separator>  read `gh pr list --json number,createdAt,mergedAt,body` from stdin;
 //                            print the count listed and the count merged before <since> on the
 //                            first line, then for each pull request merged on or after <since> a
@@ -115,6 +116,16 @@ switch (command) {
   case 'settings':
     settings(args[0] === '--check');
     break;
+  case 'hooks': {
+    const s = parse(existsSync('.claude/settings.json') ? readFileSync('.claude/settings.json', 'utf8') : '');
+    const commands = Object.values(s?.hooks ?? {})
+      .flat()
+      .flatMap((m) => m?.hooks ?? [])
+      .map((h) => h?.command)
+      .filter((c) => typeof c === 'string');
+    process.stdout.write(commands.map((c) => `${c.replace(/\n/g, ' ')}\n`).join(''));
+    break;
+  }
   case 'prs':
     prs(args[0] ?? '', args[1] ?? '\x1f');
     break;

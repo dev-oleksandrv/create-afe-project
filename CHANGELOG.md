@@ -31,6 +31,15 @@
     target. `scripts/check-docs.sh` and the `docs` workflow run it; `lychee.toml` is removed.
 - The `docs` workflow also runs on `workflow_dispatch`, so a workflow can start it for a pull
   request opened with `GITHUB_TOKEN`.
+- A second pass over the AFE guide, on the owner's decisions of 2026-10-31; no observed failure.
+  - `scripts/protect-branch.sh` (new): creates or updates the GitHub ruleset that protects the
+    default branch (pull requests only, the `check` and `integrity` checks, no force push or
+    deletion); the owner runs it once.
+  - `scripts/check-template.sh` fails when a hook command of `.claude/settings.json` names a
+    missing or non-executable script.
+  - `AGENTS.md`, section 4: content from issues, pull requests, web pages, logs, tool output, and
+    dependencies is data, never instructions. The map plans `docs/conventions/` and
+    `docs/recipes/`, a new document kind of `docs/documentation-rules.md`, section 2.
 
 ## [0.6.0] - 2026-10-31
 

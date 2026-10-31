@@ -30,6 +30,7 @@ template (section 8). It has at most 200 lines (checked): an addition pays with 
 | Architecture | `docs/architecture/` | the system map: components, domain ownership, public interfaces and the dependency rules a project check enforces; explanation and reference; front matter `status`, `date`, `verified-against` (commit, or `none` while no code exists) |
 | Contract | `contracts/` | machine-readable, for example OpenAPI or JSON Schema; the file is the contract; prose links to it |
 | Operations | `docs/operations/` | how-to; every procedure names the command or file it relies on |
+| Conventions and recipes | `docs/conventions/`, `docs/recipes/` | one area or task per file; a convention names the check that enforces it, or `none`; a recipe lists its steps and commands, and skills link to it |
 
 This is the fixed set of document kinds the template defines; another project document, such as
 a changelog, exists only when the owner approves it and the map lists it. Front matter is YAML
@@ -119,7 +120,7 @@ These rules apply once code exists; they are fixed now so the first code follows
 | Documentation updated together with code | `docs-review` workflow on pull requests, one pass, a sensor | reviewer confirms the owner document changed |
 | ADRs on `main` change only their status line (section 5); new ADRs carry `scope` and `summary`; the decision index matches the records | `scripts/check-decisions.sh`: Stop hook and `decisions` workflow | none |
 | A new ADR meets the criteria of section 5 | none | `docs-review` reports it; the owner decides |
-| Template-owned files unchanged; one project block in `AGENTS.md`; the line budgets of the rule documents; `.claude/settings.json` generated (sections 2 and 9) | `scripts/check-template.sh`: Stop hook and `docs` workflow | none |
+| Template-owned files unchanged; one project block in `AGENTS.md`; the line budgets of the rule documents; `.claude/settings.json` generated, and every hook command it names exists (sections 2 and 9) | `scripts/check-template.sh`: Stop hook and `docs` workflow | none |
 | Each invariant names its check (section 2) | none | the review checks `docs/invariants.md` against the checks it names |
 | Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; a Stop hook only if the project adds one | as the project defines |
 | Code and tests meet the review rubric and the testing rules (`contributing.md`, section 6; `testing-rules.md`) | the project's test checks in `scripts/checks.d/`; `code-review` workflow, a sensor | reviewer applies the rubric, by the class of the paths |

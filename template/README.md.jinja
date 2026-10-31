@@ -21,6 +21,15 @@ Requires Git, bash, and Node.js 20 or later; nothing else to install. External l
 checked; a project that wants it adds a check such as [lychee](https://lychee.cli.rs/) in
 `scripts/checks.d/` (`docs/documentation-rules.md`, section 9).
 
+## Protected main branch
+
+Changes reach `main` only through pull requests with passing checks. After the first push, a
+repository admin applies the GitHub ruleset once (`--dry-run` shows it first):
+
+```bash
+scripts/protect-branch.sh
+```
+
 ## Project template
 
 This repository is generated from

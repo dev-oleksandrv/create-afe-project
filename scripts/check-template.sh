@@ -73,6 +73,14 @@ done
 echo "== .claude/settings.json is generated from the template's and the project's settings"
 out=$(scripts/gen-settings.sh --check 2>&1) || fail "${out#FAIL: }"
 
+# Harness drift (docs/documentation-rules.md, section 7): a hook whose script is gone fails silently.
+echo "== every hook command of .claude/settings.json exists and is executable"
+while IFS= read -r hc; do
+  script=${hc%% *}; script=${script//\"/}; script=${script//\$CLAUDE_PROJECT_DIR/.}; script=${script//\$\{CLAUDE_PROJECT_DIR\}/.}
+  case "$script" in */*) [ -f "$script" ] && [ -x "$script" ] ||
+    fail ".claude/settings.json: the hook command $hc names $script, which is missing or not executable" ;; esac
+done < <(node scripts/lib/json.mjs hooks)
+
 if [ "$failures" -gt 0 ]; then
   echo "== template checks failed: $failures"
   exit 1

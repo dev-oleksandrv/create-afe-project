@@ -16,6 +16,7 @@ scripts/gen-decisions-index.sh
 scripts/gen-settings.sh
 scripts/env.sh
 scripts/pr-metrics.sh
+scripts/protect-branch.sh
 scripts/lib/git-base.sh
 scripts/lib/classes.sh
 scripts/lib/harness-conf.sh
