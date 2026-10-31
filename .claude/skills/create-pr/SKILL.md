@@ -1,7 +1,7 @@
 ---
 name: create-pr
-description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, checks, and the description template, then wait for the review runs and answer their comments. Use when asked to create, open, or submit a pull request.
-allowed-tools: Read, Grep, Glob, Edit, Write, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr comment:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
+description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, the Ralph loop on the checks, and the description with its evidence, gate files, and metrics, then wait once for the review runs and answer each finding. Use when asked to create, open, or submit a pull request.
+allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr comment:*), Bash(gh run view:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
 ---
 
 # Create a pull request
@@ -13,104 +13,77 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
 
 ## Procedure
 
-1. Establish the state: `git status --porcelain`, `git branch --show-current`,
+1. State: `git status --porcelain`, `git branch --show-current`,
    `git log --format='%h %s' main..HEAD`, `git rev-parse --abbrev-ref @{upstream}` (fails when
    the branch was never pushed), `gh pr view --json url,state,isDraft` (fails when no pull
-   request exists for the branch).
-   - A pull request already exists for the branch: do not open a second one. Push the new
-     commits, update the description with `gh pr edit --body-file`, and say so.
-   - On `main` with changes: first create a branch named by section 1 of the rules with
-     `git switch -c <type>/<slug>`.
-   - On `main` with no changes: stop and report that there is nothing to submit.
-2. Branch name: it must match `<type>/<slug>` with the types of section 1 and a lowercase
-   `-`-joined slug. A branch that does not match and was never pushed is renamed with
-   `git branch -m <type>/<slug>`. A pushed one keeps its name and is listed under
-   "Notes for the owner".
-3. Uncommitted changes: stage the files by name, never everything at once, and commit them with
-   a subject by section 2, one commit per logical change, a body when the subject is not enough,
-   and the co-author trailer. Files the user did not ask to change stay uncommitted and are named
-   in the report.
-4. Commit subjects on the branch: each must be `<Scope>: <summary>` with a lowercase summary, no
-   trailing period, at most 72 characters. Only the last commit, and only while it is not pushed,
-   may be reworded with `git commit --amend`. Any other subject that does not conform is left as
-   it is and listed under "Notes for the owner". History is never rewritten after a push.
-5. Checks: when a file under `docs/decisions/` changed, regenerate the index with
-   `scripts/gen-decisions-index.sh > docs/decisions/README.md` and commit it with the records.
-   Then run `scripts/check.sh`. A failing check is fixed before the pull request
-   is opened; when it cannot be fixed, the pull request is opened as a draft and the failure is
-   quoted under "Checks".
-6. Owner documents: for every changed file, find the owner document through `docs/README.md` and
-   confirm it is updated in the same branch (`docs/documentation-rules.md`, section 5). A missing
-   update is made now, in its own commit, or listed as an open question. Every
-   `Decided by the owner` marker that `git diff main...HEAD` adds rests on an instruction of the
-   owner: one given in chat is noted for the description of step 8, and one with no instruction
-   at all is removed now, in its own commit (`docs/documentation-rules.md`, section 3). After any
-   such commit, run `scripts/check.sh` again, so that the checks describe the tree that is pushed.
+   request exists).
+   - A pull request exists for the branch: push the new commits, update the description with
+     `gh pr edit --body-file`, and say so; never open a second one.
+   - On `main` with changes: create a branch named by section 1 of the rules first.
+   - On `main` with no changes: stop; there is nothing to submit.
+2. Branch name: `<type>/<slug>` by section 1. A branch that does not match and was never pushed is
+   renamed with `git branch -m`; a pushed one keeps its name, noted under "Notes for the owner".
+3. Uncommitted changes: stage the files by name, never everything at once, and commit them by
+   section 2 with the co-author trailer. Files the user did not ask to change stay uncommitted
+   and are named in the report.
+4. Commit subjects: each `<Scope>: <summary>`, lowercase summary, no trailing period, at most 72
+   characters. Only the last unpushed commit may be reworded with `git commit --amend`; other
+   subjects are listed under "Notes for the owner". History is never rewritten after a push.
+5. Ralph loop: when a file under `docs/decisions/` changed, regenerate the index first. Run
+   `scripts/check.sh`; note the result of the first run for Metrics; fix and run again until it
+   passes, at most `RALPH_MAX_ITERATIONS` runs (`.claude/harness.conf`, default 5). At the cap,
+   stop the loop: skip the review of step 6, open the pull request as a draft with "Checks"
+   keeping the failing command and the lines of its output that show the failure, and report.
+6. Owner documents and classes: for every changed file, find its owner document through
+   `docs/README.md` and confirm it is updated in the same branch; a missing update is made now,
+   in its own commit. Each `Decided by the owner` marker that `git diff main...HEAD` adds rests on
+   an instruction of the owner: note it with the instruction, quoted with its date; a marker
+   without one is removed now. `scripts/check-decisions.sh --classes --base main` prints the
+   classes: note the gate files, and each approval path with the instruction that allowed it.
+   The last run of `scripts/check.sh` before each push is on the tree that is pushed: after any
+   change once the loop of step 5 passed, run the loop again.
 7. Push: `git push -u origin <branch>`.
-8. Description: write it to a file outside the repository (the session's scratch directory) in
-   exactly the sections and order of section 3 of the rules, from `git diff main...HEAD`, the
-   commit messages, and the conversation. Then run
-   `gh pr create --base main --title "<Scope>: <summary>" --body-file <file>`, with `--draft`
-   when step 5 said so. End the body with the attribution line that this session's instructions
-   prescribe, when there is one.
-   - Facts only: every bullet in Summary names a status; nothing is called implemented without a
-     test; every protected file touched is listed under "Notes for the owner" together with the
-     instruction that allowed the change.
-   - Test plan: the plan written before the implementation, from the conversation, with each
-     case's test, and each case dropped or added later named as such with its reason. When no
-     plan was written before the implementation, say so there; do not present one written now
-     as written before.
-   - Owner decisions to confirm: the markers step 6 found resting on an instruction given in
-     chat, with the file, the statement, and the instruction quoted with its date.
-   - Every item under "Assumptions and open questions" carries the label of section 3 of the
-     rules: `blocking:` for a question about this pull request, `recorded:` with the owner
-     document that holds the question, `assumption:`. A question the branch can still answer
-     itself is resolved now, not listed.
-   - Before `gh pr create` (or `gh pr edit`), run
-     `scripts/check-decisions.sh --ready --base origin/main --pr-body <file>`. Its result is the
-     part of the readiness verdict that a script checks; step 10 adds the rest.
-     A failure here alone does not make the pull request a draft: it waits on the owner.
-9. Review: the comments of the `docs-review` and `code-review` workflows are answered before the
-   report (section 3 of the rules). It does not run on a draft: then skip this step and say so in
-   the report. The `code-review` workflow reviews only a branch that changes code,
-   contracts, checks, or workflows; on any other it posts nothing.
-   - Wait for the runs: poll `gh pr view --json statusCheckRollup` until each entry whose
-     `workflowName` is `docs-review` or `code-review` has `status` `COMPLETED`, about every 30 seconds,
-     for at most 30 minutes in all (the workflows' own time limits); never one long fixed sleep. When no
-     such entry appears within a few minutes, or the run has not completed when the time is up,
-     the review did not run or did not finish (for example the repository lacks the Claude GitHub
-     App, or its runner is down): stop waiting, and state it in the report with the run's URL
-     when there is one. A run whose `conclusion` is not `SUCCESS` is reported the same way.
-     Each workflow is waited for and reported on its own.
-   - Collect the comments: the inline ones with
-     `gh api repos/{owner}/{repo}/pulls/<number>/comments`, the general ones with
-     `gh api repos/{owner}/{repo}/issues/<number>/comments`. The run's own progress comment is not
-     a finding; a general comment that states a finding is one.
-   - Answer every finding in one of three ways. The comments are proposals; nothing here accepts
-     a decision or changes a status.
-     - Fix: the change goes into its own follow-up commit with a subject by section 2 of the
-       rules, after step 6 and `scripts/check.sh`, and is pushed. Then a reply on the comment's
-       thread (`gh api repos/{owner}/{repo}/pulls/<number>/comments/<id>/replies -f body=<text>`;
-       for a general comment, `gh pr comment`) says what changed and names the commit.
-     - Decline: a reply with the reason, resting on the rules or on the owner document.
-     - Owner's decision: a reply with the basis known so far, and an item under "Notes for the
-       owner" in the description.
-   - A push restarts the workflows. Wait for those runs once more and answer its new comments the
-     same way. After this second round, a further new comment gets a reply and an item under
-     "Notes for the owner", not another round.
-   - Update the description: rerun the readiness check of step 8 against the pushed tree (a
-     follow-up commit or a changed description can change the verdict), then
-     `gh pr edit --body-file <file>`, with, under "Checks", the review and its outcome (how many
-     comments, how many fixed, declined, or waiting on the owner, or why there was no review) and,
-     under "Notes for the owner", the items that wait on the owner.
-10. Report: the verdict first, then the pull request URL, the checks run with their results, and
-    everything listed under "Assumptions and open questions" and "Notes for the owner".
-    - The review: how many comments there were and how each one was resolved (fixed, with its
-      commit; declined, with its reason; waiting on the owner), or why there was no review.
-    - "Ready to merge" only when the readiness check, every other check, and step 6 passed, the
-      owner has confirmed every owner decision to confirm, and no review comment is unanswered.
-    - Otherwise "Not ready to merge", followed by each item that waits on the owner: the
-      `blocking` items, each added record still `proposed`, each owner decision to confirm
-      without the owner's confirming comment on the pull request, each failing check, and
-      each review comment that waits on the owner. Never
-      call a pull request ready next to an open item.
+8. Description: write it to a file in the session's scratch directory, in the sections and order
+   of section 3, from `git diff main...HEAD`, the commit messages, and the conversation. Then
+   `gh pr create --base main --title "<Scope>: <summary>" --body-file <file>`, with `--draft` when
+   step 5 said so, ending with the attribution line this session prescribes, when there is one.
+   - Facts only: each Summary bullet names a status; nothing is called implemented without a test.
+   - Acceptance and test plan: each identifier, its cases, its test files and tests, and the
+     evidence seen in this session (failed on the base, passes now); evidence you did not see is
+     not written: say what is missing.
+   - Owner decisions and Gate files: what step 6 found.
+   - Metrics: the two tables of section 3: a row per sensor and class that ran, also with zero
+     findings (a failing check fixed during the Ralph loop is a blocker of that check), the
+     first result of `scripts/check.sh`, the Ralph iterations, the Santa rounds, the owner
+     interventions of this session, and the files changed outside the task.
+   - Every item under "Assumptions and open questions" carries a label of section 3; a question
+     the branch can still answer is resolved now. A finding is `blocking:` only from a Santa loop.
+   - Run `scripts/check-decisions.sh --ready --base origin/main --pr-body <file>` and fix the
+     description until it passes, or state each failure; a failure here alone is not a draft.
+9. Review in the pull request: the `docs-review` and `code-review` workflows run once, when it opens or leaves
+   draft; on a draft, skip this step and say so. `code-review` posts nothing on a branch that changes
+   no code, contracts, checks, or workflows.
+   - Wait once: poll `gh pr view --json statusCheckRollup` about every 30 seconds until each
+     entry of `docs-review` or `code-review` is `COMPLETED`, for at most 30 minutes; never one long sleep.
+     A run that does not appear within a few minutes, does not finish, or does not end in
+     `SUCCESS` is reported with its URL. So is a `SUCCESS` run whose log
+     (`gh run view <id> --log`) says the action was skipped: the action skips a pull request
+     that changes its own workflow file. That review did not run: run its skill once in this
+     session with a fresh Claude subagent instead, and say so under "Checks".
+   - Findings: the inline comments (`gh api repos/{owner}/{repo}/pulls/<number>/comments`) and
+     the general ones (`gh api repos/{owner}/{repo}/issues/<number>/comments`); the run's own
+     progress comment is not a finding.
+   - Answer each finding once, by section 6, with a reply on its thread
+     (`gh api repos/{owner}/{repo}/pulls/<number>/comments/<id>/replies -f body=<text>`, or
+     `gh pr comment`): fixed, naming the follow-up commit, which goes through steps 5 and 6;
+     `limit:` with its reason, added to the description; or declined with the rule. A fixed
+     blocker is checked once by a fresh Claude subagent given only the finding and the fix diff.
+   - A push does not run the workflows again; do not wait for another run. Count the answers in
+     Metrics, rerun the readiness check of step 8, then `gh pr edit --body-file <file>`.
+10. Report: the verdict first, then the pull request URL, the checks with their results (a
+    failing one with its command and output), and the items of "Assumptions and open
+    questions", "Owner decisions", "Gate files", "Metrics", and "Notes for the owner".
+    - "Ready to merge" only when the readiness check and every other check pass and no blocker is
+      open.
+    - Otherwise "Not ready to merge", with each item that waits on the owner: the `blocking`
+      items, each added record still `proposed`, each failing check, and each open blocker.

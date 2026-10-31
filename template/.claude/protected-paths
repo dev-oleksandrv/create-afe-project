@@ -1,3 +1,0 @@
-# Extra paths that need the owner's instruction before an agent edits them, one shell glob per
-# line, relative to the repository root (docs/documentation-rules.md, sections 8 and 9). The
-# template-owned files are protected already. This file belongs to the project.

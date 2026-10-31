@@ -11,13 +11,27 @@ _skip_if_exists:
   - CLAUDE.md
   - .gitignore
   - docs/README.md
-  - .claude/protected-paths
+  - .claude/path-classes
+  - .claude/harness.conf
+  - .claude/settings.project.json
 
-# Generated files: the ownership manifest and the decision index are rebuilt after every copy and
-# update. Running them needs `copier copy --trust` and `copier update --trust`.
+# Generated files: the Claude Code settings, the ownership manifest, and the decision index are
+# rebuilt after every copy and update. Running them needs `copier copy --trust` and
+# `copier update --trust`.
 _tasks:
+  - "scripts/gen-settings.sh"
   - "scripts/check-template.sh --write"
   - "scripts/gen-decisions-index.sh > docs/decisions/README.md"
+
+# 0.5.0 replaces the seeded .claude/protected-paths, which the update deletes, with
+# .claude/path-classes: its glob lines are kept as class approval.
+_migrations:
+  - version: v0.5.0
+    when: "{{ _stage == 'before' }}"
+    command: "[ ! -f .claude/protected-paths ] || cp .claude/protected-paths .claude/protected-paths.pre-0.5"
+  - version: v0.5.0
+    when: "{{ _stage == 'after' }}"
+    command: "[ ! -f .claude/protected-paths.pre-0.5 ] || { grep -v -E '^[[:space:]]*(#|$)' .claude/protected-paths.pre-0.5 | sed 's/^/approval /' >> .claude/path-classes; rm .claude/protected-paths.pre-0.5; }"
 
 project_name:
   type: str
@@ -61,7 +75,17 @@ code_review:
 
 dual_review:
   type: bool
-  help: Review a branch with Claude and the Codex CLI before its pull request opens (needs the Codex CLI where Claude Code runs)
+  help: Review a branch before its pull request opens by the class of its paths, with the Codex CLI or a Claude subagent, and both in a Santa loop for class high (the loop needs the Codex CLI where Claude Code runs)
+  default: false
+
+acceptance_check:
+  type: bool
+  help: Check that every identifier of a pull request's Acceptance section appears in a test file (set TEST_GLOBS in .claude/harness.conf)
+  default: false
+
+fail_without_change:
+  type: bool
+  help: Check that each new or changed test fails on the base, with the project's own test command (set FWC_TEST in .claude/harness.conf)
   default: false
 
 ci_runs_on_default:

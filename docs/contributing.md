@@ -1,224 +1,191 @@
 # Contribution rules
 
-Reference for branches, commit messages, pull requests, template updates, and review in this
-repository.
-`AGENTS.md` holds the short rules and takes precedence if the two ever disagree. This file comes
-from the project template: report such a disagreement to the template instead of editing it. Everything written into git history and pull
-requests is in English, without exception.
+Branches, commits, pull requests, when a change is done, template updates, and review.
+`AGENTS.md` takes precedence; this file comes from the template, so report a disagreement there.
+Everything written into git history and pull requests is in English, without exception.
 
 ## 1. Branches
 
-- The repository has the remote `origin`, and `main` is its default branch, known locally as
-  `origin/HEAD` (`git remote set-head origin -a` after the first push).
-- `main` is the only long-lived branch and the base of every pull request. Nothing is committed
-  to it directly, except the initial commit of the files the template generated; every other
-  change reaches it through a merged pull request.
-- A working branch is named `<type>/<slug>`.
-  - `type` says what the change touches: `docs` for documentation, decisions, requirements, and
-    plans; `ci` for checks, hooks, workflows, and skills; `feat` for new behaviour; `fix` for a
-    defect in existing behaviour; `chore` for tooling and housekeeping.
-  - `slug` names the change in two to five lowercase words joined by `-`, for example
-    `docs/requirements-platform` or `ci/check-script-timeout`. No ticket numbers: the
-    repository has no tracker.
-- One branch carries one logical change and ends in one pull request. A logical change is one
-  mechanism together with its tests and the owner documents it changes: one check, one hook, one
-  rule, one behaviour. For example, a lint rule and the test that proves it are one change; a new
-  hook and an unrelated fix of another hook are two; a rule change and the first code that
-  follows it are two (`AGENTS.md`, section 5). Work that needs several mechanisms is split into
-  branches, opened in the order in which they depend on each other.
-- A branch that a tool created under another name (for example `claude/<name>`) is renamed to
-  the convention before it is first pushed. A branch that is already pushed keeps its name, and
-  the pull request says so under "Notes for the owner".
-- After the merge the branch is deleted.
+- `main` on the remote `origin` (`git remote set-head origin -a`) is the only long-lived branch
+  and the base of every pull request; nothing but the template's initial commit goes to it directly.
+- A working branch is named `<type>/<slug>`: `docs` for documentation, decisions, requirements,
+  and plans; `ci` for checks, hooks, workflows, and skills; `feat` for new behaviour; `fix` for a
+  defect; `chore` for tooling and housekeeping. The slug names the change in two to five
+  lowercase words joined by `-`, such as `ci/check-script-timeout`; no ticket numbers.
+- One branch carries one logical change and ends in one pull request: one mechanism with its
+  tests and the owner documents it changes (one check, one hook, one rule, one behaviour). A rule
+  change and the first code that follows it are two changes (`AGENTS.md`, section 5). An
+  exception needs the owner's instruction, named under "Notes for the owner".
+- Each session that works in parallel with another works in its own git worktree
+  (`git worktree add`) on its own branch; two sessions never share a working tree.
+- A branch that a tool named otherwise (`claude/<name>`) is renamed before its first push; a
+  pushed one keeps its name, noted under "Notes for the owner". After the merge it is deleted.
 
 ## 2. Commits
 
-- The subject line is `<Scope>: <summary>`.
-  - `Scope` names what the commit changes, written as it is written elsewhere: an owner document
-    or its area (`Requirements`, `Rules`, `Map`, `Plan`, `Contributing`), a decision (`ADR-0001`),
-    a workflow or skill (`create-pr`), later a module. Several scopes are
-    separated by commas: `ADR-0001, ADR-0002: accepted by the owner`.
-  - `summary` states what the commit does or what is now true, in the present tense, starting
-    with a lowercase letter, without a trailing period: `apply review fixes`,
-    `requirements section now exists`.
-  - The whole subject fits in 72 characters.
-- The body is separated from the subject by a blank line and wrapped at 72 characters. It is
-  present whenever the subject alone does not say why, or what else the reader must know: the
-  documents affected, the statuses that changed and who set them (`accepted by the owner`), and
-  related pull requests by number (`PR #2`). It never calls something implemented without a test.
-- One commit per logical change. Work-in-progress and fix-up commits are squashed locally before
-  the branch is pushed. A follow-up that answers review is its own commit with its own scope.
-- A commit authored by an agent ends with the co-author trailer its tool prescribes, after a
-  blank line. For Claude Code that is a `Co-Authored-By:` line naming the model.
+- The subject line is `<Scope>: <summary>`, at most 72 characters.
+  - `Scope` names what the commit changes, as it is written elsewhere: an owner document or its
+    area (`Requirements`, `Rules`, `Map`, `Plan`, `Contributing`), a decision (`ADR-0001`), a
+    workflow or skill (`create-pr`). Several scopes are separated by commas.
+  - `summary` states what the commit does or what is now true, in the present tense, lowercase,
+    without a trailing period: `apply review fixes`, `requirements section now exists`.
+- The body, after a blank line and wrapped at 72 characters, says why when the subject does not,
+  and names the documents affected, the statuses changed and who set them, and related pull
+  requests (`PR #2`). It never calls something implemented without a test.
+- One commit per logical change. Work-in-progress and fix-up commits are squashed before the
+  branch is pushed. A follow-up that answers review is its own commit.
+- A commit authored by an agent ends with the co-author trailer its tool prescribes; for Claude
+  Code, a `Co-Authored-By:` line naming the model.
 
-## 3. Pull requests
+## 3. Pull requests and done
 
-- One pull request per branch, opened against `main`. It is a draft while the work is unfinished
-  or a check other than merge readiness fails. The `docs-review` workflow reviews non-draft pull requests only.
-- The title is the subject of the branch's only commit or, with several commits, a new subject
-  in the same `<Scope>: <summary>` form that covers the whole branch.
-- The description is the report that `AGENTS.md`, section 6, requires: Summary covers the files
-  changed, the other sections cover the test plan, the checks, the assumptions, and the open
-  questions. It has these sections, in this order. The first four are always present; a section
-  with nothing to say reads "None". "Owner decisions to confirm" is present when the branch adds
-  a marker that it lists.
+- One pull request per branch, against `main`; a draft while the work is unfinished or a check
+  other than merge readiness fails. The title is the branch's commit subject, or one subject in
+  the same form for several commits.
+- The description is the report of `AGENTS.md`, section 6: the evidence that the change is done.
+  It has these sections in this order; "Owner decisions" and "Gate files" appear when they have
+  an item, "Notes for the owner" is optional, and an empty section reads "None".
 
 ```markdown
 ## Summary
 
-- What changed and why, one bullet per owner document or area, naming the files. Each new
-  statement names its status: `proposed`, `accepted by the owner`, `approved`, `implemented`
-  (with its test).
+- What changed and why, one bullet per owner document or area, naming the files; each new
+  statement with its status (`proposed`, `accepted by the owner`, `implemented` with its test).
 
-## Test plan
+## Acceptance and test plan
 
-- The plan written before the implementation, one bullet per requirement or behaviour: its
-  cases, failure paths, and edge cases (`docs/testing-rules.md`, sections 2 and 3), each with
-  the test that covers it. "None" when the change adds or changes no behaviour.
+- One bullet per identifier the change serves (`REQ-NNN`, `AC-NN`, or an identifier in the owner
+  document of a check): its cases, the test files in backticks and the tests that carry it, and
+  the evidence: failed on the base and why, passes now. "None: <reason>" for no behaviour change.
 
 ## Checks
 
-- `scripts/check.sh`: documentation, decision records, template integrity, and project checks
-  pass; name each failing part and its output.
-- Semantic self-review (`docs/documentation-rules.md`, section 7): what was checked, and the result.
+- `scripts/check.sh` passes; or, for each failing part, the command and the lines of its output
+  that show the failure, so that the next session can resume from them.
+- Semantic self-review (`docs/documentation-rules.md`, section 7): what was checked, the result.
+- The review before the pull request (section 6): its reviewers and their models, or why none.
 
 ## Assumptions and open questions
 
-- None, or one bullet each, starting with `blocking:`, `recorded:`, or `assumption:`.
+- None, or one bullet each, labelled `blocking:`, `recorded:`, `assumption:`, or `limit:`.
 
-## Owner decisions to confirm
+## Owner decisions
 
-- One bullet per `Decided by the owner` marker that the branch adds on an instruction given in
-  chat: the file, the statement, and the instruction, quoted with its date.
+- Each `Decided by the owner` marker the branch adds: the file, the statement, and the owner's
+  instruction, quoted with its date.
+
+## Gate files
+
+- Each file of class gate the branch touches, as `scripts/check-decisions.sh --ready` lists them.
+
+## Metrics
+
+| Sensor | Class | Found | Fixed | Limit | Declined |
+| --- | --- | --- | --- | --- | --- |
+| check.sh | blocker | 0 | 0 | 0 | 0 |
+
+| Measure | Value |
+| --- | --- |
+| First check.sh | pass |
+| Ralph iterations | 1 |
+| Santa rounds | 0 |
+| Owner interventions | 0 |
+| Files outside the scope | 0 |
 
 ## Notes for the owner
 
-- Optional: protected files touched and the instruction that allowed it, decisions that await
-  acceptance, alternatives not taken.
+- Optional: protected files touched and the instruction that allowed it, alternatives not taken.
 ```
 
-- A pull request opened by an agent ends with the attribution line its tool prescribes, after
-  the last section. For Claude Code that is
+- An agent's pull request ends with the attribution line its tool prescribes; for Claude Code,
   `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
-- Each item under "Assumptions and open questions" carries one label:
-  - `blocking:` a question about the pull request itself (its content, wording, location, a
-    status, a decision it needs). It is answered and resolved before the merge.
-  - `recorded:` a question about the subject matter, written down with an identifier in its
-    owner document; the item names that file, for example
-    `recorded: OQ-1 in docs/requirements/<document>.md`. It does not hold the merge.
+- The labels of "Assumptions and open questions":
+  - `blocking:` a question about the pull request itself (its content, a status, a decision it
+    needs), resolved before the merge. A review finding is one only in a Santa loop (section 6).
+  - `recorded:` a question about the subject matter, kept with an identifier in its owner
+    document, which the item names (`recorded: OQ-1 in docs/requirements/<document>.md`).
   - `assumption:` an assumption the change rests on, also labelled where it is used.
-- The test plan is written before the implementation, together with the tests that come first
-  (`testing-rules.md`, section 3), and the description carries it. A case dropped or added later
-  is named as such with its reason. Reviewers compare the code and the tests with the plan
-  (section 6).
-- A `Decided by the owner` marker rests on the owner's instruction in the pull request
-  (`documentation-rules.md`, section 7, item 6). Each marker the branch adds on an instruction
-  given in chat is listed under "Owner decisions to confirm", and the owner confirms them all
-  with one comment on the pull request.
-- Every comment of the `docs-review` and `code-review` workflows is answered on the pull request before the merge: fixed in a
-  follow-up commit, or declined with a reason. The comments are proposals; the owner decides.
-- A pull request is ready to merge when no `blocking` item remains, every decision record it adds
-  is `accepted` or `rejected`, the owner has confirmed every item under "Owner decisions to
-  confirm", every check passes, and every review comment is answered.
-  The `decisions` workflow checks the first two; it signals and does
-  not block, so a merge while it fails is the owner's deliberate exception. A pull request that
-  only waits on the owner stays open for review, not a draft. An agent reports such a pull
-  request as "not ready to merge" with the items that wait on the owner, never as ready.
-- The owner merges with a merge commit, so the branch's commits and their scopes stay visible in
-  history. Squash and rebase merges are not used.
+  - `limit:` a suggestion of a review that the branch does not fix, with its sensor and reason;
+    for a check, its owner document now names the forms it catches. The merge accepts it.
+- A change is done when each identifier it serves has a test that carries it, each new or changed
+  test failed on the base and passes now, `scripts/check.sh` passes and no measure the project
+  records falls below the base, no `blocker` is open, and the readiness check passes. The agent
+  derives the test plan from the identifiers (`testing-rules.md`, section 3); it is a report,
+  never approved per pull request and not maintained afterwards.
+- Ralph loop: the author runs `scripts/check.sh`, fixes, and runs it again until it passes, at
+  most `RALPH_MAX_ITERATIONS` runs (`.claude/harness.conf`, default 5). At the cap the author
+  stops and reports the failing command and its output. Metrics count the runs.
+- An agent writes a `Decided by the owner` marker only on the owner's instruction and lists each
+  one it adds under "Owner decisions"; the owner's merge confirms them.
+- Metrics measure the sensors, so that a rule or check that never fires is removed;
+  `scripts/pr-metrics.sh` aggregates merged pull requests. A sensor is a check or a reviewer; an
+  owner intervention is anything the owner answered, approved, or corrected besides the merge.
+- Ready to merge: `scripts/check-decisions.sh --ready` and every other check pass, no `blocker`
+  is open, every finding is answered. Readiness fails on a missing "Acceptance and test plan" or
+  "Metrics" section, a missing or repeated measure; an added record still `proposed`; an
+  open `blocking:` item or one without a label; an Acceptance item that is neither "None" with a
+  reason nor names an existing path in backticks; an added marker in a Markdown file or a touched
+  gate file that its section does not name; a Metrics table outside its forms, whose answers do
+  not add up, or with a blocker as a limit. Whether a test proves
+  its identifier is left to the review. The `decisions` workflow runs it on every change and
+  does not block. A pull request waiting only on the owner stays open as "not ready to merge".
+- The owner merges with a merge commit; squash and rebase merges are not used.
 
-## 4. Checklist before opening a pull request
+## 4. Before opening a pull request
 
-1. The branch is named `<type>/<slug>` (section 1) and based on `main`.
-2. Every commit subject follows section 2, and no work-in-progress commit remains.
-3. `scripts/check.sh` passes.
-4. Every owner document affected by the change is updated in the same branch
-   (`docs/documentation-rules.md`, section 5).
-5. The description follows section 3, and every protected file touched is listed under
-   "Notes for the owner".
-6. `scripts/check-decisions.sh --ready --base origin/main --pr-body <description file>` passes,
-   or its failures are stated. It checks the added records and the items under "Assumptions and
-   open questions"; the report's readiness verdict adds the rest of section 3, such as the
-   owner's confirmation of "Owner decisions to confirm".
-
-In Claude Code the `create-pr` skill (`.claude/skills/create-pr/SKILL.md`) runs this checklist
-and opens the pull request, then waits for the review runs and answers their comments.
+Sections 1 to 3 hold, the checks pass or their failures are stated, and every affected owner
+document is updated in the same branch. The `create-pr` skill runs this and opens it.
 
 ## 5. Template updates
 
-This repository is generated from the project template, and `.copier-answers.yml` records the
-template version it was last updated to. Template-owned files (`documentation-rules.md`, section 9)
-change only through an update:
+This repository is generated from the project template; `.copier-answers.yml` records the
+version. Template-owned files (`documentation-rules.md`, section 9) change only through an update:
 
-1. Start from an up-to-date `main` with a clean working tree, on the branch
-   `chore/template-update`.
-2. Run `copier update --trust --defaults`, or add `--vcs-ref=<tag>` for a specific version. The
-   `--trust` flag lets the template regenerate `.template/owned.sha256` and the decision index.
-3. Resolve every conflict marker and `.rej` file by the class of the file
-   (`documentation-rules.md`, section 9):
-   - template-owned: take the template's side, except inside the project block of `AGENTS.md`,
-     which keeps the project's content;
-   - generated: never merge by hand; take the template's side for `.template/owned.sha256` and
-     `.copier-answers.yml`, and rerun `scripts/gen-decisions-index.sh` for the decision index;
-   - project files: keep the project's content and add the template's change only when it is
-     clearly additive; otherwise stop and ask the owner. Seeded files are never touched by an
-     update; a change the template makes to them reaches new projects only, and its changelog
-     entry says what an existing project should copy by hand.
-4. Run `scripts/check.sh`, then open a pull request titled `Template: update to <version>`, with
-   the entries of the template's `CHANGELOG.md` for the versions in between under "Summary".
+1. From an up-to-date `main` with a clean working tree, on the branch `chore/template-update`,
+   run `copier update --trust --defaults`, or add `--vcs-ref=<tag>` for a version. `--trust`
+   lets the template regenerate its generated files.
+2. Resolve every conflict marker and `.rej` file by the class of the file: template-owned takes
+   the template's side, except the project block of `AGENTS.md`; generated files are never
+   merged by hand but regenerated; project files keep the project's content and take the
+   template's change only when it is clearly additive, otherwise ask the owner. Seeded files are
+   not touched by an update, except by a migration that the changelog names, and the changelog
+   says what to copy by hand.
+3. Run `scripts/check.sh`, then open a pull request titled `Template: update to <version>`, with
+   the template's changelog entries since the previous version under "Summary".
 
 In Claude Code the `update-template` skill (`.claude/skills/update-template/SKILL.md`) runs these
-steps. A change the project needs in a template-owned file is made in the template repository
-first and arrives here through such an update.
+steps. A change the project needs in a template-owned file is made in the template first.
 
 ## 6. Review of pull requests
 
-- A pull request that changes code, contracts, checks, or workflows is reviewed against the
-  rubric below. Reviewers propose; the owner decides. A finding names a file and a line, a
-  severity, and the rule it rests on. Style, formatting, and naming belong to the linters, and
-  zero findings is a valid result. The severities:
-  - `blocker`: merged as it is, the change breaks behaviour, a contract, a check, or security,
-    or it contradicts a source of higher precedence (`AGENTS.md`, section 1).
-  - `should`: merged as it is, the change leads a reader or a later change to a wrong result:
-    a statement that is false or has the wrong status, a behaviour without the test that
-    proves it, a rule that contradicts its owner document, or a gap through which an ordinary
-    edit loosens a gate or an honest mistake passes it.
-  - `nit`: anything else that would improve the change: wording, order, a clearer link, a
-    detail nobody would act on wrongly. A reviewer who hesitates between `should` and `nit`
-    picks `nit` and says why.
-- A finding that only deliberate evasion can exploit to bypass a development gate, by the threat
-  model of `testing-rules.md`, section 4, is a `nit`. A bypass of a product invariant (security,
-  secrets, policy enforcement, limits) keeps its severity, and so does evasion that the diff
-  under review itself commits, such as a test skipped through an aliased import. Every reviewer calibrates by the same
-  examples:
-
-| `should` | `nit` |
-| --- | --- |
-| A document says a check rejects a form that no test exercises, or calls a rule absolute when a counterexample exists | A sentence about the same check could be shorter, or its link could point at the section instead of the file |
-| A new behaviour, or a case of the test plan, has no test that fails without the change | A test proves its case, but its name does not say which case |
-| A gate misses a form an agent writes in ordinary work, for example a hook that sees `>` but not `>>` into a protected file | A gate misses a form that takes deliberate evasion, for example an aliased import of a test function, or a target path built at run time |
-| A statement claims `implemented` without a test, or `decided` without the owner's instruction | A commit body could name the affected document more precisely |
-
-- A review fails on any `blocker` or `should` and passes otherwise; a `nit` never fails it. A
-  `nit` is answered like any comment and may be declined with a reason or left to a later
-  change.
-- The project adds its own criteria, for example its dependency rule or its conventions, in one
-  owner document that the map (`docs/README.md`) names under "Review criteria"; every reviewer
-  applies both.
+- AI review is a sensor, not a gate: the checks decide by themselves, and a reviewer judges what
+  they cannot. Reviewers propose; the owner decides. The review follows the highest class of the
+  changed paths (`documentation-rules.md`, section 8), as `scripts/check-decisions.sh --classes`
+  prints it. No
+  review runs before the pull request.
+- In the pull request, `docs-review` reviews every pull request and `code-review` every one that changes code, contracts, checks, or workflows, once, when it
+  opens or leaves draft; a push does not run them again.
+- A finding names a file, a line, a class, and the rule it rests on; zero findings is a valid
+  result, and style belongs to the linters. A `blocker`: merged as it is, the change breaks
+  behaviour, a contract, security, or a product invariant (`docs/invariants.md`), loses data,
+  fails a criterion of its Acceptance section, or contradicts a higher source (`AGENTS.md`,
+  section 1). Which bypass of a gate is a blocker follows `testing-rules.md`, section 4. Any
+  other finding is a `suggestion`.
+- Each finding is answered once. A blocker is fixed, and the fix checked once more by a fresh
+  reviewer given the blocker and the fix, or declined with a reason. A suggestion never drives
+  a loop: it is fixed at once, recorded as `limit:` (section 3), or declined with a reason.
+- The project adds its own criteria in one owner document that the map names under "Review
+  criteria"; every reviewer applies both.
 
 | Criterion | Passes when |
 | --- | --- |
-| Authority | every behaviour in the diff serves a named requirement or acceptance criterion, or is listed as an open question; nothing is invented (`AGENTS.md`, section 4) |
-| Co-change | contract, code, tests, and the owner document change together; a breaking contract change is versioned; generated files are regenerated (`documentation-rules.md`, section 6) |
-| Correctness | the logic does what the requirement says, including the edge cases that apply to it |
-| Tests | the tests follow `docs/testing-rules.md`, cover every case of the test plan in the description that is not named as dropped (section 3), and each new test fails without the change |
-| Errors | no error is swallowed, no failure hides behind a default, and nothing is substituted silently |
-| Security | external input is validated where it enters; secrets never reach code, logs, errors, or output |
+| Authority | every behaviour serves a named requirement or criterion, or is an open question; nothing is invented (`AGENTS.md`, section 4) |
+| Co-change | contract, code, tests, and owner document change together; a breaking contract change is versioned; generated files are regenerated |
+| Correctness | the logic does what the requirement says, with the edge cases that apply |
+| Tests | the tests follow `docs/testing-rules.md`, and every identifier of "Acceptance and test plan" has a test that carries it and fails without the change |
+| Errors | no error is swallowed, no failure hides behind a default |
+| Security | external input is validated where it enters; secrets never reach code, logs, or output |
 | Statuses | nothing is called implemented without a test (`documentation-rules.md`, section 3) |
 
-- A defect found after the merge is fixed after a regression test (`testing-rules.md`, section
-  3), and the pull request that fixes it names what keeps the next one out: a criterion of the
-  project, a check, a rule, or the reason none fits.
-- The `code-review` workflow reviews every such pull request that is not a draft against the same
-  rubric, with Claude Code and the `CLAUDE_CODE_OAUTH_TOKEN` secret, and posts its findings as
-  comments; it changes nothing.
+- A defect found after the merge is fixed after a regression test, and its pull request names
+  what keeps the next one out: a criterion, a check, a rule, or why none fits.

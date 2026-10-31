@@ -37,6 +37,7 @@ owned "$work/out/.template/owned.txt" | while IFS= read -r p; do
     cp -p "$work/out/$p" "$p"
   fi
 done
+scripts/gen-settings.sh
 scripts/check-template.sh --write
 scripts/gen-decisions-index.sh > docs/decisions/README.md
 echo "== synced from template/"

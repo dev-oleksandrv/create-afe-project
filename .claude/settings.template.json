@@ -1,4 +1,23 @@
 {
+  "permissions": {
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push * --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)",
+      "Bash(git push -uf*)",
+      "Bash(git push -fu*)",
+      "Bash(git push * -uf*)",
+      "Bash(git push * -fu*)",
+      "Bash(git push --delete*)",
+      "Bash(git push * --delete*)",
+      "Bash(git push -d *)",
+      "Bash(git push * -d *)",
+      "Bash(git push --mirror*)",
+      "Bash(git push * --mirror*)",
+      "Bash(git push * +*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

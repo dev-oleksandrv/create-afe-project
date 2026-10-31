@@ -1,13 +1,14 @@
 # Code review of pull requests (docs/contributing.md, section 6). Claude reads the diff of a pull
 # request that changes code, contracts, checks, or workflows, reviews it against the rubric of
 # that section and the project's own criteria, and posts findings as PR comments. It proposes
-# only; it changes nothing. Needs the Claude GitHub App installed on the repository and the
-# CLAUDE_CODE_OAUTH_TOKEN secret.
+# only; it changes nothing. It is a sensor with one pass: it runs when the pull request opens or
+# leaves draft, and a push does not run it again. Needs the Claude GitHub App installed on the
+# repository and the CLAUDE_CODE_OAUTH_TOKEN secret.
 name: code-review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+    types: [opened, ready_for_review]
 
 concurrency:
   group: code-review-{{ '${{' }} github.event.pull_request.number {{ '}}' }}

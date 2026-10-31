@@ -12,8 +12,12 @@ scripts/check-decisions.sh
 scripts/check-template.sh
 scripts/check-project.sh
 scripts/gen-decisions-index.sh
+scripts/gen-settings.sh
+scripts/pr-metrics.sh
 scripts/lib/git-base.sh
-.claude/settings.json
+scripts/lib/classes.sh
+scripts/lib/harness-conf.sh
+.claude/settings.template.json
 .claude/hooks/protect-docs.sh
 .claude/hooks/stop-check-docs.sh
 .claude/hooks/stop-check-decisions.sh

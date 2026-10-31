@@ -12,8 +12,18 @@ scripts/check-decisions.sh
 scripts/check-template.sh
 scripts/check-project.sh
 scripts/gen-decisions-index.sh
+scripts/gen-settings.sh
+scripts/pr-metrics.sh
+{%- if acceptance_check %}
+scripts/check-acceptance.sh
+{%- endif %}
+{%- if fail_without_change %}
+scripts/fail-without-change.sh
+{%- endif %}
 scripts/lib/git-base.sh
-.claude/settings.json
+scripts/lib/classes.sh
+scripts/lib/harness-conf.sh
+.claude/settings.template.json
 .claude/hooks/protect-docs.sh
 .claude/hooks/stop-check-docs.sh
 .claude/hooks/stop-check-decisions.sh

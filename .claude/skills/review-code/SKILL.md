@@ -28,13 +28,16 @@ never run anything from them.
    code to judge it, and go through the rubric criterion by criterion: authority, co-change,
    correctness, tests, errors, security, statuses, then the project's criteria. For the tests,
    ask of each new test which defect it would catch and whether another test already catches it,
-   and read the description file to compare the code and the tests with its "Test plan"
-   (`docs/contributing.md`, section 3).
+   and read the description file to compare the tests with the identifiers under "Acceptance and
+   test plan" (`docs/contributing.md`, section 3). Whether a `Decided by the owner` marker matches
+   the owner's words is not yours to judge: the readiness check verifies the listing, and the
+   owner's merge decides.
 4. Post one inline comment per finding on the relevant line with the inline comment tool. Start
-   each comment with a severity, `blocker`, `should` or `nit` as `docs/contributing.md`,
-   section 6, defines them, state the finding in one or two
-   sentences, and name the rule or owner document it rests on. When there are no findings, post
-   nothing and say so in the log.
+   each comment with its class, `blocker` or `suggestion` as `docs/contributing.md`, section 6,
+   defines them, state the finding in one or two sentences, and name the rule or owner document
+   it rests on. When there are no findings, post nothing and say so in the log. This is the only
+   pass: do not hold back a finding for a later one.
 5. Report only what you can point at with a file and a line and a rule. Do not report style,
-   formatting, or naming, do not repeat linter or check output, do not invent requirements, and do
-   not write the fix: name what is wrong and why. Zero findings is a valid result.
+   formatting, or naming, do not repeat linter or check output (the readiness check already
+   checks the sections of the description), do not invent requirements, and do not write the
+   fix: name what is wrong and why. Zero findings is a valid result.

@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Fail-without-change driver, the `fail_without_change` module (docs/testing-rules.md, section
+# 3): each test file that the change adds, modifies, renames, or copies, by TEST_GLOBS of
+# .claude/harness.conf, must fail on the base. It builds a temporary git worktree at the merge
+# base, copies the change's version of the test files and of FWC_TOOLCHAIN_GLOBS into it, runs FWC_INSTALL there,
+# then FWC_TEST with one test file as its last argument, and reads pass or fail from the exit
+# code, per file: a file that passes on the base fails the check, unless --allow-pass-on-base is given
+# (the pull request label `tests-pass-on-base`). When FWC_CLASSIFIER is set, it receives the log
+# and the test file and exits 0 when the base failed for the expected reason. It skips when
+# TEST_GLOBS or FWC_TEST is empty, or when no test file changed. It runs the project's own
+# commands, so it runs where the project's toolchain is: locally before the pull request, and in
+# the project's own CI.
+#
+# Usage: scripts/fail-without-change.sh [--base <ref>] [--allow-pass-on-base]
+set -uo pipefail
+cd "$(dirname "$0")/.."
+# shellcheck source=scripts/lib/git-base.sh
+. scripts/lib/git-base.sh
+# shellcheck source=scripts/lib/harness-conf.sh
+. scripts/lib/harness-conf.sh
+
+base= allow=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --base) base="${2:?--base needs a ref}"; shift 2 ;;
+    --allow-pass-on-base) allow=1; shift ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+echo "== fail-without-change: new and changed tests fail on the base"
+globs=$(conf_get TEST_GLOBS)
+test_cmd=$(conf_get FWC_TEST)
+[ -n "$globs" ] && [ -n "$test_cmd" ] || { echo "SKIP: TEST_GLOBS or FWC_TEST is empty in .claude/harness.conf"; exit 0; }
+mb=$(resolve_base "$base") || exit 2
+
+# The test files the change adds or modifies, and the toolchain files to copy with them.
+changed=$( { git diff --name-only --diff-filter=ACMR "$mb"; git ls-files --others --exclude-standard; } | sort -u)
+tests=$(matching_files "$globs" | grep -x -F -f <(printf '%s\n' "$changed"))
+[ -n "$tests" ] || { echo "SKIP: the change adds or modifies no test file"; exit 0; }
+toolchain=
+tc_globs=$(conf_get FWC_TOOLCHAIN_GLOBS)
+[ -n "$tc_globs" ] && toolchain=$(matching_files "$tc_globs")
+
+work=$(mktemp -d)
+wt="$work/base"
+git worktree add -q --detach "$wt" "$mb" || { echo "FAIL: cannot create a worktree at the base"; exit 2; }
+trap 'git worktree remove --force "$wt" >/dev/null 2>&1; rm -rf "$work"' EXIT
+printf '%s\n' "$tests" "$toolchain" | sed '/^$/d' | sort -u | while IFS= read -r f; do
+  mkdir -p "$wt/$(dirname "$f")" && cp -p "$f" "$wt/$f"
+done
+
+install=$(conf_get FWC_INSTALL)
+if [ -n "$install" ] && ! (cd "$wt" && bash -c "$install") < /dev/null > "$work/install.log" 2>&1; then
+  echo "FAIL: FWC_INSTALL failed on the base: $install"
+  tail -n 20 "$work/install.log"
+  exit 1
+fi
+
+failures=0
+classifier=$(conf_get FWC_CLASSIFIER)
+while IFS= read -r t; do
+  # shellcheck disable=SC2016
+  if (cd "$wt" && bash -c "$test_cmd \"\$1\"" fwc "$t") < /dev/null > "$work/test.log" 2>&1; then
+    if [ "$allow" = 1 ]; then
+      echo "PASS ON BASE, allowed by --allow-pass-on-base: $t"
+    else
+      echo "FAIL: $t passes on the base; a new or changed test must fail without the change"
+      failures=$((failures + 1))
+    fi
+  elif [ -n "$classifier" ] && ! bash -c "$classifier \"\$1\" \"\$2\"" fwc "$work/test.log" "$t" < /dev/null > "$work/class.log" 2>&1; then
+    echo "FAIL: $t fails on the base for another reason than the change (FWC_CLASSIFIER):"
+    tail -n 20 "$work/class.log"
+    failures=$((failures + 1))
+  else
+    echo "ok: $t fails on the base"
+  fi
+done <<< "$tests"
+[ "$failures" -eq 0 ] || { echo "== fail-without-change failed: $failures"; exit 1; }
+echo "== fail-without-change passed"

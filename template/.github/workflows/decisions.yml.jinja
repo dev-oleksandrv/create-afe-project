@@ -37,7 +37,8 @@ jobs:
           fetch-depth: 0
 
       # The description goes through the environment, never into the command line.
-      - name: no blocking item, no added record still proposed
+      # Readiness reads the description and the diff (docs/contributing.md, section 3).
+      - name: description ready, no added record still proposed
         env:
           BASE_REF: {{ '${{' }} github.base_ref {{ '}}' }}
           PR_BODY: {{ '${{' }} github.event.pull_request.body {{ '}}' }}

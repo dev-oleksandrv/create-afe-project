@@ -9,9 +9,8 @@ The project is **{{ project_name }}** (`{{ github_repo }}`). {{ project_descript
 
 ## 1. Sources of truth and precedence
 
-Each fact has exactly one owner document; `docs/README.md` lists which document owns which kind
-of fact. When sources disagree, the higher item below wins; the lower one is wrong and must be
-fixed or flagged:
+Each fact has exactly one owner document, listed in `docs/README.md`. When sources disagree, the
+higher item below wins; the lower one is wrong and must be fixed or flagged:
 
 1. Explicit instructions from the user in the current conversation.
 2. `AGENTS.md` (this file), `docs/documentation-rules.md`, `docs/contributing.md`: process rules.
@@ -25,13 +24,13 @@ fixed or flagged:
 
 Read on demand. Do not load the whole `docs/` tree.
 
-- `docs/README.md`: documentation map, what exists and what is planned. Read it first.
-- `docs/documentation-rules.md`: status vocabulary, lifecycle, ownership of files, alignment with
-  code and contracts, review checklist. Read it before creating or changing any document.
-- `docs/decisions/README.md`: generated index of ADRs; open a record only when the task needs it.
-- `docs/plans/`: active plans only.
-- `docs/contributing.md`: branches, commit messages, pull requests, review. Read it before you
-  commit. `docs/testing-rules.md`: what a test must prove. Read it before you write a test.
+- `docs/README.md`: documentation map, what exists and what is planned. Read it first. Its row
+  "Environment commands" names how to set up, check, test end to end, and reset; use those.
+- `docs/documentation-rules.md`: statuses, lifecycle, path classes, ownership of files, review
+  checklist. Read it before creating or changing any document.
+- `docs/decisions/README.md`: generated index of ADRs. `docs/plans/`: active plans only.
+- `docs/contributing.md`: branches, commits, pull requests, review. Read it before you commit.
+  `docs/testing-rules.md`: what a test must prove. Read it before you write a test.
 
 ## 3. Status of information
 
@@ -44,30 +43,28 @@ Every statement about the system has exactly one status, and the status must be 
 | accepted | a decision the owner approved | owner only |
 | implemented | behaviour present in merged code with tests | code and tests, never prose |
 
-The repository owner is the only decision-maker. Agents, skills, and subagents propose; they never
-decide. Never present a plan, a proposal, or your own design as something that exists
-(`documentation-rules.md`, section 3).
+The owner is the only decision-maker: the owner sets outcomes, risks, and tradeoffs; agents
+implement and report evidence; the checks enforce. Agents, skills, and subagents propose; they
+never decide or present a plan or their own design as something that exists.
 
-## 4. Boundaries for autonomous decisions
+## 4. Autonomy by risk and reversibility (`documentation-rules.md`, section 8)
 
-Allowed without asking:
+- Every path has a class, by built-in rules and `.claude/path-classes`. Low, normal, high (code, tests,
+  documents in a branch; routine choices; fixing typos, links, lint errors; updating the owner
+  document; proposing a `proposed` ADR) need no approval{% if dual_review %}; high gets the Santa loop{% endif %}.
+- Class gate (gate configurations, workflows, dependencies): no prompt; list it under "Gate
+  files" in the pull request; the owner reviews it after the merge.
+- Class approval (rules, the map and the structure, ADRs on `main`, `.mcp.json`, credentials) and
+  irreversible actions such as a force push, a merge, or a release: the owner approves first.
 
-- Do the task as stated and make routine implementation choices within it.
-- Fix typos, broken links, lint errors, and inconsistencies, except in template-owned files.
-- Update the owner document in the same change when your change alters documented behaviour,
-  a contract, or an operational procedure.
-- Propose a needed decision as a `proposed` ADR or an edit (`documentation-rules.md`, section 5).
+Never, without an explicit user instruction:
 
-Not allowed without an explicit user instruction:
-
-- Inventing requirements, defaults, or decisions. Missing information is an open question, not a
-  default. An unavoidable assumption is labelled "assumption" where used and in your report.
-- Accepting any decision or marking it decided, or calling anything `implemented` without tests.
-- Changing the documentation map or the directory structure; adding a section, tool, dependency,
-  or CI job. A template-owned file changes only in the template: even on instruction, a local edit
-  fails `scripts/check-template.sh`, so propose the change to the template instead.
-- Deleting, archiving, or superseding documents, except a plan that your own task completes.
-- Using any ADR format or location other than `docs/decisions/adr-template.md`.
+- Inventing requirements, defaults, or decisions: missing information is an open question, and
+  an unavoidable assumption is labelled "assumption" where used and in your report.
+- Accepting a decision, writing a `Decided by the owner` marker, or calling anything `implemented`
+  without tests; adding a section; deleting, archiving, or superseding documents, except a plan
+  your own task completes; any ADR format or location other than `docs/decisions/adr-template.md`.
+- Editing a template-owned file: it fails `scripts/check-template.sh`; propose it to the template.
 
 ## 5. Documentation change rules
 
@@ -78,14 +75,16 @@ Not allowed without an explicit user instruction:
   conversation, the PR description, or scratch space until a person promotes durable facts.
 - Structure and rule changes are separate, owner-approved changes, never bundled with other work.
 
-## 6. Required checks
+## 6. Done and required checks
 
-- Before you finish, run `scripts/check.sh` and make it pass: documentation (markdownlint-cli2
-  and lychee), decision records, template integrity, and the project's own checks in
-  `scripts/checks.d/`. Do not disable rules or exclude files to get a pass.
+- Done is a claim; evidence is the product. A change is done by the definition of
+  `contributing.md`, section 3: each identifier it serves has a test that carries it, failed on
+  the base, and passes now; `scripts/check.sh` passes; no blocker is open; readiness passes.
+- Ralph loop: run `scripts/check.sh`, fix, repeat until it passes, at most the cap of
+  `.claude/harness.conf`; then report. Never disable rules or exclude files to get a pass.
 - Semantic self-review, which tools cannot do: statuses correct, no invented fact, no duplication,
   map and links updated. Checklist: `docs/documentation-rules.md`, section 7.
-- In Claude Code, Stop hooks rerun the documentation, decision, and template checks and the
-  project's own Stop hooks; a protect hook asks the owner before edits of protected files. Pull
-  requests get a readiness check (`contributing.md`, section 3){% if docs_review %}, `docs-review` proposals{% endif %}{% if code_review %}, `code-review` proposals{% endif %}{% if dual_review %}, a dual review before they open (section 6 there){% endif %}.
-- Finish with a report: files changed, checks with results, assumptions, open questions, readiness.
+- AI review is a sensor that follows the class of the paths; only a `blocker` holds the merge,
+  and only a blocker of class high loops (`contributing.md`, section 6).
+- Finish with a report: files changed, checks with results (a failing one with its command and
+  output), assumptions, open questions, readiness, and the metrics of `contributing.md`, section 3.
