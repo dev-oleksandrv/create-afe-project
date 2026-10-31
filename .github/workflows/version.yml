@@ -1,0 +1,62 @@
+# Version PR of this repository (docs/maintaining.md, section 5). On every push to main,
+# changesets/action opens or updates the pull request "Release: next version" on
+# changeset-release/main while changesets are pending: it bumps package.json, writes CHANGELOG.md,
+# and syncs this repository's own template files. Merging it is the release decision; the push of
+# that merge finds nothing pending, and scripts/tag-release.sh tags the version and starts the
+# release workflow.
+#
+# Everything runs with GITHUB_TOKEN, which starts no workflow by itself: the docs checks of the
+# Version PR and the release are started with workflow_dispatch, the one event it may trigger.
+# The repository setting "Allow GitHub Actions to create and approve pull requests" must be on.
+name: version
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: version
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  version:
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: lts/*
+
+      - run: npm ci
+
+      - id: changesets
+        uses: changesets/action@v2.1.2
+        with:
+          version-script: npm run version-packages
+          commit-message: "Release: next version"
+          pr-title: "Release: next version"
+          github-token: ${{ github.token }}
+
+      - name: run the docs checks on the Version PR
+        if: steps.changesets.outputs.pr-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run docs.yml --ref changeset-release/main
+
+      # Runs every time: the action sets no output when nothing is pending.
+      - name: tag a merged version and start the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          scripts/tag-release.sh

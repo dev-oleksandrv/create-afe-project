@@ -33,11 +33,13 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
 1. Edit `template/`, `src/`, and `bin/` only. This repository is itself generated from the
    template: run `scripts/sync-self.sh` to regenerate its template-owned files from the working
    tree, never edit those copies.
-2. Add an entry under `## [Unreleased]` in [`CHANGELOG.md`](../CHANGELOG.md), in the section
-   that matches its effect (Added, Changed, Fixed, Removed), naming the files a project sees
-   change. An entry that adds a rule or a check names the recurring failure it addresses, with
-   the pull requests where that failure occurred; a rule or check without one is added only on
-   the owner's decision, and the entry says so (section 6).
+2. Add a changeset with `npx changeset`: the bump by section 4 and a summary that names the
+   files a project sees change; it becomes the [`CHANGELOG.md`](../CHANGELOG.md) entry, with a
+   link to the pull request. A change of `bin/`, `src/`, `template/`, or `package.json` needs one
+   (the `changeset` workflow checks it); `npx changeset --empty` when nobody notices it. A
+   changeset that adds a rule or a check names the recurring failure it addresses, with the pull
+   requests where that failure occurred; a rule or check without one is added only on the owner's
+   decision, and the changeset says so (section 6).
 3. Run `scripts/check.sh`. Its project part, `scripts/checks.d/10-template.sh`, is the template
    test suite (section 3).
 4. Open the pull request with the `create-pr` skill, as in any generated project.
@@ -99,24 +101,26 @@ highest.
 | Correction without new capability | PATCH | wording, a broken link, a script bug |
 
 A MAJOR release that needs a mechanical change in projects ships a `MIGRATIONS` entry in
-`src/config.js` that performs it, and its changelog entry says what the project must check by hand.
+`src/config.js` that performs it, and its changeset says what the project must check by hand.
 An update never changes an existing seeded file (`SEEDED`): a change to them reaches new projects
-only, so its changelog entry says what an existing project should copy by hand.
+only, so its changeset says what an existing project should copy by hand.
 Before 1.0.0, MINOR takes the role of MAJOR.
 
 ## 5. Release
 
-1. Before the release, the measurement of section 6 runs, and its proposals go to the owner.
-   A release pull request renames `## [Unreleased]` in `CHANGELOG.md` to
-   `## [X.Y.Z] - YYYY-MM-DD`, adds a fresh empty `## [Unreleased]`, sets `version` in
-   `package.json` and `package-lock.json` to `X.Y.Z` (`npm version X.Y.Z --no-git-tag-version`),
-   runs `scripts/sync-self.sh`, and is merged by the owner.
-2. The owner, or an agent on the owner's instruction, tags the merge commit and pushes the tag:
-   `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`.
-3. The `release` workflow checks that `CHANGELOG.md` has the section `## [X.Y.Z]`, that the
-   tag is on `main`, and that `package.json` has the version `X.Y.Z`; it publishes a GitHub
-   release with that section as its notes, then the package to npm with the repository secret
-   `NPM_TOKEN`.
+1. On every push to `main` with pending changesets, the `version` workflow opens or updates the
+   Version PR "Release: next version" on `changeset-release/main`: `npm run version-packages`
+   consumes the changesets, bumps `package.json` and `package-lock.json`, writes the
+   `CHANGELOG.md` section `## X.Y.Z`, and runs `scripts/sync-self.sh`. It starts the `docs`
+   workflow on that branch, because a pull request opened with `GITHUB_TOKEN` starts none. The
+   Version PR is exempt from the description sections of readiness: its description is generated.
+2. Before merging it, the measurement of section 6 runs, and its proposals go to the owner.
+   Merging the Version PR is the owner's release decision.
+3. The push of that merge finds no changeset pending: `scripts/tag-release.sh` tags `vX.Y.Z` and
+   starts the `release` workflow on the tag. The workflow checks that the tag is on `main` and
+   that `package.json` and the `CHANGELOG.md` section are at `X.Y.Z`, runs the package tests,
+   publishes a GitHub release with that section as its notes, then the package to npm with the
+   repository secret `NPM_TOKEN`. A tag pushed by hand releases the same way.
 4. Projects update with their `update-template` skill (the generated `docs/contributing.md`,
    section 5).
 

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "baseBranch": "main",
+  "changelog": ["@changesets/changelog-github", { "repo": "dev-oleksandrv/create-afe-project" }],
+  "commit": false,
+  "access": "public",
+  "changedFilePatterns": ["bin/**", "src/**", "template/**", "package.json"]
+}

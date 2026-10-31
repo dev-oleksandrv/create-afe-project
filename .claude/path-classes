@@ -19,3 +19,5 @@ gate scripts/sync-self.sh
 gate .claude/harness.conf
 gate package.json
 gate package-lock.json
+gate .changeset/config.json
+gate scripts/tag-release.sh
