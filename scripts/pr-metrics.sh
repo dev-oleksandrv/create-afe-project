@@ -7,7 +7,7 @@
 # merge, which gh reports for every pull request. It measures which rules and checks earn their
 # keep, so that one that never fires can be proposed for removal. Only table rows inside
 # "## Metrics" are read; a pull request without that section counts for the time to merge only.
-# Needs the GitHub CLI (`gh`, signed in) and jq.
+# Needs the GitHub CLI (`gh`, signed in) and Node.js.
 #
 # Usage: scripts/pr-metrics.sh [--since YYYY-MM-DD] [--limit N] [--repo owner/name]
 #   --since  only pull requests merged on or after this date; default: all that gh lists
@@ -26,17 +26,15 @@ while [ $# -gt 0 ]; do
   esac
 done
 command -v gh >/dev/null || { echo "pr-metrics: the GitHub CLI gh is required" >&2; exit 2; }
-command -v jq >/dev/null || { echo "pr-metrics: jq is required" >&2; exit 2; }
+command -v node >/dev/null || { echo "pr-metrics: Node.js is required" >&2; exit 2; }
 
 json=$(gh pr list --state merged --limit "$limit" --json number,createdAt,mergedAt,body ${repo[@]+"${repo[@]}"}) ||
   { echo "pr-metrics: gh pr list failed" >&2; exit 2; }
-listed=$(printf '%s' "$json" | jq 'length')
-outside=$(printf '%s' "$json" | jq --arg since "$since" '[.[] | select(.mergedAt < $since)] | length')
 sep=$(printf '\037')
-printf '%s' "$json" |
-  jq -r --arg since "$since" --arg sep "$sep" '.[] | select(.mergedAt >= $since) |
-    ($sep + "PR \(.number) \(((.mergedAt | fromdateiso8601) - ((.createdAt // .mergedAt) | fromdateiso8601)) / 3600)"),
-    ((.body // "") | gsub("\r"; ""))' |
+feed=$(printf '%s' "$json" | node "$(dirname "$0")/lib/json.mjs" prs "$since" "$sep") || { echo "pr-metrics: cannot read the gh output" >&2; exit 2; }
+read -r listed outside <<< "${feed%%$'\n'*}"
+body=; case "$feed" in *$'\n'*) body=${feed#*$'\n'} ;; esac
+printf '%s\n' "$body" |
   awk -F'|' -v sep="$sep" -v since="${since:-the first listed}" '
     function add(name, v) { cnt[name]++; val[name, cnt[name]] = v + 0; sum[name] += v }
     function stats(name,   i, j, t, n, a) {

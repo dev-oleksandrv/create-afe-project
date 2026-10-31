@@ -84,7 +84,7 @@ of a template-owned file, converts a Copier answers file, and runs the 0.5.0 mig
 this repository's template-owned files match `template/`. CI runs both through the `docs`
 workflow, which sets up Node.js and lychee; the checks run `npm ci` when `node_modules` is
 missing, and the Python test installs uv into `~/.local/bin` when `uvx` is missing, so the runner
-needs only Git, curl, and jq besides.
+needs only Git and curl besides.
 
 ## 4. Versions
 

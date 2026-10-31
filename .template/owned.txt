@@ -18,6 +18,7 @@ scripts/pr-metrics.sh
 scripts/lib/git-base.sh
 scripts/lib/classes.sh
 scripts/lib/harness-conf.sh
+scripts/lib/json.mjs
 .claude/settings.template.json
 .claude/hooks/protect-docs.sh
 .claude/hooks/stop-check-docs.sh

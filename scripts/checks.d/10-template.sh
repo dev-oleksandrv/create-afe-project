@@ -11,8 +11,14 @@ root=$PWD
 cli() { node "$root/bin/create-afe-project.js" "$@"; }
 
 work=$(mktemp -d)
+export work
 trap 'rm -rf "$work"' EXIT
 failures=0
+# sj <expression> [argument]: true when the JavaScript expression holds for s, the parsed
+# .claude/settings.json of the current directory.
+printf '%s\n' '#!/usr/bin/env node' 'const s = JSON.parse(require("fs").readFileSync(".claude/settings.json", "utf8"));' \
+  'process.exit(new Function("s", "process", "return (" + process.argv[2] + ");")(s, { argv: process.argv.slice(2) }) ? 0 : 1);' > "$work/sj"
+chmod +x "$work/sj"
 fail() { printf 'FAIL: %s\n' "$*"; failures=$((failures + 1)); }
 gitc() { git -C "$1" -c user.name=test -c user.email=test@example.com "${@:2}"; }
 
@@ -83,7 +89,7 @@ expect_fail "removed project block end" bash -c 'grep -v "project:end" AGENTS.md
 expect_pass "a rule document over its line budget is named" bash -c 'for i in $(seq 1 200); do echo x; done >> docs/contributing.md; scripts/check-template.sh | grep -q "docs/contributing.md: [0-9]* lines; at most 200"'
 expect_fail "settings.project.json changed, settings.json not regenerated" bash -c 'printf "{\"permissions\":{\"deny\":[\"Bash(rm -rf:*)\"]}}\n" > .claude/settings.project.json && scripts/check-template.sh'
 expect_pass "settings.json regenerated with the project's deny rule" bash -c 'printf "{\"permissions\":{\"deny\":[\"Bash(rm -rf:*)\"]}}\n" > .claude/settings.project.json && scripts/gen-settings.sh && scripts/check-template.sh &&
-  jq -e ".permissions.deny | index(\"Bash(rm -rf:*)\") and index(\"Bash(git push --force*)\")" .claude/settings.json && jq -e ".hooks.PreToolUse | length == 1" .claude/settings.json'
+  "$work/sj" "s.permissions.deny.includes(\"Bash(rm -rf:*)\") && s.permissions.deny.includes(\"Bash(git push --force*)\") && s.hooks.PreToolUse.length === 1"'
 record() { printf -- '---\nstatus: %s\ndate: 2026-01-01\ndecision-makers: test\nscope: stack\nsummary: "Test."\nsupersedes: []\n---\n\n# Test\n' "${2:-proposed}" > "docs/decisions/$1-test.md"; }
 export -f record
 expect_fail "record that skips a number" bash -c 'record 0002; scripts/gen-decisions-index.sh > docs/decisions/README.md; scripts/check-decisions.sh --base main'
@@ -142,12 +148,12 @@ expect_pass "a change at the limit, or in generated files, does not warn" bash -
 expect_fail "no Regression of row" bash -c 'grep -v "Regression of" "$work/r-none.md" > "$work/r-noreg.md" && ready "$work/r-noreg.md"'
 expect_fail "a Regression of value outside its forms" bash -c 'sed "s/| Regression of | none |/| Regression of | maybe |/" "$work/r-none.md" > "$work/r-badreg.md" && ready "$work/r-badreg.md"'
 expect_pass "the project takes a template deny entry out" bash -c 'printf "{\"remove\":{\"permissions\":{\"deny\":[\"Read(**/.env.*)\"]}}}\n" > .claude/settings.project.json && scripts/gen-settings.sh &&
-  ! jq -e ".permissions.deny | index(\"Read(**/.env.*)\")" .claude/settings.json > /dev/null && jq -e ".permissions.deny | index(\"Read(**/.env)\")" .claude/settings.json > /dev/null && ! jq -e "has(\"remove\")" .claude/settings.json > /dev/null'
+  "$work/sj" "!s.permissions.deny.includes(\"Read(**/.env.*)\") && s.permissions.deny.includes(\"Read(**/.env)\") && !(\"remove\" in s)"'
 expect_pass "a large change warns and still passes" bash -c 'seq 1 500 > big.txt && out=$(ready "$work/r-none.md") && printf "%s\n" "$out" | grep -q "WARNING: the change has 500 changed lines, more than DIFF_WARN_LINES (400)"'
 expect_pass "a public contract is class high" bash -c 'mkdir -p contracts && echo x > contracts/api.yaml && classes | grep -qx "high	contracts/api.yaml"'
 expect_pass "env.sh: an unset command is SKIP, a set one runs with its exit code" bash -c 'out=$(scripts/env.sh setup) && [ "$out" = "SKIP: SETUP is not set in .claude/harness.conf" ] &&
   scripts/env.sh fast > /dev/null && sed -i.bak "s/^E2E=.*/E2E=exit 3/" .claude/harness.conf && rm .claude/harness.conf.bak; scripts/env.sh e2e > /dev/null; [ $? -eq 3 ] && { scripts/env.sh nope 2> /dev/null; [ $? -eq 2 ]; }'
-expect_pass "settings deny reading secrets" bash -c 'for r in "Read(**/.env)" "Read(**/.env.*)" "Read(**/*.pem)" "Read(**/*.key)"; do jq -e --arg r "$r" ".permissions.deny | index(\$r)" .claude/settings.json > /dev/null || exit 1; done'
+expect_pass "settings deny reading secrets" bash -c 'for r in "Read(**/.env)" "Read(**/.env.*)" "Read(**/*.pem)" "Read(**/*.key)"; do "$work/sj" "s.permissions.deny.includes(process.argv[1])" "$r" || exit 1; done'
 expect_fail "a touched gate file not listed" bash -c 'gatefile && ready "$work/r-none.md"'
 expect_pass "a touched gate file listed under Gate files" bash -c 'gatefile && ready "$work/r-gate.md"'
 expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/plans src/auth && echo x > docs/plans/x.md && echo x >> docs/README.md &&
@@ -167,12 +173,27 @@ mkdir -p "$work/bin"
 cat > "$work/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 [ "$1 $2" = "pr list" ] || { echo "unexpected gh call: $*" >&2; exit 1; }
-t='| Sensor | Class | Found | Fixed | Limit | Declined |\n| --- | --- | --- | --- | --- | --- |\n'
-m='| Measure | Value |\n| --- | --- |\n'
-jq -n --arg t "$t" --arg m "$m" '[
-  {number: 3, createdAt: "2026-10-20T04:00:00Z", mergedAt: "2026-10-20T10:00:00Z", body: ("## Summary\n\n- x\n\n## Metrics\n\n" + ($t | gsub("\\\\n"; "\n")) + "| code-review | blocker | 1 | 1 | 0 | 0 |\n| code-review | suggestion | 2 | 1 | 1 | 0 |\n| docs-review | suggestion | 0 | 0 | 0 | 0 |\n\n" + ($m | gsub("\\\\n"; "\n")) + "| First check.sh | fail |\n| Ralph iterations | 3 |\n| Santa rounds | 0 |\n| Owner interventions | 1 (a question) |\n| Files outside the scope | 2 (a, b) |\n| Regression of | #1 |\n\n## Notes for the owner\n\n| code-review | blocker | 9 | 9 | 0 | 0 |\n")},
-  {number: 2, createdAt: "2026-10-10T08:00:00Z", mergedAt: "2026-10-10T10:00:00Z", body: "## Summary\n\n- x\n"},
-  {number: 1, mergedAt: "2026-09-01T10:00:00Z", body: ("## Metrics\n\n| code-review | blocker | 5 | 5 | 0 | 0 |\n")}]'
+cat <<'JSON'
+[
+ {
+  "number": 3,
+  "createdAt": "2026-10-20T04:00:00Z",
+  "mergedAt": "2026-10-20T10:00:00Z",
+  "body": "## Summary\n\n- x\n\n## Metrics\n\n| Sensor | Class | Found | Fixed | Limit | Declined |\n| --- | --- | --- | --- | --- | --- |\n| code-review | blocker | 1 | 1 | 0 | 0 |\n| code-review | suggestion | 2 | 1 | 1 | 0 |\n| docs-review | suggestion | 0 | 0 | 0 | 0 |\n\n| Measure | Value |\n| --- | --- |\n| First check.sh | fail |\n| Ralph iterations | 3 |\n| Santa rounds | 0 |\n| Owner interventions | 1 (a question) |\n| Files outside the scope | 2 (a, b) |\n| Regression of | #1 |\n\n## Notes for the owner\n\n| code-review | blocker | 9 | 9 | 0 | 0 |\n"
+ },
+ {
+  "number": 2,
+  "createdAt": "2026-10-10T08:00:00Z",
+  "mergedAt": "2026-10-10T10:00:00Z",
+  "body": "## Summary\n\n- x\n"
+ },
+ {
+  "number": 1,
+  "mergedAt": "2026-09-01T10:00:00Z",
+  "body": "## Metrics\n\n| code-review | blocker | 5 | 5 | 0 | 0 |\n"
+ }
+]
+JSON
 EOF
 chmod +x "$work/bin/gh"
 if out=$(cd "$a" && PATH="$work/bin:$PATH" scripts/pr-metrics.sh --since 2026-10-01 2>&1); then

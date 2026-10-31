@@ -19,11 +19,11 @@
 set -uo pipefail
 [ "${DOCS_GUARD:-on}" = "off" ] && exit 0
 
-# Without jq the hook cannot read the tool call; block it rather than allow everything.
-command -v jq >/dev/null || { echo "protect-docs: jq is required (README.md, Checks)" >&2; exit 2; }
-input=$(cat)
-tool=$(printf '%s' "$input" | jq -r '.tool_name // empty')
-cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
+# Without Node.js the hook cannot read the tool call; block it rather than allow everything.
+command -v node >/dev/null || { echo "protect-docs: Node.js is required (README.md, Checks)" >&2; exit 2; }
+json="$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib/json.mjs"
+{ IFS= read -r -d '' tool; IFS= read -r -d '' cwd; IFS= read -r -d '' file_path; IFS= read -r -d '' cmd; } < <(
+  node "$json" fields tool_name cwd tool_input.file_path tool_input.command)
 [ -n "$cwd" ] && [ -d "$cwd" ] || cwd=$PWD
 project="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$project" ] && project=$(cd "$project" 2>/dev/null && pwd -P) || project=
@@ -219,26 +219,23 @@ irreversible() {
 }
 
 ask_owner() {
-  jq -cn --arg r "Protected file: $1 ($2). Changing it needs an explicit owner instruction (AGENTS.md, section 4). Approve only if you asked for this change; otherwise the agent must report it as an open question." \
-    '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"ask",permissionDecisionReason:$r}}'
+  node "$json" ask "Protected file: $1 ($2). Changing it needs an explicit owner instruction (AGENTS.md, section 4). Approve only if you asked for this change; otherwise the agent must report it as an open question."
   exit 0
 }
 
 ask_action() {
-  jq -cn --arg r "Irreversible action: $1. It needs an explicit owner instruction (AGENTS.md, section 4; docs/documentation-rules.md, section 8). Approve only if you asked for it." \
-    '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"ask",permissionDecisionReason:$r}}'
+  node "$json" ask "Irreversible action: $1. It needs an explicit owner instruction (AGENTS.md, section 4; docs/documentation-rules.md, section 8). Approve only if you asked for it."
   exit 0
 }
 
 case "$tool" in
   Edit|Write|MultiEdit)
-    path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
+    path=$file_path
     [ -n "$path" ] || exit 0
     reason=$(protected_reason "$path")
     [ -n "$reason" ] && ask_owner "$path" "$reason"
     ;;
   Bash)
-    cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
     [ -n "$cmd" ] || exit 0
     # Rewriting the manifest is how a local edit of a template-owned file would be hidden.
     if printf '%s' "$cmd" | grep -q -E 'check-template\.sh[^|;&]*--write'; then

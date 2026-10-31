@@ -28,7 +28,7 @@ section 9.
 ## Requirements
 
 Node.js 20 or later with npm, Git, and bash. The generated project's checks also need
-[lychee](https://lychee.cli.rs/) and `jq`.
+[lychee](https://lychee.cli.rs/).
 
 ## Create a project
 
