@@ -6,6 +6,8 @@ All notable changes to the template are listed here, newest first. The format fo
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-31
+
 The process follows the Agent-Friendly Engineering principles: the owner sets outcomes and
 risks, agents report evidence, checks enforce, and governance follows risk and reversibility.
 Recurring failure addressed: in `xandronak/brain`, pull requests #14, #15, and #18 each needed
