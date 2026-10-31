@@ -1,0 +1,18 @@
+# Path classes of this repository (docs/documentation-rules.md, sections 8 and 9): one
+# "<class> <glob>" per line, relative to the repository root; a path takes the highest class
+# among the lines that match it and the template's built-in ones. This file belongs to the
+# project; a change to it is class approval.
+
+# The product of this repository: every generated project's rules come from here.
+approval template/*
+approval copier.yml
+
+# Secrets.
+approval .env
+approval .env.*
+
+# Gates: workflows, the template tests, the self-sync, and the harness settings.
+gate .github/workflows/*
+gate scripts/checks.d/*
+gate scripts/sync-self.sh
+gate .claude/harness.conf

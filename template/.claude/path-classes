@@ -1,0 +1,58 @@
+# Path classes of this project (docs/documentation-rules.md, sections 8 and 9): one
+# "<class> <glob>" per line, a shell glob relative to the repository root, in which * also matches
+# /. A path takes the highest class among the lines that match it and the template's built-in
+# ones (approval for the rules, the map, ADRs on main, and generated files). A path that nothing
+# matches is low when it is Markdown, otherwise normal. This file belongs to the project; a
+# change to it is class approval.
+#   approval  the owner approves the edit first: the protect hook asks, a headless run is denied
+#   high      Santa loop before the pull request: two reviewers until neither finds a blocker
+#   gate      listed under "Gate files" in the pull request, reviewed by the owner after the merge
+#   normal    one reviewer before the pull request
+#   low       no reviewer before the pull request
+
+# Secrets and tools with irreversible effects.
+approval .env
+approval .env.*
+approval *.pem
+approval *.key
+
+# Security, access, data migrations, money. Add the project's own, such as policy or limits.
+high *auth/*
+high *security/*
+high *secrets/*
+high *migrations/*
+high *billing/*
+high *payments/*
+
+# Gates: workflows, the project's checks and Stop hooks, harness settings, dependency manifests
+# and lock files, and the configuration of linters, test runners, coverage, and mutation testing.
+gate .github/workflows/*
+gate scripts/checks.d/*
+gate .claude/hooks/project/*
+gate .claude/harness.conf
+gate package.json
+gate */package.json
+gate package-lock.json
+gate pnpm-lock.yaml
+gate yarn.lock
+gate pyproject.toml
+gate uv.lock
+gate poetry.lock
+gate requirements*.txt
+gate go.mod
+gate go.sum
+gate Cargo.toml
+gate Cargo.lock
+gate .eslintrc*
+gate eslint.config.*
+gate .prettierrc*
+gate ruff.toml
+gate .ruff.toml
+gate pytest.ini
+gate tox.ini
+gate .coveragerc
+gate jest.config.*
+gate vitest.config.*
+gate tsconfig*.json
+gate stryker.conf.*
+gate .golangci.yml

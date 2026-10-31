@@ -18,10 +18,11 @@ fi
 base=$(resolve_base 2>/dev/null) || exit 0
 changed=$( { git diff --name-only "$base" -- '*.md'; git ls-files --others --exclude-standard -- '*.md'; } 2>/dev/null | head -n 1)
 [ -n "$changed" ] || exit 0
+# shellcheck source=scripts/lib/harness-conf.sh
+. scripts/lib/harness-conf.sh 2>/dev/null || { ralph_block() { printf '%s\n' "$2" >&2; exit 2; }; ralph_pass() { :; }; }
 out=$(scripts/check-docs.sh 2>&1)
 case $? in
-  0) exit 0 ;;
+  0) ralph_pass docs; exit 0 ;;
   3) printf 'Documentation checks could not run; install the missing tool:\n%s\n' "$out" >&2; exit 1 ;;
 esac
-printf 'Documentation checks failed; fix them before finishing (AGENTS.md, section 6):\n%s\n' "$out" >&2
-exit 2
+ralph_block docs "$(printf 'Documentation checks failed; fix them before finishing (AGENTS.md, section 6):\n%s' "$out")"

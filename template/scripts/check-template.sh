@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Template integrity (docs/documentation-rules.md, section 9): every template-owned file listed in
-# .template/owned.txt matches its hash in .template/owned.sha256, and AGENTS.md contains exactly
-# one project block. The hash of AGENTS.md ignores the content of its project block.
+# Template integrity (docs/documentation-rules.md, sections 2 and 9): every template-owned file
+# listed in .template/owned.txt matches its hash in .template/owned.sha256, AGENTS.md contains
+# exactly one project block, the rule documents stay within their line budgets, and the generated
+# .claude/settings.json is current. The hash of AGENTS.md ignores the content of its project block.
 #
 # Usage: scripts/check-template.sh [--write]
 #   --write  record the current hashes; the template runs it after `copier copy` and
@@ -62,6 +63,15 @@ block=$(awk -v s="$start" -v e="$end" '$0==s {f=1; next} $0==e {f=0} f' AGENTS.m
 total=$(wc -l < AGENTS.md | tr -d ' ')
 [ "$block" -le 10 ] || fail "AGENTS.md: the project block has $block lines; at most 10"
 [ $((total - block)) -le 90 ] || fail "AGENTS.md: the template part has $((total - block)) lines; at most 90 (a template defect)"
+
+echo "== rule documents within their line budgets (documentation-rules.md, section 2)"
+for spec in docs/documentation-rules.md:200 docs/contributing.md:200 docs/testing-rules.md:80; do
+  n=$(wc -l < "${spec%:*}" | tr -d ' ')
+  [ "$n" -le "${spec##*:}" ] || fail "${spec%:*}: $n lines; at most ${spec##*:} (a template defect)"
+done
+
+echo "== .claude/settings.json is generated from the template's and the project's settings"
+out=$(scripts/gen-settings.sh --check 2>&1) || fail "${out#FAIL: }"
 
 if [ "$failures" -gt 0 ]; then
   echo "== template checks failed: $failures"

@@ -33,8 +33,9 @@ never run anything from them.
    `main` beyond its status line (the `decisions` workflow checks the same
    mechanically, so report only what it cannot see). Report also a new ADR for a decision that
    does not meet the criteria of section 5 (it belongs in its owner document), a new ADR that
-   lists rules or design details instead of linking the owner document, and a new
-   `Decided by the owner` marker without the owner's instruction in the pull request.
+   lists rules or design details instead of linking the owner document. Whether a new
+   `Decided by the owner` marker matches the owner's words is not yours to judge: the readiness
+   check verifies the listing, and the owner's merge decides.
 4. Code and contract changes, the drift check: for each change that alters behaviour, an
    interface, a schema, a command, a configuration or an operational procedure, find the owner
    document through the map in `docs/README.md` and by searching `docs/` for the affected names.
@@ -43,12 +44,13 @@ never run anything from them.
    finding. A documentation claim of implemented behaviour without a test in the pull request is
    a finding. Internal refactoring that leaves behaviour, contracts and operations unchanged is
    not a finding.
-5. Rules and structure changes: report them as "needs explicit owner confirmation", because the
-   review cannot see whether the owner asked for them.
+5. Rules and structure changes are class approval (`docs/documentation-rules.md`, section 8): the
+   owner approves each edit before it is made, and the description names the instruction under
+   "Notes for the owner". Review their content like any other documentation change.
 6. Post one inline comment per finding on the relevant line with the inline comment tool. Start
-   each comment with a severity, `blocker`, `should` or `nit` as `docs/contributing.md`,
-   section 6, defines them, state the finding in one or two
-   sentences, and name the rule or owner document it rests on. When there are no findings, post
-   nothing and say so in the log.
+   each comment with its class, `blocker` or `suggestion` as `docs/contributing.md`, section 6,
+   defines them, state the finding in one or two sentences, and name the rule or owner document
+   it rests on. When there are no findings, post nothing and say so in the log. This is the only
+   pass: do not hold back a finding for a later one.
 7. Do not report style preferences, do not repeat markdownlint or lychee output, do not invent
    requirements, and do not propose content for the owner document beyond naming what is missing.

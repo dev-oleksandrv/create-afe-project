@@ -11,7 +11,9 @@ documents, which the map (`docs/README.md`) names, and its test checks in `scrip
 
 - A test protects a behaviour that a requirement, an acceptance criterion, a contract, or a fixed
   defect names. It carries that identifier (`REQ-NNN`, `AC-NN`) in its name or a tag when one
-  applies, so that an `implemented` status can point at it (`documentation-rules.md`, section 3).
+  applies, so that an `implemented` status and the "Acceptance and test plan" of a pull request can
+  point at it (`documentation-rules.md`, section 3; `contributing.md`, section 3). The project's
+  checks in `scripts/checks.d/` map each identifier to the tests that carry it.
 - Test count and coverage are not goals. Coverage shows which lines ran, not what a test checked:
   it is a floor the project sets, never evidence of quality. Where the project runs mutation
   testing, the mutation score is the measure.
@@ -45,9 +47,14 @@ documents, which the map (`docs/README.md`) names, and its test checks in `scrip
 - The acceptance tests of a requirement's criteria are written or reviewed by someone other than
   the author of the implementation, before it exists; the author changes them only with the
   owner's agreement.
+- The agent derives the test plan from the identifiers the change serves: their cases, failure
+  paths, and edge cases (section 2). It is a report under "Acceptance and test plan"
+  (`contributing.md`, section 3), never approved per pull request and not maintained afterwards.
+  Each new or changed test fails on the base and passes with the change.
 - A defect is fixed only after a regression test that reproduces it fails.
-- Changing the expectation of an existing test is a change of behaviour: the pull request names
-  the test and the requirement or owner decision behind the change.
+- A refactoring keeps the tests as they are. A change of behaviour first changes the requirement
+  or the acceptance criterion, then the test that carries the same identifier; the pull request
+  names both.
 
 ## 4. Gates
 
@@ -56,21 +63,18 @@ documents, which the map (`docs/README.md`) names, and its test checks in `scrip
   the owner.
 - The quality measures the project records (coverage, mutation score) never fall below those of
   the base branch.
-- The configuration of the test runner, coverage, mutation testing, and linters is listed in
-  `.claude/protected-paths` (`documentation-rules.md`, section 8). In Claude Code the protect hook
-  (`.claude/hooks/protect-docs.sh`) asks the owner before an agent changes such a file through an
-  Edit, Write, or MultiEdit call, or through a shell command of a form the hook's comments name
-  (a redirect, `cp`, `sed -i`, and the like); a headless run denies the change instead. A file
-  rewritten as a side effect of a tool, such as a package manager, or named only inside a script
-  is not caught and is left to the review of the diff.
+- The configuration of the test runner, coverage, mutation testing, and linters is class gate in
+  `.claude/path-classes` (`documentation-rules.md`, section 8): it changes without a prompt, the
+  pull request lists it under "Gate files", which the readiness check enforces, and the owner
+  reviews it after the merge.
 - An invariant that must hold everywhere (for example, a secret never appears in output) is an
-  executable check, a test or a project check, not only a sentence in a document.
-- Threat model of development gates: a development gate (a lint rule, a test check, a coverage or
-  mutation setting, an agent hook) catches the honest mistakes and shortcuts of an agent. It is
-  not a security boundary. Deliberate evasion, such as an alias, a computed property, or
-  tampering with a gate's own files or state, is left to the review of the diff; the protect
-  hook on the protected paths is a development gate too, and only puts the changes named above
-  in front of the owner. Review classifies its findings by this model (`contributing.md`, section 6);
-  it never permits loosening a gate, and the rules above still apply. Product invariants
-  (security, secrets, policy enforcement, limits) are not development gates: a bypass of one is
-  a defect, whatever it takes.
+  executable check, a test or a project check, and the register `docs/invariants.md` names it
+  with that check (`documentation-rules.md`, section 2); its invariants are criteria of the
+  Santa loop (`contributing.md`, section 6).
+- Threat model of development gates: a gate (a lint rule, a test check, a coverage or mutation
+  setting, an agent hook) catches honest mistakes and shortcuts; it is not a security boundary.
+  It decides which bypass is a `blocker` (`contributing.md`, section 6): a diff that itself
+  loosens or evades a gate (a test skipped, an assertion weakened, a threshold lowered, a test
+  behind an aliased import), and any bypass of a product invariant (security, secrets, policy
+  enforcement, limits), whatever it takes. A gap that only deliberate evasion exploits, such as
+  a computed property or tampering with a gate's own state, is a `suggestion`.

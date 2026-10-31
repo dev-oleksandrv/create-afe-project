@@ -1,67 +1,53 @@
 ---
 name: dual-review
-description: Review the current branch with two independent reviewers, a Claude subagent and the Codex CLI in a read-only sandbox, against the review rubric of docs/contributing.md, fix their findings, and repeat for at most three rounds; produces the verdict for the pull request description. Use before opening a pull request that changes code, contracts, checks, or workflows.
-allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(command -v codex), Bash(codex exec:*), Bash(scripts/check.sh)
+description: Review the current branch before its pull request opens, by the class of its paths (docs/contributing.md, section 6) - none for class low, one pass by one reviewer for normal and gate, the Santa loop of a Claude subagent and the Codex CLI for high - and answer each finding; produces the Checks line and the Metrics rows for the pull request description. Use before opening a pull request.
+allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(command -v codex), Bash(codex exec:*), Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*)
 ---
 
-# Dual review of a branch
+# Review before the pull request
 
 Arguments: none, or the base branch (default `main`).
 
 The rules are in `docs/contributing.md`, section 6, and `docs/testing-rules.md`. Read them first;
-this skill applies them and does not restate them. It never commits, pushes, opens a pull
-request, changes a status, or accepts a decision.
+this skill applies them. It never commits, pushes, opens a pull request, changes a status, or
+accepts a decision. Suggestions never drive a loop; only blockers of class high do.
 
 ## Procedure
 
-1. Scope: `git diff <base>...HEAD` plus the uncommitted changes (`git status --porcelain`,
-   `git diff`). When they change nothing but documentation, stop: the dual review has no scope,
-   and the verdict reads "not run: no code change". When the branch is a template update that
-   changes only template-owned and generated files (`docs/contributing.md`, section 6), stop: the
-   verdict reads "not run: template update to X.Y.Z".
-2. Reviewer B must be able to run: `command -v codex`. When it is missing, stop before the first
-   round and report "not run: Codex CLI unavailable". A second Claude reviewer never takes its
-   place.
-3. Gate: run `scripts/check.sh`. A round starts only when it passes; fix a failure first, as the
-   author, and run it again.
-4. Self-check, once, as the author, before the first round: compare every statement the diff
-   adds or changes in a document with the code and the tests it describes
-   (`docs/documentation-rules.md`, section 3), and compare the test plan
-   (`docs/contributing.md`, section 3) with the tests. Correct a statement the code does not
-   bear out, add a missing test, and name a case dropped from the plan with its reason; then run
-   `scripts/check.sh` again.
-5. Brief: write one file in the session's scratch directory, outside the repository, with the
-   rubric of section 6 and its severity examples, the project's criteria (the owner document the
-   map `docs/README.md` names under "Review criteria", when there is one),
-   `docs/testing-rules.md`, the requirements or task the branch serves, the test plan, the diff, the final lines of `scripts/check.sh`, and
-   these instructions: you review independently and have seen no
-   other review; find problems, do not approve; judge what the checks cannot (whether the tests
-   prove the requirement), not whether they pass; report only findings with a file, a line, a
-   severity (`blocker`, `should`, `nit`, as section 6 defines them), and the rule; zero
-   findings is a valid result; answer
-   only with JSON `{"verdict": "PASS" | "FAIL", "findings": [{"severity", "file", "line",
-   "criterion", "finding"}]}`, where any `blocker` or `should` means `FAIL`.
-6. Round: run both reviewers at the same time, each with the same brief and nothing else.
-   - Reviewer A: a fresh Claude subagent with the Agent tool, one per reviewer that the
-     project's criteria name for the changed paths, and at least one. Their findings together
-     are Reviewer A's verdict.
-   - Reviewer B: `codex exec --sandbox read-only -C <repository root> - < <brief file>`, with
-     the model of the Codex configuration; this skill pins none. A run that fails, times out,
-     or returns no valid JSON is not a pass: stop and report it.
-7. Verdict: both `PASS` ends the loop. A `nit` never fails a round: it is fixed or listed for
-   the description, not reviewed again. Otherwise merge and deduplicate the `blocker` and
-   `should` findings and fix only them, in the working tree, without commits and without changes the findings do not ask for.
-   A finding you judge wrong is not fixed: it goes to the owner as a question, not argued away.
-   Run `scripts/check.sh` until it passes, rewrite the brief from the new diff, and start the
-   next round with fresh reviewers that know nothing of earlier rounds. From the second round
-   the brief adds the decisions the owner made on this branch, each with its source (the pull
-   request comment, or the chat instruction quoted with its date), and says that a decided point
-   is not a finding. It adds nothing else: never the other reviewer's findings, and never the
-   findings you declined or sent to the owner unanswered.
-8. Stop after the third round that does not pass. The remaining findings become `blocking:` items
-   of the pull request (`docs/contributing.md`, section 3).
-9. Report the verdict in the form of the description's "Checks" item (section 3): passed or
-   escalated, each reviewer's verdict and the model its tool reported, the number of rounds, the
-   findings that only one reviewer raised, and the open questions. Name the files the fixes
-   changed. Once the loop passes, the fixes are squashed into the branch's commits by section 2
-   when the branch is committed; that is the author's step, not this skill's.
+1. Scope: `scripts/check-decisions.sh --classes --base <base>` prints the class of every changed
+   path and, last, `review<TAB>none|one|santa`. For `none`, stop: "Review: not run: class low".
+2. Reviewers: `command -v codex` tells whether the Codex CLI is installed.
+   - `one`: the Codex CLI when it is installed, otherwise one fresh Claude subagent.
+   - `santa`: a fresh Claude subagent and the Codex CLI. Without Codex, stop: "Santa loop not
+     run: Codex unavailable". A second Claude reviewer never takes its place.
+3. Gate: `scripts/check.sh` passes (the Ralph loop of `docs/contributing.md`, section 3). Then the
+   author's self-check: compare each statement the diff adds in a document with the code and the
+   tests it describes, and each identifier of "Acceptance and test plan" with the tests that
+   carry it; fix what does not hold and run `scripts/check.sh` again.
+4. Brief: one file in the session's scratch directory, outside the repository: the rubric and
+   the classes of section 6, the project's criteria (the owner document the map names under
+   "Review criteria"), `docs/testing-rules.md`, the task or requirements, "Acceptance and test
+   plan", the diff, and the last lines of `scripts/check.sh`. For `santa` also `docs/invariants.md`
+   when it exists, and the instruction that only objective criteria count: the blocker classes,
+   the Acceptance criteria, and the invariants. Instructions to the reviewer: review
+   independently; find problems, do not approve; judge what the checks cannot; report only
+   findings with a file, a line, a class (`blocker` or `suggestion`), and the rule; zero findings
+   is valid; answer only with JSON `{"verdict": "PASS" | "FAIL", "findings": [{"class", "file",
+   "line", "criterion", "finding"}]}`, where a blocker means `FAIL`.
+5. Run each reviewer with the same brief and nothing else: a Claude subagent with the Agent tool;
+   Codex with `codex exec --sandbox read-only -C <repository root> - < <brief file>`, the model of
+   the Codex configuration. A run that fails, times out, or returns no valid JSON is not a pass:
+   stop and report it.
+6. Answers, once per finding: a suggestion is fixed now or written up for `limit:` with its
+   reason, or declined with the rule it misreads. A blocker is fixed in the working tree or
+   declined with a reason.
+   - `one`: a fresh reviewer of the same kind gets each fixed blocker and the fix diff only, and
+     says whether the fix holds; nothing else is reviewed again.
+   - `santa`: after the fixes both reviewers review the branch again from a fresh context, until
+     neither finds a blocker. After the third round the open blockers become `blocking:` items.
+   Run `scripts/check.sh` after each set of fixes.
+7. Report, in the form of the description (`docs/contributing.md`, section 3): the Checks line
+   with the reviewers, the model each tool reported, and the rounds; each finding with its
+   class, reviewer, and answer; the `limit:` items; one Metrics row per reviewer and class, such
+   as `| dual-review/codex | suggestion | 2 | 1 | 1 | 0 |`; and the Santa rounds. Name the files
+   the fixes changed; committing them is the author's step.

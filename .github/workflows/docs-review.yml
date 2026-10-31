@@ -2,12 +2,14 @@
 # the diff, checks documentation
 # changes against docs/documentation-rules.md and code or contract changes for missing
 # documentation updates, and posts findings as PR comments. It proposes only; it changes nothing.
+# It is a sensor with one pass (docs/contributing.md, section 6): it runs when the pull request
+# opens or leaves draft, and a push does not run it again.
 # Needs the Claude GitHub App installed on the repository and the CLAUDE_CODE_OAUTH_TOKEN secret.
 name: docs-review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+    types: [opened, ready_for_review]
 
 concurrency:
   group: docs-review-${{ github.event.pull_request.number }}
