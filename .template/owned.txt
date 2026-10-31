@@ -8,6 +8,7 @@ docs/testing-rules.md
 docs/decisions/adr-template.md
 scripts/check.sh
 scripts/check-docs.sh
+scripts/check-links.mjs
 scripts/check-decisions.sh
 scripts/check-template.sh
 scripts/check-project.sh
@@ -34,4 +35,3 @@ scripts/lib/json.mjs
 .github/workflows/docs-review.yml
 .github/workflows/code-review.yml
 .markdownlint-cli2.jsonc
-lychee.toml

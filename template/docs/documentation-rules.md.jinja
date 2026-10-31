@@ -110,7 +110,7 @@ These rules apply once code exists; they are fixed now so the first code follows
 | Concern | Automated (`scripts/check.sh`, CI) | Semantic review, per change |
 | --- | --- | --- |
 | Markdown syntax and structure | markdownlint-cli2 | none |
-| Broken internal links and anchors | lychee, offline, with fragments | none |
+| Broken internal links and anchors | `scripts/check-links.mjs`, offline, with anchors | none |
 | External links | not checked automatically | author verifies when adding; spot check on review |
 | Status correctness | none | status matches the evidence (section 3) |
 | Invented facts | none | every new fact has a source or is marked unknown |
@@ -190,7 +190,7 @@ Every file belongs to exactly one class:
 
 The project extends the template only at its extension points: checks in `scripts/checks.d/*.sh`,
 run in name order by `scripts/check.sh` and the `docs` workflow, which provision any tool they
-need beyond Git, Node.js, and lychee; Stop hooks in `.claude/hooks/project/stop/*.sh`, which
+need beyond Git, bash, and Node.js; Stop hooks in `.claude/hooks/project/stop/*.sh`, which
 receive the Stop hook input and block the agent by exiting with 2; its own workflows in
 `.github/workflows/`; its path classes in `.claude/path-classes`; its harness settings in
 `.claude/harness.conf` (the Ralph cap, the identifier pattern, test globs, test commands); and

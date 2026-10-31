@@ -82,9 +82,9 @@ block, seeded files, project checks), creates a missing seeded file, removes a f
 no longer owns, refuses a dirty working tree and a downgrade, reports and replaces a local edit
 of a template-owned file, converts a Copier answers file, and runs the 0.5.0 migration; and that
 this repository's template-owned files match `template/`. CI runs both through the `docs`
-workflow, which sets up Node.js and lychee; the checks run `npm ci` when `node_modules` is
-missing, and the Python test installs uv into `~/.local/bin` when `uvx` is missing, so the runner
-needs only Git and curl besides.
+workflow, which sets up Node.js; the checks run `npm ci` when `node_modules` is missing, and the
+Python test installs uv into `~/.local/bin` when `uvx` is missing, so the runner needs only Git
+and curl besides.
 
 ## 4. Versions
 

@@ -81,6 +81,10 @@ expect_pass() {
   (cd "$a" && "$@" > "$work/pass.log" 2>&1) || { cat "$work/pass.log"; fail "wrongly rejected: $what"; }
   gitc "$a" checkout -q -- . && gitc "$a" clean -q -fd
 }
+expect_fail "a link to a missing file" bash -c 'printf "# Note\n\nSee [x](docs/nope.md).\n" > note.md && node scripts/check-links.mjs'
+expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](docs/testing-rules.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
+expect_fail "a link to a missing heading of the same document" bash -c 'printf "# Note\n\n## Part\n\nSee [x](#parts).\n" > note.md && node scripts/check-links.mjs'
+expect_pass "links to files, headings, duplicate headings, HTML anchors, and code are fine" bash -c 'printf "# Note\n\n## Part \x60one\x60\n\n## Part \x60one\x60\n\n<a id=\"here\"></a>\n\n[a](docs/README.md) [b](#part-one-1) [c](#here) [d](docs/) [e](https://example.com/x#y) \x60[f](nope.md)\x60\n\n\x60\x60\x60\n[g](nope.md)\n\x60\x60\x60\n" > note.md && node scripts/check-links.mjs'
 expect_fail "edited template-owned rules" bash -c 'echo x >> docs/documentation-rules.md && scripts/check-template.sh'
 expect_fail "edited template-owned script" bash -c 'echo "# x" >> scripts/check.sh && scripts/check-template.sh'
 expect_pass "edited project block" bash -c 'sed -i.bak "s/The project is/This project is/" AGENTS.md && rm AGENTS.md.bak && scripts/check-template.sh'
@@ -418,7 +422,7 @@ mkdir -p "$u/scripts/checks.d" && printf '#!/usr/bin/env bash\necho project chec
 rm "$u/.claude/harness.conf"
 gitc "$u" add -A && gitc "$u" commit -q -m init
 printf '\nA line added by the next template version.\n' >> "$tpl/template/docs/contributing.md.jinja"
-sed -i.bak '/^lychee.toml$/d' "$tpl/template/.template/owned.txt.jinja" && rm "$tpl/template/lychee.toml" "$tpl/template/.template/owned.txt.jinja.bak"
+sed -i.bak '/^scripts\/pr-metrics.sh$/d' "$tpl/template/.template/owned.txt.jinja" && rm "$tpl/template/scripts/pr-metrics.sh" "$tpl/template/.template/owned.txt.jinja.bak"
 node -e 'const f=process.argv[1],fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version="0.0.2";fs.writeFileSync(f,JSON.stringify(p))' "$tpl/package.json"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up.log" 2>&1) || { cat "$work/up.log"; fail "update test: update fails"; }
 grep -q 'Project line two.' "$u/AGENTS.md" || fail "update test: the project block was lost"
@@ -426,7 +430,7 @@ grep -q 'Project note.' "$u/README.md" || fail "update test: the seeded README w
 [ -f "$u/.claude/harness.conf" ] || fail "update test: a missing seeded file was not created"
 [ -x "$u/scripts/checks.d/10-sample.sh" ] || fail "update test: the project check was lost"
 grep -q 'added by the next template version' "$u/docs/contributing.md" || fail "update test: the template change did not arrive"
-[ ! -e "$u/lychee.toml" ] || fail "update test: a file the template no longer owns was kept"
+[ ! -e "$u/scripts/pr-metrics.sh" ] || fail "update test: a file the template no longer owns was kept"
 grep -q '"_version": "0.0.2"' "$u/.afe-answers.json" || fail "update test: the answers file does not record 0.0.2"
 (cd "$u" && scripts/check-template.sh > "$work/ut.log" 2>&1) || { cat "$work/ut.log"; fail "update test: template check fails after the update"; }
 gitc "$u" add -A && gitc "$u" commit -q -m update
