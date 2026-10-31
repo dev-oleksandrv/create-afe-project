@@ -1,6 +1,6 @@
 ---
 name: dual-review
-description: Review the current branch before its pull request opens, by the class of its paths (docs/contributing.md, section 6) - none for class low, one pass by one reviewer for normal and gate, the Santa loop of a Claude subagent and the Codex CLI for high - and answer each finding; produces the Checks line and the Metrics rows for the pull request description. Use before opening a pull request.
+description: Review the current branch before its pull request opens, by the class of its paths (docs/contributing.md, section 6) - none for class low, one pass by one reviewer for normal and gate, the Santa loop of two independent reviewers (a Claude subagent and the Codex CLI, or two fresh Claude subagents without Codex) for high, up to REVIEW_MAX_ROUNDS rounds - and answer each finding; produces the Checks line and the Metrics rows for the pull request description. Use before opening a pull request.
 allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(command -v codex), Bash(codex exec:*), Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*)
 ---
 
@@ -18,8 +18,11 @@ accepts a decision. Suggestions never drive a loop; only blockers of class high 
    path and, last, `review<TAB>none|one|santa`. For `none`, stop: "Review: not run: class low".
 2. Reviewers: `command -v codex` tells whether the Codex CLI is installed.
    - `one`: the Codex CLI when it is installed, otherwise one fresh Claude subagent.
-   - `santa`: a fresh Claude subagent and the Codex CLI. Without Codex, stop: "Santa loop not
-     run: Codex unavailable". A second Claude reviewer never takes its place.
+   - `santa`: a fresh Claude subagent and the Codex CLI. Without Codex, a second fresh Claude
+     subagent takes its place, with another lens: the first reviews correctness and the blocker
+     classes, the second the Acceptance criteria, the invariants, and the tests that should fail;
+     "Checks" names both. The rounds: `REVIEW_MAX_ROUNDS` of `.claude/harness.conf`, default 3,
+     never more than 5.
 3. Gate: `scripts/check.sh` passes (the Ralph loop of `docs/contributing.md`, section 3). Then the
    author's self-check: compare each statement the diff adds in a document with the code and the
    tests it describes, and each identifier of "Acceptance and test plan" with the tests that
@@ -43,8 +46,10 @@ accepts a decision. Suggestions never drive a loop; only blockers of class high 
    declined with a reason.
    - `one`: a fresh reviewer of the same kind gets each fixed blocker and the fix diff only, and
      says whether the fix holds; nothing else is reviewed again.
-   - `santa`: after the fixes both reviewers review the branch again from a fresh context, until
-     neither finds a blocker. After the third round the open blockers become `blocking:` items.
+   - `santa`: after the fixes both reviewers review the branch again, each from a fresh context
+     with the same brief and the fix diff, until neither finds a blocker. Stop early when a
+     blocker comes back unchanged after its fix, since another round will not settle it. After
+     the last round the open blockers become `blocking:` items.
    Run `scripts/check.sh` after each set of fixes.
 7. Report, in the form of the description (`docs/contributing.md`, section 3): the Checks line
    with the reviewers, the model each tool reported, and the rounds; each finding with its

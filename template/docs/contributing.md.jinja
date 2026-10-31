@@ -168,12 +168,12 @@ template version, which `.afe-answers.json` records; the `update-template` skill
   - normal and gate: one pass by one reviewer, {% if dual_review %}the Codex CLI when it is installed, otherwise {% endif %}a fresh
     Claude subagent; only the fix of a blocker is checked again;
 {%- if dual_review %}
-  - high: the Santa loop: a Claude subagent and the Codex CLI review independently; the author
-    fixes the blockers and both review again, until neither finds one; after the third round the
-    open blockers go to the owner as `blocking:` items. Without Codex the loop does not run, and
-    "Checks" says "Santa loop not run: Codex unavailable"; a second Claude never replaces it.
+  - high: the Santa loop: a Claude subagent and the Codex CLI (without Codex, a second fresh
+    Claude subagent with another lens) review independently; the author fixes the blockers and both
+    review again, until neither finds one or after `REVIEW_MAX_ROUNDS` rounds (`.claude/harness.conf`,
+    3 to 5): the open blockers go to the owner as `blocking:` items.
 {%- else %}
-  - high: one pass as for normal; the Santa loop comes with the review module and the Codex CLI.
+  - high: one pass as for normal; the Santa loop is an optional module of the template.
 {%- endif %}
 {%- if docs_review or code_review %}
 - In the pull request, {% if docs_review %}`docs-review` reviews every pull request{% endif %}{% if docs_review and code_review %} and {% endif %}{% if code_review %}`code-review` every one that changes code, contracts, checks, or workflows{% endif %}, once, when it

@@ -165,7 +165,7 @@ template version, which `.afe-answers.json` records; the `update-template` skill
   - low (documents, generated files, a template update): no reviewer;
   - normal and gate: one pass by one reviewer, a fresh
     Claude subagent; only the fix of a blocker is checked again;
-  - high: one pass as for normal; the Santa loop comes with the review module and the Codex CLI.
+  - high: one pass as for normal; the Santa loop is an optional module of the template.
 - In the pull request, `docs-review` reviews every pull request and `code-review` every one that changes code, contracts, checks, or workflows, once, when it
   opens or leaves draft; a push does not run them again.
 - A finding names a file, a line, a class, and the rule it rests on; zero findings is a valid
