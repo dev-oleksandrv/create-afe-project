@@ -32,6 +32,15 @@
 - The `docs` workflow also runs on `workflow_dispatch`, so a workflow can start it for a pull
   request opened with `GITHUB_TOKEN`.
 - A second pass over the AFE guide, on the owner's decisions of 2026-10-31; no observed failure.
+  - `afe-init` skill (new, run by the owner only): interviews the owner about the product, the
+    stack, and the stage; records requirements, an accepted stack ADR, and a proposed
+    architecture; scaffolds the code with the stack's own generator; wires format, lint, types,
+    unit and end-to-end tests into `scripts/checks.d/` and `.claude/harness.conf`; and proves
+    that every gate fails when it should. Three pull requests, one change each.
+  - The check after every edit: `.claude/hooks/post-edit-check.sh` (new, PostToolUse) runs
+    `CHECK_EDIT` of `.claude/harness.conf` on the changed file, limited by `CHECK_EDIT_GLOBS`,
+    and sends a failure back to the agent. `.claude/harness.conf` is seeded: an existing project
+    adds the two keys by hand when it wants the check.
   - The protect hook asks before publishing (`npm`, `pnpm`, `yarn`, `bun`, `cargo`, `poetry`, `uv`
     publish, `twine upload`, `gem push`, `dotnet nuget push`, `docker` or `podman push`),
     `gh workflow run`, and a `gh api` DELETE, also behind `git -C DIR`; it denies a push to the

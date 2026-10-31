@@ -126,7 +126,7 @@ export function messageAfterCreate(a) {
   return (
     `${a.project_name} is ready. Next: make the initial commit on main (the one direct commit that ` +
     'docs/contributing.md allows), add the remote origin, push, run git remote set-head origin -a, ' +
-    `${steps.join(', ')}, then run scripts/check.sh.`
+    `${steps.join(', ')}, then run scripts/check.sh. To set up the code and its checks, run /afe-init in Claude Code.`
   );
 }
 

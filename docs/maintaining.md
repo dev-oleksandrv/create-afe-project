@@ -81,7 +81,8 @@ at the Ralph cap and counts again afterwards; that a large change only warns; th
 `scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
 settings deny reading secrets. It also checks that the protect hook asks before publishing a
 package or an image, `gh workflow run`, a `gh api` DELETE, and an edit or command with a known
-token format, and denies a push to `main` once the remote has it; that a hook command whose script is
+token format, and denies a push to `main` once the remote has it; that the check after every edit
+runs `CHECK_EDIT` on matching files inside the project only; that a hook command whose script is
 missing fails the template check; that the link check finds a missing file or anchor; that
 `scripts/protect-branch.sh --dry-run` prints the ruleset; and that the `secret-scan` workflow
 appears only with its module. It also checks that `update` keeps project content (the project

@@ -275,6 +275,17 @@ stop; [ $? -eq 2 ] || fail "ralph cap: the count does not restart after the cap"
 gitc "$a" switch -q main && gitc "$a" branch -q -D ralph && rm -f "$(git -C "$a" rev-parse --git-dir)"/ralph-stops-*
 hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
 hook allow '{"tool_name":"Bash","tool_input":{"command":"gh pr view 3 --json state"}}'
+# The check after every edit: CHECK_EDIT runs on the changed file and reports a failure with exit 2.
+pe() { (cd "$a" && printf '%s' '{"tool_name":"Write","tool_input":{"file_path":"'"$1"'"}}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/post-edit-check.sh > "$work/pe.log" 2>&1); }
+printf 'bad\n' > "$a/pe.txt" && printf 'ok\n' > "$a/pe-ok.txt" && cp "$a/pe.txt" "$work/outside.txt"
+pe "$a/pe.txt" || fail "post-edit: runs although CHECK_EDIT is empty"
+printf 'CHECK_EDIT=grep -q ok\n' >> "$a/.claude/harness.conf"
+pe "$a/pe.txt"; [ $? -eq 2 ] && grep -q "CHECK_EDIT failed on pe.txt" "$work/pe.log" || { cat "$work/pe.log"; fail "post-edit: a failing CHECK_EDIT is not reported"; }
+pe "$a/pe-ok.txt" || { cat "$work/pe.log"; fail "post-edit: a passing CHECK_EDIT is reported"; }
+pe "$work/outside.txt" || fail "post-edit: checks a file outside the project"
+printf 'CHECK_EDIT_GLOBS=src/*.py\n' >> "$a/.claude/harness.conf"
+pe "$a/pe.txt" || fail "post-edit: checks a file that CHECK_EDIT_GLOBS leaves out"
+gitc "$a" checkout -q -- .claude/harness.conf && rm -f "$a/pe.txt" "$a/pe-ok.txt"
 # A known token format in written content or a command asks; the tokens are assembled here, so
 # this file holds none.
 aws="AKIA""IOSFODNN7EXAMPLE" ghp="ghp_""$(printf 'a%.0s' $(seq 1 36))" pk="-----BEGIN ""RSA PRIVATE KEY-----"
