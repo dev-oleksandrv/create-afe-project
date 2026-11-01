@@ -10,16 +10,24 @@ cd "$(dirname "$0")/.."
 git fetch --quiet origin main
 ref=origin/main
 
-# A changeset is pending when its front matter names a package. An empty one (`npx changeset
-# --empty`) releases nothing, and changesets/action opens no Version PR for it, so it must not
-# block the tag.
-pending=0
-while IFS= read -r f; do
-  case "$f" in *.md) ;; *) continue ;; esac
-  [ "${f##*/}" = README.md ] && continue
-  git show "$ref:$f" | awk 'NR == 1 && /^---/ {fm = 1; next} fm && /^---/ {exit} fm && NF {n++} END {exit n ? 0 : 1}' &&
-    pending=$((pending + 1))
-done < <(git ls-tree --name-only "$ref" .changeset/)
+# A changeset is pending when @changesets/parse, the parser changesets/action uses, finds a
+# release in it. An empty one (`npx changeset --empty`) releases nothing, and the action opens no
+# Version PR for it, so it must not block the tag. Files are skipped as @changesets/read skips
+# them; a file that does not parse fails the script instead of being guessed.
+pending=$(node -e '
+const { execFileSync } = require("node:child_process");
+const m = require("@changesets/parse");
+const parse = m.default ?? m;
+const ref = process.argv[1];
+const git = (...args) => execFileSync("git", args, { encoding: "utf8", maxBuffer: 1 << 26 });
+let n = 0;
+for (const f of git("ls-tree", "-z", "--name-only", ref, ".changeset/").split("\0").filter(Boolean)) {
+  const name = f.slice(f.lastIndexOf("/") + 1);
+  if (!name.endsWith(".md") || name.startsWith(".") || /^(readme|agents|claude|gemini)\.md$/i.test(name)) continue;
+  if (parse(git("show", `${ref}:${f}`)).releases.length > 0) n += 1;
+}
+console.log(n);
+' "$ref")
 if [ "$pending" != 0 ]; then
   echo "$pending changeset(s) pending: nothing to tag."
   exit 0
