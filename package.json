@@ -1,0 +1,45 @@
+{
+  "name": "create-afe-project",
+  "version": "1.0.0",
+  "description": "Create and update agent-friendly repositories: documentation rules, decision records, checks, and Claude Code hooks and skills.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-afe-project": "bin/create-afe-project.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "template/",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "changeset": "changeset",
+    "version-packages": "changeset version && npm install --package-lock-only --ignore-scripts && scripts/sync-self.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dev-oleksandrv/create-afe-project.git"
+  },
+  "keywords": [
+    "create",
+    "scaffold",
+    "template",
+    "agents",
+    "claude-code",
+    "afe"
+  ],
+  "dependencies": {
+    "@clack/prompts": "^1.8.1",
+    "nunjucks": "^3.2.4",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "1.0.1",
+    "@changesets/cli": "3.0.3"
+  }
+}

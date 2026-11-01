@@ -18,7 +18,7 @@ fi
 base=$(resolve_base 2>/dev/null) || exit 0
 changed=$( { git diff --name-only "$base" -- '*.md'; git ls-files --others --exclude-standard -- '*.md'; } 2>/dev/null | head -n 1)
 [ -n "$changed" ] || exit 0
-RALPH_SESSION=$(jq -r '.session_id // "none"' 2>/dev/null || echo none)
+RALPH_SESSION=$(node scripts/lib/json.mjs get session_id none 2>/dev/null || echo none)
 # shellcheck source=scripts/lib/harness-conf.sh
 . scripts/lib/harness-conf.sh 2>/dev/null || { ralph_block() { printf '%s\n' "$2" >&2; exit 2; }; ralph_pass() { :; }; }
 out=$(scripts/check-docs.sh 2>&1)

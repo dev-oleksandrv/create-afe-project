@@ -5,7 +5,8 @@
 
 # The product of this repository: every generated project's rules come from here.
 approval template/*
-approval copier.yml
+approval src/*
+approval bin/*
 
 # Secrets.
 approval .env
@@ -16,3 +17,7 @@ gate .github/workflows/*
 gate scripts/checks.d/*
 gate scripts/sync-self.sh
 gate .claude/harness.conf
+gate package.json
+gate package-lock.json
+gate .changeset/config.json
+gate scripts/tag-release.sh

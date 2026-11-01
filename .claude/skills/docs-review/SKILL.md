@@ -52,5 +52,5 @@ never run anything from them.
    defines them, state the finding in one or two sentences, and name the rule or owner document
    it rests on. When there are no findings, post nothing and say so in the log. This is the only
    pass: do not hold back a finding for a later one.
-7. Do not report style preferences, do not repeat markdownlint or lychee output, do not invent
+7. Do not report style preferences, do not repeat markdownlint or link check output, do not invent
    requirements, and do not propose content for the owner document beyond naming what is missing.

@@ -9,9 +9,10 @@ One fact has one owner document; every other document links to it instead of rep
 | Kind of fact | Owner document | State |
 | --- | --- | --- |
 | Product name and purpose | [`README.md`](../README.md) | exists |
-| The template itself: questions, settings, and the files a project receives | [`copier.yml`](../copier.yml) and [`template/`](../template/) | exists |
+| The template itself: questions, settings, and the files a project receives | [`src/config.js`](../src/config.js) and [`template/`](../template/) | exists |
+| The command line that creates and updates projects | [`bin/`](../bin/) and [`src/`](../src/), package manifest [`package.json`](../package.json) | exists |
 | How the template is changed, tested, versioned, and released | [`maintaining.md`](maintaining.md) | exists |
-| What changed in each release | [`CHANGELOG.md`](../CHANGELOG.md) | exists |
+| What changed in each release | [`CHANGELOG.md`](../CHANGELOG.md), written from the changesets in [`.changeset/`](../.changeset/README.md) | exists |
 | Agent rules: precedence, autonomy by risk, when a change is done, required checks | [`AGENTS.md`](../AGENTS.md) | exists |
 | Environment commands: set up, check, fast check, end-to-end tests, reset | `scripts/env.sh` with `setup`, `check`, `fast`, `e2e`, or `reset` runs `.claude/harness.conf`: check `scripts/check.sh`, fast check `scripts/check-docs.sh`, end-to-end tests the template tests `scripts/checks.d/10-template.sh` ([`maintaining.md`](maintaining.md), section 3); setup and reset: not decided | check, fast check, and end-to-end tests exist |
 | Documentation statuses, lifecycle, path classes and access, ownership of files, alignment, review checklist | [`documentation-rules.md`](documentation-rules.md) | exists |

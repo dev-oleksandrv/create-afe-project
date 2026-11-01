@@ -1,35 +1,60 @@
-# Release of a template version (docs/maintaining.md, section 5): a tag vX.Y.Z on main with a
-# matching CHANGELOG.md section becomes a GitHub release with that section as its notes.
+# Release of a version (docs/maintaining.md, section 5): the tag vX.Y.Z on main, which
+# scripts/tag-release.sh pushes after a Version PR merges and starts with workflow_dispatch, or a
+# tag pushed by hand. It checks that package.json and CHANGELOG.md are at X.Y.Z, runs the package
+# tests, publishes a GitHub release with the CHANGELOG.md section as its notes, and publishes the
+# npm package create-afe-project.
 name: release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","linux","ARM64"]') }}
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
-      - name: tag is on main and has a changelog section
+      - name: tag is on main, package.json and CHANGELOG.md are at its version
         env:
           TAG: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
         run: |
+          [ "$REF_TYPE" = tag ] || { echo "run the release on a tag, not on $TAG"; exit 1; }
           [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] ||
             { echo "$TAG is not vMAJOR.MINOR.PATCH without leading zeros"; exit 1; }
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$TAG is not on main"; exit 1; }
           version="${TAG#v}"
-          awk -v h="## [$version]" 'index($0, h) == 1 {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
-          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "CHANGELOG.md has no section for $version"; exit 1; }
+          [ "$(node -p 'require("./package.json").version')" = "$version" ] || { echo "package.json is not at version $version"; exit 1; }
+          awk -v h="## $version" '$0 == h {f=1; next} /^## / {f=0} f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "CHANGELOG.md has no section ## $version"; exit 1; }
 
-      - name: publish
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: lts/*
+          registry-url: https://registry.npmjs.org
+
+      - name: package tests
+        run: npm ci && npm test
+
+      - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
+        run: gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
+
+      - name: npm package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

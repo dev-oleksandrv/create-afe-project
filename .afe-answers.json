@@ -1,0 +1,14 @@
+{
+  "_note": "Written by create-afe-project; never edit by hand (docs/documentation-rules.md, section 9).",
+  "_version": "1.0.0",
+  "project_name": "create-afe-project",
+  "project_description": "An npm package that creates and updates agent-friendly repositories: documentation rules, decision records, checks, and Claude Code hooks and skills.",
+  "github_repo": "dev-oleksandrv/create-afe-project",
+  "ci_runner": "github-hosted",
+  "docs_review": true,
+  "code_review": true,
+  "dual_review": false,
+  "secret_scan": true,
+  "acceptance_check": false,
+  "fail_without_change": false
+}

@@ -1,7 +1,8 @@
 # Sourced by scripts/check-decisions.sh. The path classes of docs/documentation-rules.md,
 # section 8: approval, high, gate, normal, low; a path takes the highest class that applies.
 # - approval, built in: AGENTS.md, the template-owned files of .template/owned.txt, the generated
-#   .template/owned.sha256, .copier-answers.yml, and .claude/settings.json, the map
+#   .template/owned.sha256, the answers file (.afe-answers.json, or the legacy
+#   .copier-answers.yml), and .claude/settings.json, the map
 #   docs/README.md, .claude/path-classes, .claude/settings.project.json, .mcp.json, the glob
 #   lines of a legacy .claude/protected-paths, any decision record that exists on the base, and
 #   any decision record whose status is not `proposed`;
@@ -29,7 +30,7 @@ glob_listed() {
 # True when path $1 is an approval path by a built-in rule; $2 is the base commit.
 builtin_approval() {
   case "$1" in
-    AGENTS.md|.template/owned.sha256|.copier-answers.yml|.claude/settings.json|docs/README.md|\
+    AGENTS.md|.template/owned.sha256|.afe-answers.json|.copier-answers.yml|.claude/settings.json|docs/README.md|\
     .claude/path-classes|.claude/settings.project.json|.mcp.json) return 0 ;;
     docs/decisions/README.md) return 1 ;;
     docs/decisions/[0-9][0-9][0-9][0-9]-*.md)
@@ -57,7 +58,7 @@ class_of() {
   fi
   if [ -z "$name" ]; then
     case "$1" in
-      *.md|.template/owned.sha256|.copier-answers.yml|.claude/settings.json) name=low ;;
+      *.md|.template/owned.sha256|.afe-answers.json|.copier-answers.yml|.claude/settings.json) name=low ;;
       *) name=normal ;;
     esac
   fi
@@ -67,13 +68,13 @@ class_of() {
 # review_level <base commit> <path>...: the review before the pull request that the paths need,
 # by their highest content class: santa (high), one (gate, normal), or none (low). A template
 # update needs none, because the template repository reviewed it: a change of
-# .copier-answers.yml whose other paths are all template-owned, generated, or seeded.
+# the answers file whose other paths are all template-owned, generated, or seeded.
 review_level() {
   local mb="$1" p c best=1 update=1 answers=0
   shift
   for p in "$@"; do
     case "$p" in
-      .copier-answers.yml) answers=1 ;;
+      .afe-answers.json|.copier-answers.yml) answers=1 ;;
       AGENTS.md|.template/owned.sha256|.claude/settings.json|docs/decisions/README.md) ;;
       README.md|CLAUDE.md|.gitignore|docs/README.md|.claude/path-classes|.claude/harness.conf|\
       .claude/settings.project.json|.claude/protected-paths) ;;

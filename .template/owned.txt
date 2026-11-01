@@ -8,6 +8,7 @@ docs/testing-rules.md
 docs/decisions/adr-template.md
 scripts/check.sh
 scripts/check-docs.sh
+scripts/check-links.mjs
 scripts/check-decisions.sh
 scripts/check-template.sh
 scripts/check-project.sh
@@ -15,16 +16,20 @@ scripts/gen-decisions-index.sh
 scripts/gen-settings.sh
 scripts/env.sh
 scripts/pr-metrics.sh
+scripts/protect-branch.sh
 scripts/lib/git-base.sh
 scripts/lib/classes.sh
 scripts/lib/harness-conf.sh
+scripts/lib/json.mjs
 .claude/settings.template.json
 .claude/hooks/protect-docs.sh
+.claude/hooks/post-edit-check.sh
 .claude/hooks/stop-check-docs.sh
 .claude/hooks/stop-check-decisions.sh
 .claude/hooks/stop-check-template.sh
 .claude/hooks/stop-run-project-hooks.sh
 .claude/skills/create-pr/SKILL.md
+.claude/skills/afe-init/SKILL.md
 .claude/skills/update-template/SKILL.md
 .claude/skills/docs-review/SKILL.md
 .claude/skills/review-code/SKILL.md
@@ -32,5 +37,5 @@ scripts/lib/harness-conf.sh
 .github/workflows/decisions.yml
 .github/workflows/docs-review.yml
 .github/workflows/code-review.yml
+.github/workflows/secret-scan.yml
 .markdownlint-cli2.jsonc
-lychee.toml

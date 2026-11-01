@@ -1,12 +1,15 @@
 # Documentation, template, and project checks: the CI side of scripts/check.sh (AGENTS.md,
-# section 6). markdownlint-cli2 and lychee run through their official actions with the same
-# configuration files; decision records are checked by the `decisions` workflow.
+# section 6). markdownlint-cli2 runs through its official action with the same configuration
+# file, and the link check is scripts/check-links.mjs, as locally; decision records are checked
+# by the `decisions` workflow.
 name: docs
 
 on:
   push:
     branches: [main]
   pull_request:
+  # By hand, or by a workflow: a pull request opened with GITHUB_TOKEN starts no run by itself.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +18,7 @@ jobs:
   check:
     # Set the repository variable CI_RUNS_ON (a JSON array of runner labels) to run elsewhere
     # without editing this template-owned file.
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","linux","ARM64"]') }}
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v7.0.1
 
@@ -27,11 +30,8 @@ jobs:
       - name: markdownlint-cli2
         uses: DavidAnson/markdownlint-cli2-action@v25.0.0
 
-      - name: lychee
-        uses: lycheeverse/lychee-action@v2.9.0
-        with:
-          args: --no-progress .
-          fail: true
+      - name: links
+        run: node scripts/check-links.mjs
 
       - name: template integrity
         run: scripts/check-template.sh

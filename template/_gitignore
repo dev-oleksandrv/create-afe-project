@@ -3,7 +3,6 @@ CLAUDE.local.md
 
 # Tooling
 node_modules/
-.lycheecache
 .DS_Store
 
 # Personal Claude Code settings, never committed (docs/documentation-rules.md, section 9)

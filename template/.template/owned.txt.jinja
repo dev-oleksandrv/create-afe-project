@@ -8,6 +8,7 @@ docs/testing-rules.md
 docs/decisions/adr-template.md
 scripts/check.sh
 scripts/check-docs.sh
+scripts/check-links.mjs
 scripts/check-decisions.sh
 scripts/check-template.sh
 scripts/check-project.sh
@@ -15,6 +16,7 @@ scripts/gen-decisions-index.sh
 scripts/gen-settings.sh
 scripts/env.sh
 scripts/pr-metrics.sh
+scripts/protect-branch.sh
 {%- if acceptance_check %}
 scripts/check-acceptance.sh
 {%- endif %}
@@ -24,13 +26,16 @@ scripts/fail-without-change.sh
 scripts/lib/git-base.sh
 scripts/lib/classes.sh
 scripts/lib/harness-conf.sh
+scripts/lib/json.mjs
 .claude/settings.template.json
 .claude/hooks/protect-docs.sh
+.claude/hooks/post-edit-check.sh
 .claude/hooks/stop-check-docs.sh
 .claude/hooks/stop-check-decisions.sh
 .claude/hooks/stop-check-template.sh
 .claude/hooks/stop-run-project-hooks.sh
 .claude/skills/create-pr/SKILL.md
+.claude/skills/afe-init/SKILL.md
 .claude/skills/update-template/SKILL.md
 {%- if docs_review %}
 .claude/skills/docs-review/SKILL.md
@@ -49,8 +54,10 @@ scripts/lib/harness-conf.sh
 {%- if code_review %}
 .github/workflows/code-review.yml
 {%- endif %}
+{%- if secret_scan %}
+.github/workflows/secret-scan.yml
+{%- endif %}
 {%- if fail_without_change %}
 .github/workflows/fail-without-change.yml
 {%- endif %}
 .markdownlint-cli2.jsonc
-lychee.toml
