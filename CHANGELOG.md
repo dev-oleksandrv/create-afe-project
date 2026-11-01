@@ -9,7 +9,12 @@
   npm, under the MIT license.
   - `npx create-afe-project@latest <directory>` (or `npm create afe-project@latest`) creates a
     project with a wizard that asks the questions of the former `copier.yml`; `--defaults`,
-    `--data key=value`, and `--data-file` answer without a terminal.
+    `--data key=value`, and `--data-file` answer without a terminal. The questions are short and
+    plain, and the message after create numbers the next steps.
+  - Create makes the initial commit on `main` (`Template: create the project with
+    create-afe-project <version>`), the one direct commit that `docs/contributing.md` allows, so
+    `/afe-init` starts on a clean working tree. It commits only in a new directory or an empty
+    clone, never in a non-empty directory written with `--force`; `--no-git` skips it.
   - `npx create-afe-project@latest update` replaces the template-owned files, keeps the project
     block of `AGENTS.md`, creates missing seeded files and never changes existing ones, removes
     files the template no longer owns, runs the migrations between the versions, and regenerates

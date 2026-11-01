@@ -19,6 +19,7 @@ Options:
   --data key=value     answer a question; repeatable
   --data-file <file>   answers from a JSON file; --data wins over it
   --force              create: write into a directory that is not empty
+  --no-git             create: do not make the initial Git commit on main
   --allow-dirty        update: run with uncommitted changes
   --quiet              print only errors and the result
   -h, --help           print this help
@@ -43,6 +44,7 @@ async function main() {
       data: { type: 'string', multiple: true },
       'data-file': { type: 'string' },
       force: { type: 'boolean' },
+      'no-git': { type: 'boolean' },
       'allow-dirty': { type: 'boolean' },
       quiet: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
@@ -77,16 +79,24 @@ async function main() {
   let dir = positionals[0];
   if (!dir) {
     if (!interactive) throw new UsageError('name the directory to create the project in');
-    dir = await p.text({ message: 'Directory to create the project in', placeholder: 'my-project', validate: (v) => (v?.trim() ? undefined : 'Required') });
+    dir = await p.text({ message: 'Where should the project go? (a new or empty directory)', placeholder: 'my-project', validate: (v) => (v?.trim() ? undefined : 'Required') });
     if (p.isCancel(dir)) {
       p.cancel('Cancelled; nothing was written.');
       process.exit(130);
     }
   }
+  if (interactive) {
+    p.note(
+      'A few questions about the project, then yes/no questions that turn optional checks on.\n' +
+        'Press Enter to keep a default. To change an answer later, run\n' +
+        'npx create-afe-project@latest update in the project.',
+    );
+  }
   const spinner = interactive && !quiet ? p.spinner() : null;
   const { message } = await create(resolve(dir), {
     ...common,
     force: Boolean(values.force),
+    git: !values['no-git'],
     quiet: quiet || interactive,
     log: (msg) => spinner?.start(msg),
   });

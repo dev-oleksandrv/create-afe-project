@@ -114,8 +114,9 @@ function isDirty(dir) {
  *   force?: boolean, quiet?: boolean, log?: (msg: string) => void }} options
  * @returns {Promise<{ answers: Record<string, unknown>, message: string }>}
  */
-export async function create(dir, { given, useDefaults, interactive, force = false, quiet = false, log = () => {} }) {
-  if (existsSync(dir) && !force && readdirSync(dir).some((n) => n !== '.git')) {
+export async function create(dir, { given, useDefaults, interactive, force = false, quiet = false, git = true, log = () => {} }) {
+  const empty = !existsSync(dir) || readdirSync(dir).every((n) => n === '.git');
+  if (!empty && !force) {
     throw new UsageError(`${dir} is not empty; choose an empty directory, or pass --force to write into it`);
   }
   const { answers, context } = await collectAnswers({ given, useDefaults, interactive });
@@ -124,7 +125,38 @@ export async function create(dir, { given, useDefaults, interactive, force = fal
   writeAnswers(dir, VERSION, answers);
   log('Writing generated files');
   runTasks(dir, quiet);
-  return { answers, message: messageAfterCreate(answers) };
+  let commit = { done: false, reason: 'skipped with --no-git' };
+  if (git) {
+    log('Making the initial commit');
+    commit = empty ? initialCommit(dir) : { done: false, reason: 'the directory was not empty' };
+  }
+  return { answers, commit, message: messageAfterCreate(answers, commit) };
+}
+
+/**
+ * Commits the generated files as the first commit on `main`: the one direct commit to `main` that
+ * docs/contributing.md, section 1, allows. Runs only in a new repository, or in one without
+ * commits (an empty clone); never throws.
+ * @param {string} dir
+ * @returns {{ done: boolean, reason?: string }}
+ */
+export function initialCommit(dir) {
+  const git = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+  const failed = (r) => r.error || r.status !== 0;
+  const why = (r) => (r.error ? r.error.message : (r.stderr || r.stdout || '').trim().split('\n')[0]);
+  if (existsSync(join(dir, '.git'))) {
+    if (!failed(git('rev-parse', '--verify', '--quiet', 'HEAD'))) return { done: false, reason: 'the repository already has commits' };
+    const r = git('symbolic-ref', 'HEAD', 'refs/heads/main');
+    if (failed(r)) return { done: false, reason: why(r) };
+  } else {
+    const r = git('init', '--quiet', '--initial-branch=main');
+    if (failed(r)) return { done: false, reason: `git init failed: ${why(r)}` };
+  }
+  for (const args of [['add', '--all'], ['commit', '--quiet', '-m', `Template: create the project with create-afe-project ${VERSION}`]]) {
+    const r = git(...args);
+    if (failed(r)) return { done: false, reason: `git ${args[0]} failed: ${why(r)}` };
+  }
+  return { done: true };
 }
 
 /**

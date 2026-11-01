@@ -64,7 +64,9 @@ command line of the working tree in four projects and runs `scripts/check.sh` in
   driver. The Python part needs `uvx` to provision pytest and says SKIP
   without it.
 
-On variant A it proves that the checks reject an edited template-owned file, a damaged project
+Every project is created with the initial commit of the command line on `main`; it also proves
+that `--no-git` makes none, that an empty clone gets it on `main`, and that a non-empty
+directory written with `--force` is never committed. On variant A it proves that the checks reject an edited template-owned file, a damaged project
 block, a rule document over its budget, a stale `.claude/settings.json`, a decision record with
 the wrong number, and a stale index; that a description in the template's sections passes
 readiness, and the forms readiness rejects (no Acceptance, an Acceptance item without an

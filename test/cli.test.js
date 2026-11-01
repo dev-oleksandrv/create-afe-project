@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { UsageError, coerce, collectAnswers, compareVersions, readAnswers } from '../src/answers.js';
-import { SEEDED } from '../src/config.js';
+import { SEEDED, messageAfterCreate } from '../src/config.js';
 import { TEMPLATE_DIR } from '../src/project.js';
 import { renderString, renderTemplate } from '../src/render.js';
 
@@ -98,4 +98,12 @@ test('a Copier answers file is read with its version, without private keys', () 
   writeFileSync(join(dir, '.afe-answers.json'), JSON.stringify({ _note: 'n', _version: '0.7.0', project_name: 't' }));
   assert.deepEqual(readAnswers(dir), { version: '0.7.0', answers: { project_name: 't' }, legacy: false });
   assert.equal(readFileSync(join(dir, '.copier-answers.yml'), 'utf8').length > 0, true);
+});
+
+test('the message after create numbers the next steps and says whether the initial commit was made', () => {
+  const a = { project_name: 'sample', docs_review: true, code_review: false, dual_review: false };
+  const done = messageAfterCreate(a, { done: true });
+  assert.match(done, /^sample is ready\. Next:\n {2}1\. the generated files are committed on main\n/);
+  assert.match(done, /\d+\. run \/afe-init in Claude Code/);
+  assert.match(messageAfterCreate(a, { done: false, reason: 'skipped with --no-git' }), /1\. commit the generated files on main .*skipped with --no-git/);
 });
