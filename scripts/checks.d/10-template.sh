@@ -418,6 +418,8 @@ for c in "git push origin main" "git push" "git push origin HEAD:main" "git -C .
   hook deny '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
+# A token in the command must not turn the deny into an approvable prompt.
+hook deny '{"tool_name":"Bash","tool_input":{"command":"GH_TOKEN='"$ghp"' git push origin main"}}'
 gitc "$a" switch -q -c pushed && printf -- '---\nstatus: proposed\ndate: 2026-01-01\ndecision-makers: test\nscope: stack\nsummary: "Test."\nsupersedes: []\n---\n\n# Test\n' > "$a/docs/decisions/0001-test.md"
 (cd "$a" && scripts/gen-decisions-index.sh > docs/decisions/README.md) && gitc "$a" add -A && gitc "$a" commit -q -m record
 gitc "$a" push -q -u origin pushed
