@@ -10,7 +10,16 @@ cd "$(dirname "$0")/.."
 git fetch --quiet origin main
 ref=origin/main
 
-pending=$(git ls-tree --name-only "$ref" .changeset/ | grep '\.md$' | grep -vc 'README\.md$' || true)
+# A changeset is pending when its front matter names a package. An empty one (`npx changeset
+# --empty`) releases nothing, and changesets/action opens no Version PR for it, so it must not
+# block the tag.
+pending=0
+while IFS= read -r f; do
+  case "$f" in *.md) ;; *) continue ;; esac
+  [ "${f##*/}" = README.md ] && continue
+  git show "$ref:$f" | awk 'NR == 1 && /^---/ {fm = 1; next} fm && /^---/ {exit} fm && NF {n++} END {exit n ? 0 : 1}' &&
+    pending=$((pending + 1))
+done < <(git ls-tree --name-only "$ref" .changeset/)
 if [ "$pending" != 0 ]; then
   echo "$pending changeset(s) pending: nothing to tag."
   exit 0

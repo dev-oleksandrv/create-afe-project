@@ -49,6 +49,9 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
 `scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/`: the questions,
 their validators and defaults, the Jinja rendering and conditional names, that every rendered
 file is template-owned or seeded, and the reading of a Copier answers file.
+`scripts/checks.d/15-release.sh` runs `scripts/tag-release.sh` against a local origin: it tags
+without a changeset and with only an empty one, and not while a changeset with a release is
+pending.
 `scripts/checks.d/10-template.sh` is the template test suite. It renders the template with the
 command line of the working tree in four projects and runs `scripts/check.sh` in each, the line budgets of the rule documents included:
 
@@ -124,7 +127,8 @@ Before 1.0.0, MINOR takes the role of MAJOR.
    Version PR is exempt from the description sections of readiness: its description is generated.
 2. Before merging it, the measurement of section 6 runs, and its proposals go to the owner.
    Merging the Version PR is the owner's release decision.
-3. The push of that merge finds no changeset pending: `scripts/tag-release.sh` tags `vX.Y.Z` and
+3. The push of that merge finds no changeset pending (an empty changeset counts as none: it
+   releases nothing, and the action opens no Version PR for it): `scripts/tag-release.sh` tags `vX.Y.Z` and
    starts the `release` workflow on the tag. The workflow checks that the tag is on `main` and
    that `package.json` and the `CHANGELOG.md` section are at `X.Y.Z`, runs the package tests,
    publishes a GitHub release with that section as its notes, then the package to npm with the
