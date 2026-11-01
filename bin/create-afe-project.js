@@ -93,12 +93,20 @@ async function main() {
     );
   }
   const spinner = interactive && !quiet ? p.spinner() : null;
+  let spinning = false;
   const { message } = await create(resolve(dir), {
     ...common,
     force: Boolean(values.force),
     git: !values['no-git'],
     quiet: quiet || interactive,
-    log: (msg) => spinner?.start(msg),
+    // Start the spinner once: a second start() leaves its first timer running, and the process
+    // never exits.
+    log: (msg) => {
+      if (!spinner) return;
+      if (spinning) spinner.message(msg);
+      else spinner.start(msg);
+      spinning = true;
+    },
   });
   spinner?.stop('Generated files written');
   if (interactive) p.outro(message);
