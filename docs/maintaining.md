@@ -129,7 +129,9 @@ Before 1.0.0, MINOR takes the role of MAJOR.
    Merging the Version PR is the owner's release decision.
 3. The push of that merge finds no changeset pending (an empty changeset counts as none: it
    releases nothing, and the action opens no Version PR for it): `scripts/tag-release.sh` tags `vX.Y.Z` and
-   starts the `release` workflow on the tag. The workflow checks that the tag is on `main` and
+   starts the `release` workflow on the tag. It reads the changesets with `@changesets/parse`,
+   which the pinned `@changesets/cli` installs (`npm ci`), and fails without tagging when a
+   changeset does not parse. The workflow checks that the tag is on `main` and
    that `package.json` and the `CHANGELOG.md` section are at `X.Y.Z`, runs the package tests,
    publishes a GitHub release with that section as its notes, then the package to npm with the
    repository secret `NPM_TOKEN`. A tag pushed by hand releases the same way.

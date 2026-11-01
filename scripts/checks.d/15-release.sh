@@ -31,6 +31,7 @@ scenario() {
   git -C "$d/repo" remote add origin "$d/origin.git" && git -C "$d/repo" push -q origin main
   rm -f "$work/gh.log"
   (cd "$d/repo" && scripts/tag-release.sh 2>&1)
+  echo "exit=$?"
 }
 tagged() { git -C "$work/$1/origin.git" rev-parse -q --verify refs/tags/v1.2.3 > /dev/null; }
 
@@ -49,13 +50,16 @@ out=$(scenario pending $'---\n"create-afe-project": minor\n---\n\nA change.\n')
 # Forms where a line-based reading and @changesets/parse disagree: leading blank line, comment-only
 # front matter, CRLF line endings.
 out=$(scenario leading $'\n---\n"create-afe-project": minor\n---\n\nA change.\n')
-! tagged leading || fail "a release changeset after a blank line is not pending ($out)"
+! tagged leading && printf '%s' "$out" | grep -q '1 changeset(s) pending' && printf '%s' "$out" | grep -q 'exit=0$' ||
+  fail "a release changeset after a blank line is not pending ($out)"
 out=$(scenario comment $'---\n# a note\n---\n')
 tagged comment || fail "a changeset with only a comment blocks the tag ($out)"
 out=$(scenario crlf $'---\r\n"create-afe-project": minor\r\n---\r\n\r\nA change.\r\n')
-! tagged crlf || fail "a release changeset with CRLF line endings is not pending ($out)"
+! tagged crlf && printf '%s' "$out" | grep -q '1 changeset(s) pending' && printf '%s' "$out" | grep -q 'exit=0$' ||
+  fail "a release changeset with CRLF line endings is not pending ($out)"
 out=$(scenario broken $'---\n"create-afe-project": [\n---\n')
-! tagged broken || fail "a changeset that does not parse lets the tag through ($out)"
+! tagged broken && printf '%s' "$out" | grep -q 'could not parse changeset' && ! printf '%s' "$out" | grep -q 'exit=0$' ||
+  fail "a changeset that does not parse does not fail the script with the parse error ($out)"
 
 if [ "$failures" -gt 0 ]; then
   echo "== release tests failed: $failures"
