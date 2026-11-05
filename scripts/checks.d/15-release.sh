@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Tests of scripts/tag-release.sh (docs/maintaining.md, sections 3 and 5): in a scratch repository
 # with a local origin and a stand-in for gh, it tags main only when no changeset with a release is
-# pending; an empty changeset (`npx changeset --empty`) releases nothing and blocks nothing.
+# pending; an empty changeset (`npx changeset --empty`) releases nothing and blocks nothing; and a
+# changeset with a release passes markdownlint.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 root=$PWD
@@ -60,6 +61,17 @@ out=$(scenario crlf $'---\r\n"create-afe-project": minor\r\n---\r\n\r\nA change.
 out=$(scenario broken $'---\n"create-afe-project": [\n---\n')
 ! tagged broken && printf '%s' "$out" | grep -q 'could not parse changeset' && ! printf '%s' "$out" | grep -q 'exit=0$' ||
   fail "a changeset that does not parse does not fail the script with the parse error ($out)"
+
+# A changeset with a release is front matter and a summary, without a heading: it passes the
+# markdownlint of scripts/check-docs.sh through .changeset/.markdownlint.jsonc, whose other rules
+# still apply.
+echo "== changesets and the documentation check"
+mdl=$(grep -o 'markdownlint-cli2@[0-9.]*' scripts/check-docs.sh | head -n 1)
+mkdir -p "$work/lint/.changeset" && cp .markdownlint-cli2.jsonc "$work/lint/" && cp .changeset/.markdownlint.jsonc "$work/lint/.changeset/"
+printf -- '---\n"create-afe-project": minor\n---\n\n`a/b.sh`, a change described over a line that is longer than eighty characters on purpose.\n' > "$work/lint/.changeset/x.md"
+(cd "$work/lint" && npx --yes "$mdl" > "$work/lint.log" 2>&1) || { cat "$work/lint.log"; fail "a changeset with a release fails markdownlint"; }
+printf -- '---\n"create-afe-project": minor\n---\n\nA change.\n#Bad heading\n' > "$work/lint/.changeset/x.md"
+(cd "$work/lint" && npx --yes "$mdl" > "$work/lint.log" 2>&1) && fail "markdownlint skips the other rules in .changeset/"
 
 if [ "$failures" -gt 0 ]; then
   echo "== release tests failed: $failures"
