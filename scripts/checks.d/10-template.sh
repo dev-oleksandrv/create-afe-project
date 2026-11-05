@@ -46,6 +46,10 @@ grep -q 'GITLEAKS_VERSION: [0-9]' "$a/.github/workflows/secret-scan.yml" && grep
   fail "variant A: code-review files are missing although the module is on"
 [ ! -e "$a/.claude/skills/dual-review" ] || fail "variant A: dual-review files exist although the module is off"
 ! grep -r -n -i 'dual.review' "$a/AGENTS.md" "$a/docs" "$a/.claude/skills" > "$work/a-grep.log" || { cat "$work/a-grep.log"; fail "variant A: documents mention the dual review"; }
+grep -qF 'of both kinds' "$a/.claude/skills/create-pr/SKILL.md" &&
+  grep -qF '`claude[bot]`, the account the review workflows post as' "$a/.claude/skills/create-pr/SKILL.md" &&
+  grep -qF '`OWNER`, `MEMBER`, or `COLLABORATOR`' "$a/.claude/skills/create-pr/SKILL.md" ||
+  fail "create-pr: findings are not limited to the review bot and the repository's people"
 
 echo "== initial commit: --no-git, an empty clone, a forced non-empty directory"
 ng="$work/ng"
