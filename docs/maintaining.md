@@ -89,8 +89,10 @@ at the Ralph cap and counts again afterwards; that a large change only warns; th
 settings deny reading secrets. It also checks that the protect hook asks before publishing a
 package or an image, `gh workflow run`, a `gh api` DELETE, and an edit or command with a known
 token format, and denies a push to `main` once the remote has it; that the check after every edit
-runs `CHECK_EDIT` on matching files inside the project only; that conventions and recipes carry
-`verified-against` and that both review skills apply them; that the testing rules name the
+runs `CHECK_EDIT` on matching files inside the project only; that conventions, recipes, and operations
+carry `verified-against`, that the map names the convention's check or `none`, and that docs-review
+reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
+rule file and a convention without its check or `none`, and review-code applies the conventions; that the testing rules name the
 flaky test; that the rubric and the `review-code`
 skill check new dependencies; that the `create-pr` skill takes
 findings only from the review bot and the repository's owner, members, and collaborators; that the SessionStart hook prints at

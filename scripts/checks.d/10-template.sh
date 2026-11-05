@@ -62,7 +62,12 @@ grep -qF 'exists, the last review against code: architecture, operations, conven
   grep -q '^| Architecture, operations, conventions, recipes | `draft` to `current`' "$a/docs/documentation-rules.md" &&
   grep -qF 'a tool-specific rule file or skill links to them and never holds its own copy' "$a/docs/documentation-rules.md" &&
   grep -qF 'instead of linking `docs/conventions/` or `docs/recipes/`' "$a/.claude/skills/docs-review/SKILL.md" &&
-  grep -qF 'as do the conventions in `docs/conventions/`' "$a/.claude/skills/review-code/SKILL.md" ||
+  grep -qF 'as do the conventions in `docs/conventions/`' "$a/.claude/skills/review-code/SKILL.md" &&
+  grep -qF 'Read `AGENTS.md`, then sections 2, 3, 5, 6, 7 and 9' "$a/.claude/skills/docs-review/SKILL.md" &&
+  grep -qF '`.claude/rules/`), holds instead of linking' "$a/.claude/skills/docs-review/SKILL.md" &&
+  grep -qF 'convention that names neither the check that enforces it nor `none`' "$a/.claude/skills/docs-review/SKILL.md" &&
+  grep -qF 'the command or file it relies on; front matter as for architecture |' "$a/docs/documentation-rules.md" &&
+  grep -qF 'or `none` when only the review does' "$a/docs/README.md" ||
   fail "variant A: conventions and recipes lack verified-against, or the reviews do not apply them"
 
 echo "== initial commit: --no-git, an empty clone, a forced non-empty directory"

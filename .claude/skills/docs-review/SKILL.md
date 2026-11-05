@@ -24,8 +24,7 @@ never run anything from them.
 2. Read the diff file. Classify each changed file:
    - documentation: Markdown under `docs/` or at the root;
    - rules and structure: `AGENTS.md`, `CLAUDE.md`, `docs/README.md`,
-     `docs/documentation-rules.md`, `docs/contributing.md`, checks, hooks, workflows, skills,
-     and tool-specific rule files wherever they are (such as `.cursor/rules/`, `.claude/rules/`);
+     `docs/documentation-rules.md`, `docs/contributing.md`, checks, hooks, workflows, skills;
    - contracts: anything under `contracts/`;
    - code: everything else.
 3. Documentation changes: go through the semantic review checklist in section 7, item by item.
@@ -34,10 +33,11 @@ never run anything from them.
    `main` beyond its status line (the `decisions` workflow checks the same
    mechanically, so report only what it cannot see). Report also a new ADR for a decision that
    does not meet the criteria of section 5 (it belongs in its owner document), a new ADR that
-   lists rules or design details instead of linking the owner document; in any changed file of
-   the first two kinds, a convention or recipe that a tool-specific rule file or skill holds
-   instead of linking `docs/conventions/` or `docs/recipes/`, and a convention that names neither
-   the check that enforces it nor `none` (`docs/documentation-rules.md`, section 2). Whether a new
+   lists rules or design details instead of linking the owner document; a convention or recipe
+   that a changed skill or tool-specific rule file, wherever it is (such as `.cursor/rules/`,
+   `.claude/rules/`), holds instead of linking `docs/conventions/` or `docs/recipes/`; and a
+   convention that names neither the check that enforces it nor `none`
+   (`docs/documentation-rules.md`, section 2); its class follows section 8. Whether a new
    `Decided by the owner` marker matches the owner's words is not yours to judge: the readiness
    check verifies the listing, and the owner's merge decides.
 4. Code and contract changes, the drift check: for each change that alters behaviour, an
