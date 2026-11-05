@@ -25,12 +25,23 @@ checked; a project that wants it adds a check such as [lychee](https://lychee.cl
 
 ## Protected main branch
 
-Changes reach `main` only through pull requests with passing checks. After the first push, a
-repository admin applies the GitHub ruleset once (`--dry-run` shows it first):
+Changes reach `main` only through pull requests with passing checks, merged with a merge
+commit. After the first push, a repository admin applies the repository settings and the GitHub
+ruleset once (`--dry-run` shows them first): merge commits only and "Automatically delete head
+branches", on every plan; secret scanning with push protection, which a private repository may
+need GitHub Advanced Security for; and a ruleset on `main` that requires a pull request, allows
+no deletion or force push, and requires the checks `check` and `integrity`, and only these.
+Rulesets need a public repository or, for a private one, a paid plan.
 
 ```bash
 scripts/protect-branch.sh
 ```
+{%- if fail_without_change %}
+
+Once the `base` job of the `fail-without-change` workflow passes in CI on a pull request that
+changes a test, not as a SKIP, run it again with `--require-base` to require that job too; the
+label `tests-pass-on-base` still lets a test that passes on the base through.
+{%- endif %}
 
 ## Project template
 

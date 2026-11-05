@@ -126,11 +126,10 @@ export function messageAfterCreate(a, commit = { done: false }) {
       : `commit the generated files on main (the one direct commit that docs/contributing.md allows; not made here: ${commit.reason ?? 'not asked'})`,
   );
   steps.push('add the remote origin, push, and run git remote set-head origin -a');
-  steps.push('protect main with scripts/protect-branch.sh');
+  steps.push('protect main and apply the repository settings with scripts/protect-branch.sh (merge commits only, head branches deleted, secret scanning where the plan offers it)');
   steps.push('set up the CI runner');
   if (a.docs_review || a.code_review) steps.push('add the CLAUDE_CODE_OAUTH_TOKEN secret and install the Claude GitHub App');
   if (a.dual_review) steps.push('optionally install and sign in to the Codex CLI');
-  steps.push('turn on secret scanning and push protection (Settings, Code security)');
   steps.push('run scripts/check.sh');
   steps.push('run /afe-init in Claude Code to set up the code and its checks');
   return `${a.project_name} is ready. Next:\n${steps.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}`;

@@ -105,5 +105,7 @@ test('the message after create numbers the next steps and says whether the initi
   const done = messageAfterCreate(a, { done: true });
   assert.match(done, /^sample is ready\. Next:\n {2}1\. the generated files are committed on main\n/);
   assert.match(done, /\d+\. run \/afe-init in Claude Code/);
+  assert.match(done, /\d+\. protect main and apply the repository settings with scripts\/protect-branch\.sh \(merge commits only, head branches deleted, secret scanning/);
+  assert.doesNotMatch(done, /turn on secret scanning/);
   assert.match(messageAfterCreate(a, { done: false, reason: 'skipped with --no-git' }), /1\. commit the generated files on main .*skipped with --no-git/);
 });
