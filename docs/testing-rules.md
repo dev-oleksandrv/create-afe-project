@@ -31,8 +31,8 @@ its test checks in `scripts/checks.d/` (`documentation-rules.md`, section 9).
   clock, randomness), never for code inside it.
 - Expected values are literals or fixtures. A test never computes its expectation with the logic
   it tests, and a snapshot is never the only assertion of a rule.
-- Failure paths are tested as deliberately as success: each distinct outcome or error a unit can
-  return has a test that produces it; each invalid contract example is rejected at validation.
+- Failure paths are tested as deliberately as success: every distinct outcome or error a unit can
+  return has a test that produces it; every invalid contract example is rejected where input is validated.
 - The edge cases that apply are covered: boundaries, empty and missing values, unknown against
   zero, duplicates and retries, concurrent use, time zones and period boundaries, and the largest
   input the requirement allows. The project lists the edge cases of its domain.
