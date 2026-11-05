@@ -3,9 +3,9 @@
 # section 4). It runs the project's fast per-file check, CHECK_EDIT of .claude/harness.conf, with
 # the changed file as its last argument, and sends a failure back to the agent in the same
 # session (exit 2), before the Stop hooks and CI. CHECK_EDIT_GLOBS (shell globs separated by
-# spaces, * also matches /) limits it to matching files; empty: every file. An empty CHECK_EDIT,
-# a file outside the project, or a deleted file runs nothing. Keep the command to seconds: it runs
-# after every edit.
+# spaces, * also matches /) limits it to matching files; empty: every file. A relative path is
+# resolved against the input's cwd. An empty CHECK_EDIT, a file outside the project, or a deleted
+# file runs nothing. Keep the command to seconds: it runs after every edit.
 set -uo pipefail
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$root" ] || exit 0
@@ -13,8 +13,11 @@ cd "$root" || exit 0
 . scripts/lib/harness-conf.sh 2>/dev/null || exit 0
 cmd=$(conf_get CHECK_EDIT)
 [ -n "$cmd" ] || exit 0
-file=$(node scripts/lib/json.mjs get tool_input.file_path 2>/dev/null) || exit 0
-[ -n "$file" ] && [ -f "$file" ] || exit 0
+{ IFS= read -r -d '' file; IFS= read -r -d '' cwd; } < <(node scripts/lib/json.mjs fields tool_input.file_path cwd 2>/dev/null)
+[ -n "${file:-}" ] || exit 0
+# A relative path is relative to the session's working directory, which the input names.
+case "$file" in /*) ;; *) file="${cwd:-$root}/$file" ;; esac
+[ -f "$file" ] || exit 0
 root=$(pwd -P)
 abs=$(cd "$(dirname "$file")" 2>/dev/null && printf '%s/%s' "$(pwd -P)" "$(basename "$file")") || exit 0
 case "$abs" in "$root"/*) rel=${abs#"$root"/} ;; *) exit 0 ;; esac
