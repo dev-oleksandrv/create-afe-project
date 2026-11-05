@@ -238,6 +238,10 @@ expect_pass "env.sh: an unset command is SKIP, a set one runs with its exit code
 expect_pass "settings deny reading secrets" bash -c 'for r in "Read(**/.env)" "Read(**/.env.*)" "Read(**/*.pem)" "Read(**/*.key)"; do "$work/sj" "s.permissions.deny.includes(process.argv[1])" "$r" || exit 1; done'
 expect_fail "a touched gate file not listed" bash -c 'gatefile && ready "$work/r-none.md"'
 expect_pass "a touched gate file listed under Gate files" bash -c 'gatefile && ready "$work/r-gate.md"'
+expect_pass "dependency updates, pre-commit hooks, task runners, and tool versions are class gate" bash -c 'mkdir -p .github &&
+  for f in .github/dependabot.yml renovate.json .pre-commit-config.yaml Makefile justfile Taskfile.yml .tool-versions mise.toml; do echo x > "$f"; done &&
+  out=$(classes) && for f in .github/dependabot.yml renovate.json .pre-commit-config.yaml Makefile justfile Taskfile.yml .tool-versions mise.toml; do
+  printf "%s\n" "$out" | grep -qx "gate	$f" || { printf "%s\n" "$out"; exit 1; }; done'
 expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/plans src/auth && echo x > docs/plans/x.md && echo x >> docs/README.md &&
   echo x > src/app.py && echo x > src/auth/login.py && echo "{}" > .mcp.json && echo x >> docs/contributing.md && record 0001 accepted &&
   out=$(classes) && for l in "gate	scripts/checks.d/20-x.sh" "low	docs/plans/x.md" "approval	docs/README.md" "normal	src/app.py" \
