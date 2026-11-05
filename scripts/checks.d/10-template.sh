@@ -527,6 +527,11 @@ render "$d" --data docs_review=true --data code_review=true --data dual_review=t
 (cd "$d" && scripts/check.sh > "$work/d.log" 2>&1) || { cat "$work/d.log"; fail "Python, all modules: scripts/check.sh fails (line budgets included)"; }
 grep -q 'scripts/fail-without-change.sh --base "origin/$BASE_REF" --allow-pass-on-base' "$d/.github/workflows/fail-without-change.yml" ||
   fail "Python: the fail-without-change workflow does not run the driver"
+# Every action of every workflow is pinned to an exact version or a commit, never a floating tag.
+for p in "$a" "$d"; do
+  ! grep -h 'uses:' "$p"/.github/workflows/*.yml | grep -v -E '@(v[0-9]+\.[0-9]+\.[0-9]+|[0-9a-f]{40})( +#.*)?$' > "$work/pin.log" ||
+    { cat "$work/pin.log"; fail "$p: a workflow uses an action without an exact version or commit"; }
+done
 # uvx provisions pytest; on a CI runner without uv, uv is installed into ~/.local/bin first.
 if ! command -v uvx >/dev/null; then
   curl -LsSf https://astral.sh/uv/install.sh |

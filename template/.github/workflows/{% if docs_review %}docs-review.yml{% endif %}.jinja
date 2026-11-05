@@ -41,7 +41,7 @@ jobs:
       # not expand the leading "/docs-review" itself. Claude invokes the skill through the Skill
       # tool, which a headless run denies unless it is allowed here.
       - name: Review
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@v1.0.268
         with:
           claude_code_oauth_token: {{ '${{' }} secrets.CLAUDE_CODE_OAUTH_TOKEN {{ '}}' }}
           track_progress: "true"
