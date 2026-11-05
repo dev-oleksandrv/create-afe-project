@@ -389,6 +389,21 @@ state; [ $? -eq 0 ] && [ "$(wc -l < "$work/state.log")" -le 10 ] &&
   grep -qx -- "- plan docs/plans/old.md: review-by 2026-01-01 is past; update or delete it (docs/documentation-rules.md, section 5)" "$work/state.log" &&
   grep -qx -- "- plan docs/plans/p1.md: review-by 2999-01-01" "$work/state.log" &&
   grep -qx -- "- and 2 more plans in docs/plans/" "$work/state.log" || { cat "$work/state.log"; fail "session-start: wrong state of a branch with changes and plans"; }
+# Past plans come first, so one that sorts last is not hidden behind five ahead; review-by on the
+# day itself is not past; past plans beyond the five shown are counted; outside a repository only
+# the plans are shown. SESSION_START_TODAY stands in for the clock.
+pl="$work/plansonly" && mkdir -p "$pl/docs/plans"
+for i in 1 2 3 4 5 6; do printf -- '---\nreview-by: 2030-01-0%s\n---\n' "$i" > "$pl/docs/plans/a$i.md"; done
+printf -- '---\nreview-by: 2029-12-31\n---\n' > "$pl/docs/plans/z.md"
+(cd "$pl" && printf '{}' | CLAUDE_PROJECT_DIR="$pl" SESSION_START_TODAY=2030-01-01 "$a/.claude/hooks/session-start.sh" > "$work/state.log" 2>&1)
+grep -qx -- "- plan docs/plans/z.md: review-by 2029-12-31 is past; update or delete it (docs/documentation-rules.md, section 5)" "$work/state.log" &&
+  grep -qx -- "- plan docs/plans/a1.md: review-by 2030-01-01" "$work/state.log" && grep -qx -- "- and 2 more plans in docs/plans/" "$work/state.log" &&
+  ! grep -q -- "- branch\|uncommitted" "$work/state.log" ||
+  { cat "$work/state.log"; fail "session-start: a past plan is hidden, the day itself counts as past, or the state outside a repository is wrong"; }
+for i in 1 2 3 4 5 6 7; do printf -- '---\nreview-by: 2020-01-0%s\n---\n' "$i" > "$pl/docs/plans/old$i.md"; done
+(cd "$pl" && printf '{}' | CLAUDE_PROJECT_DIR="$pl" SESSION_START_TODAY=2030-01-01 "$a/.claude/hooks/session-start.sh" > "$work/state.log" 2>&1)
+[ "$(wc -l < "$work/state.log")" -le 10 ] && grep -qx -- "- and 9 more plans in docs/plans/, 3 of them past their review-by" "$work/state.log" ||
+  { cat "$work/state.log"; fail "session-start: the past plans beyond the five shown are not counted"; }
 gitc "$a" checkout -q -- . && gitc "$a" clean -q -fd && gitc "$a" switch -q main && git -C "$a" reset -q --hard "$start" &&
   gitc "$a" branch -q -D statebr c2
 # A known token format in written content or a command asks; the tokens are assembled here, so

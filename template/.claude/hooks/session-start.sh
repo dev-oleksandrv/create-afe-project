@@ -3,8 +3,9 @@
 # compacted session starts from facts (docs/documentation-rules.md, section 7): the branch, the
 # base of the change (scripts/lib/git-base.sh) and the commits ahead of it, the count of
 # uncommitted and untracked files, unresolved merge conflicts, and each plan in docs/plans/ with
-# its review-by date, flagged when the date is past (section 5). At most 10 lines and local facts
-# only: no network. What it cannot determine it leaves out; it always exits 0.
+# its review-by date, flagged when the date is past (section 5), past ones first. At most 10 lines
+# and local facts only: no network. Outside a git repository only the plans are shown. What it
+# cannot determine it leaves out; it always exits 0.
 set -uo pipefail
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$root" ] || exit 0
@@ -47,23 +48,31 @@ plans=()
 for p in docs/plans/*.md; do
   [ "$(basename "$p")" = README.md ] || plans+=("$p")
 done
-today=$(date +%Y-%m-%d)
-shown=0
+# SESSION_START_TODAY (YYYY-MM-DD) stands in for the clock, for the tests.
+today=${SESSION_START_TODAY:-$(date +%Y-%m-%d)}
+# Plans past their review-by come first, then those without one, then the rest, so the five shown
+# never hide a past one; the line for the rest counts the past ones among them.
+past=() undated=() ahead=()
 for p in ${plans[@]+"${plans[@]}"}; do
-  if [ "$shown" -eq 5 ]; then
-    lines+=("and $(( ${#plans[@]} - shown )) more plans in docs/plans/")
-    break
-  fi
   rb=$(awk 'NR == 1 && $0 != "---" {exit} NR > 1 && $0 == "---" {exit}
     /^review-by:/ {sub(/^review-by:[[:space:]]*/, ""); gsub(/["'\''[:space:]]/, ""); print; exit}' "$p" 2> /dev/null)
   if ! printf '%s' "$rb" | grep -q -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
-    lines+=("plan $p: no review-by date")
+    undated+=("plan $p: no review-by date")
   elif [[ "$rb" < "$today" ]]; then
-    lines+=("plan $p: review-by $rb is past; update or delete it (docs/documentation-rules.md, section 5)")
+    past+=("plan $p: review-by $rb is past; update or delete it (docs/documentation-rules.md, section 5)")
   else
-    lines+=("plan $p: review-by $rb")
+    ahead+=("plan $p: review-by $rb")
   fi
-  shown=$((shown + 1))
+done
+ordered=(${past[@]+"${past[@]}"} ${undated[@]+"${undated[@]}"} ${ahead[@]+"${ahead[@]}"})
+[ "${#ordered[@]}" -eq 0 ] || for i in "${!ordered[@]}"; do
+  if [ "$i" -eq 5 ]; then
+    rest="and $(( ${#ordered[@]} - 5 )) more plans in docs/plans/"
+    [ "${#past[@]}" -le 5 ] || rest="$rest, $(( ${#past[@]} - 5 )) of them past their review-by"
+    lines+=("$rest")
+    break
+  fi
+  lines+=("${ordered[$i]}")
 done
 
 [ "${#lines[@]}" -gt 0 ] || exit 0

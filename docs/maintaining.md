@@ -91,7 +91,8 @@ package or an image, `gh workflow run`, a `gh api` DELETE, and an edit or comman
 token format, and denies a push to `main` once the remote has it; that the check after every edit
 runs `CHECK_EDIT` on matching files inside the project only; that the SessionStart hook prints at
 most ten lines of local state (the branch, its base and the commits ahead, uncommitted and
-untracked files, merge conflicts, plans and their `review-by`) and nothing outside a repository; that the fast Stop hook runs
+untracked files, merge conflicts, plans and their `review-by`, past ones first and counted when
+not shown), only the plans outside a repository, and nothing in an empty directory; that the fast Stop hook runs
 `CHECK_FAST` only for a change to a file other than Markdown, never as the default, blocks on a
 failure, and lets the agent stop during a merge conflict; that a hook command whose script is
 missing fails the template check; that the link check finds a missing file or anchor; that
