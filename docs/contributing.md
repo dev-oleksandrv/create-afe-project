@@ -168,12 +168,11 @@ template version, which `.afe-answers.json` records; the `update-template` skill
   - high: one pass as for normal; the Santa loop is an optional module of the template.
 - In the pull request, `docs-review` reviews every pull request and `code-review` every one that changes code, contracts, checks, or workflows, once, when it
   opens or leaves draft; a push does not run them again.
-- A finding names a file, a line, a class, and the rule it rests on; zero findings is a valid
-  result, and style belongs to the linters. A `blocker`: merged as it is, the change breaks
-  behaviour, a contract, security, or a product invariant (`docs/invariants.md`), loses data,
-  fails a criterion of its Acceptance section, or contradicts a higher source (`AGENTS.md`,
-  section 1). Which bypass of a gate is a blocker follows `testing-rules.md`, section 4. Any
-  other finding is a `suggestion`.
+- A finding names a file, a line, a class, and the rule it rests on; zero findings is valid, and
+  style belongs to the linters. A `blocker`: merged as it is, the change breaks behaviour, a
+  contract, security, or a product invariant (`docs/invariants.md`), loses data, fails an item of
+  its Acceptance section, or contradicts a higher source (`AGENTS.md`, section 1). Which bypass of
+  a gate is a blocker follows `testing-rules.md`, section 4. Any other finding is a `suggestion`.
 - Each finding is answered once. A blocker is fixed, and the fix checked once more by a fresh
   reviewer given the blocker and the fix, or declined with a reason. A suggestion never drives
   a loop: it is fixed at once, recorded as `limit:` (section 3), or declined with a reason.
@@ -188,6 +187,7 @@ template version, which `.afe-answers.json` records; the `update-template` skill
 | Tests | the tests follow `docs/testing-rules.md`, and every identifier of "Acceptance and test plan" has a test that carries it and fails without the change |
 | Errors | no error is swallowed, no failure hides behind a default |
 | Security | external input is validated where it enters; secrets never reach code, logs, or output |
+| Dependencies | a new dependency exists in its registry under the name used, is maintained, has a license the project allows (an open question while no document says which), and does no job an existing dependency already does; its version is pinned exactly, through the lock file where the stack has one |
 | Statuses | nothing is called implemented without a test (`documentation-rules.md`, section 3) |
 
 - A defect found after the merge is fixed after a regression test; its pull request gives the

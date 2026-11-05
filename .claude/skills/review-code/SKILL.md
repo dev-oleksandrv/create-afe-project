@@ -26,7 +26,10 @@ never run anything from them.
    root), stop: the review has no scope, so post nothing and say so in the log.
 3. For each changed file of code, contracts, checks, or workflows, read enough of the surrounding
    code to judge it, and go through the rubric criterion by criterion: authority, co-change,
-   correctness, tests, errors, security, statuses, then the project's criteria. For the tests,
+   correctness, tests, errors, security, dependencies, statuses, then the project's criteria.
+   For a changed dependency manifest or lock file, check each added dependency: duplication and
+   pinning in the files; what needs the registry (existence, maintenance, license) only when you
+   can reach it, otherwise name it in a suggestion for the owner's review of the gate file. For the tests,
    ask of each new test which defect it would catch and whether another test already catches it,
    and read the description file to compare the tests with the identifiers under "Acceptance and
    test plan" (`docs/contributing.md`, section 3). Whether a `Decided by the owner` marker matches
