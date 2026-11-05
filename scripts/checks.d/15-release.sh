@@ -71,7 +71,16 @@ mkdir -p "$work/lint/.changeset" && cp .markdownlint-cli2.jsonc "$work/lint/" &&
 printf -- '---\n"create-afe-project": minor\n---\n\n`a/b.sh`, a change described over a line that is longer than eighty characters on purpose.\n' > "$work/lint/.changeset/x.md"
 (cd "$work/lint" && npx --yes "$mdl" > "$work/lint.log" 2>&1) || { cat "$work/lint.log"; fail "a changeset with a release fails markdownlint"; }
 printf -- '---\n"create-afe-project": minor\n---\n\nA change.\n#Bad heading\n' > "$work/lint/.changeset/x.md"
-(cd "$work/lint" && npx --yes "$mdl" > "$work/lint.log" 2>&1) && fail "markdownlint skips the other rules in .changeset/"
+! (cd "$work/lint" && npx --yes "$mdl" > "$work/lint.log" 2>&1) && grep -q 'MD018' "$work/lint.log" ||
+  { cat "$work/lint.log"; fail "markdownlint skips the other rules in .changeset/ (MD018 does not fire)"; }
+# The directory configuration repeats the root "config" of the template-owned
+# .markdownlint-cli2.jsonc and adds only MD041: false, so a template update of the root
+# configuration that does not reach .changeset/ fails here.
+node -e '
+  const fs = require("fs"), jsonc = (f) => JSON.parse(fs.readFileSync(f, "utf8").replace(/^\s*\/\/.*$/gm, ""));
+  const want = { ...jsonc(".markdownlint-cli2.jsonc").config, MD041: false }, got = jsonc(".changeset/.markdownlint.jsonc");
+  process.exit(JSON.stringify(Object.entries(want).sort()) === JSON.stringify(Object.entries(got).sort()) ? 0 : 1);' ||
+  fail ".changeset/.markdownlint.jsonc is not the root markdownlint config plus MD041: false"
 
 if [ "$failures" -gt 0 ]; then
   echo "== release tests failed: $failures"
