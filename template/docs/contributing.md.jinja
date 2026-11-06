@@ -21,8 +21,8 @@ Everything written into git history and pull requests is in English, without exc
   session that stops unfinished leaves a checkpoint: its commits pushed, and its progress and
   blockers in the plan or the pull request description, where the next session starts.
 - A branch that a tool named otherwise (`claude/<name>`) is renamed before its first push; a
-  pushed one keeps its name, noted under "Notes for the owner". After the merge GitHub deletes it ("Automatically delete head
-  branches" in the repository settings).
+  pushed one keeps its name, noted under "Notes for the owner". After the merge GitHub deletes it, a repository
+  setting that `scripts/protect-branch.sh` applies.
 
 ## 2. Commits
 
@@ -136,7 +136,7 @@ Everything written into git history and pull requests is in English, without exc
   not add up, or with a blocker as a limit.{% if acceptance_check %} It runs `scripts/check-acceptance.sh` too.{% endif %} Whether a test proves
   its identifier is left to the review. The `decisions` workflow runs it on every change and
   does not block. A pull request waiting only on the owner stays open as "not ready to merge".
-- The owner merges with a merge commit; squash and rebase merges are not used.
+- The owner merges with a merge commit; `scripts/protect-branch.sh` allows no other merge method.
 
 ## 4. Before opening a pull request
 

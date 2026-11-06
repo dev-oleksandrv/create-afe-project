@@ -3,7 +3,9 @@
 # runner, then scripts/fail-without-change.sh runs the project's test command with the change and
 # on the base. The label `tests-pass-on-base` allows a test that passes on the base; the
 # description gives the reason. A runner without the toolchain fails the test with the change
-# too, which the driver reports; the project then sets SETUP in .claude/harness.conf.
+# too, which the driver reports; the project then sets SETUP in .claude/harness.conf. Once `base`
+# passes on a pull request that changes a test, not as a SKIP, the owner requires it with
+# scripts/protect-branch.sh --require-base (README.md, "Protected main branch").
 name: fail-without-change
 
 on:

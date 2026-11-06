@@ -158,7 +158,50 @@ JSON
 expect_fail "a hook command whose script is missing" bash -c 'cp "$work/hook-settings.json" .claude/settings.project.json && scripts/gen-settings.sh && scripts/check-template.sh'
 expect_pass "a hook command whose script exists" bash -c 'cp "$work/hook-settings.json" .claude/settings.project.json && mkdir -p .claude/hooks/project/stop &&
   printf "#!/bin/sh\nexit 0\n" > .claude/hooks/project/stop/10-x.sh && chmod +x .claude/hooks/project/stop/10-x.sh && scripts/gen-settings.sh && scripts/check-template.sh'
-expect_pass "protect-branch prints the ruleset of the default branch" bash -c 'scripts/protect-branch.sh --dry-run | node -e "const r=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); process.exit(r.conditions.ref_name.include[0]===\"~DEFAULT_BRANCH\" && r.rules.some(x=>x.type===\"pull_request\") && r.rules.some(x=>x.type===\"non_fast_forward\") ? 0 : 1)"'
+expect_pass "protect-branch prints the settings and the ruleset of the default branch" bash -c 'scripts/protect-branch.sh --dry-run | node -e "const p=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")), r=p.ruleset, pr=r.rules.find(x=>x.type===\"pull_request\"), sc=r.rules.find(x=>x.type===\"required_status_checks\");
+  process.exit(r.conditions.ref_name.include[0]===\"~DEFAULT_BRANCH\" && r.rules.some(x=>x.type===\"non_fast_forward\") && r.rules.some(x=>x.type===\"deletion\") && pr.parameters.allowed_merge_methods.join()===\"merge\" &&
+  sc.parameters.required_status_checks.map(c=>c.context).join()===\"check,integrity\" && p.repository.allow_merge_commit===true && p.repository.allow_squash_merge===false && p.repository.allow_rebase_merge===false &&
+  p.repository.delete_branch_on_merge===true && p.security.security_and_analysis.secret_scanning_push_protection.status===\"enabled\" ? 0 : 1)"'
+expect_pass "protect-branch --require-base refuses without the fail-without-change workflow" bash -c '! scripts/protect-branch.sh --dry-run --require-base 2> err.log &&
+  grep -q "needs the fail-without-change workflow" err.log'
+# A live run against a stand-in for gh: the repository settings, then secret scanning, which a
+# private repository may refuse without stopping the run, then the ruleset.
+mkdir -p "$work/ghpb" && cat > "$work/ghpb/gh" <<'GH'
+#!/usr/bin/env bash
+in=; case " $* " in *" --input - "*) in=$(cat) ;; esac
+printf '%s | %s\n' "$*" "$in" >> "$work/ghpb.log"
+case "$*" in "repo view"*) echo example/sample; exit 0 ;; esac
+# With GHPB_RULESET set, the ruleset exists as id 7 and requires check and integrity, with "base"
+# also base; with "fail", reading it fails.
+case "$*" in "api repos/example/sample/rulesets --jq"*) [ -z "${GHPB_RULESET:-}" ] || echo 7; exit 0 ;; esac
+case "$*:${GHPB_RULESET:-}" in
+  "api repos/example/sample/rulesets/7 --jq"*:fail) echo "HTTP 502" >&2; exit 1 ;;
+  "api repos/example/sample/rulesets/7 --jq"*:base) printf 'check\nintegrity\nbase\n'; exit 0 ;;
+  "api repos/example/sample/rulesets/7 --jq"*) printf 'check\nintegrity\n'; exit 0 ;;
+esac
+case "$in" in *security_and_analysis*) echo "HTTP 422: Secret scanning is not available for this repository" >&2; exit 1 ;; esac
+exit 0
+GH
+chmod +x "$work/ghpb/gh"
+expect_pass "protect-branch applies the settings, goes on past a refused secret scanning, and creates the ruleset" bash -c 'rm -f "$work/ghpb.log";
+  out=$(PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "secret scanning and push protection not set" &&
+  grep -q "^api --method PATCH repos/example/sample --input - | .*\"allow_squash_merge\":false.*\"delete_branch_on_merge\":true" "$work/ghpb.log" &&
+  grep -q "^api --method POST repos/example/sample/rulesets --input - | .*\"allowed_merge_methods\":\[\"merge\"\]" "$work/ghpb.log" &&
+  [ "$(grep -c "^api --method PATCH repos/example/sample " "$work/ghpb.log")" = 2 ] || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch keeps a required base check when it updates the ruleset" bash -c 'rm -f "$work/ghpb.log"; touch .github/workflows/fail-without-change.yml;
+  out=$(GHPB_RULESET=base PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "requires \`base\`: kept" &&
+  grep -q "^api --method PUT repos/example/sample/rulesets/7 --input - | .*{\"context\":\"base\"}" "$work/ghpb.log" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch drops a required base check that no workflow reports" bash -c 'rm -f "$work/ghpb.log";
+  out=$(GHPB_RULESET=base PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "which no workflow of this project reports: dropped" &&
+  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"integrity\"}" &&
+  ! grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"base\"}" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch adds no base check to a ruleset without one" bash -c 'rm -f "$work/ghpb.log"; touch .github/workflows/fail-without-change.yml;
+  out=$(GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && ! printf "%s\n" "$out" | grep -q "requires \`base\`" &&
+  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"integrity\"}" &&
+  ! grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"base\"}" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch stops, changing no ruleset, when it cannot read the existing one" bash -c 'rm -f "$work/ghpb.log";
+  ! GHPB_RULESET=fail PATH="$work/ghpb:$PATH" scripts/protect-branch.sh > out.log 2>&1 && grep -q "cannot read the ruleset" out.log &&
+  ! grep -q "rulesets/7 --input" "$work/ghpb.log" || { cat out.log; cat "$work/ghpb.log"; exit 1; }'
 expect_fail "a link to a missing file" bash -c 'printf "# Note\n\nSee [x](docs/nope.md).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](docs/testing-rules.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of the same document" bash -c 'printf "# Note\n\n## Part\n\nSee [x](#parts).\n" > note.md && node scripts/check-links.mjs'
@@ -565,6 +608,9 @@ for p in "$a" "$d"; do
   ! grep -v -E '@(v[0-9]+\.[0-9]+\.[0-9]+|[0-9a-f]{40})( +#.*)?$' "$work/uses.log" > "$work/pin.log" ||
     { cat "$work/pin.log"; fail "$p: a workflow uses an action without an exact version or commit"; }
 done
+(cd "$d" && scripts/protect-branch.sh --dry-run --require-base) | node -e 'const p = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  process.exit(p.ruleset.rules.find((x) => x.type === "required_status_checks").parameters.required_status_checks.map((c) => c.context).join() === "check,integrity,base" ? 0 : 1)' ||
+  fail "Python: protect-branch --require-base does not require the base job"
 # uvx provisions pytest; on a CI runner without uv, uv is installed into ~/.local/bin first.
 if ! command -v uvx >/dev/null; then
   curl -LsSf https://astral.sh/uv/install.sh |
