@@ -146,7 +146,9 @@ Before 1.0.0, MINOR takes the role of MAJOR.
    Version PR "Release: next version" on `changeset-release/main`: `npm run version-packages`
    consumes the changesets, bumps `package.json` and `package-lock.json`, writes the
    `CHANGELOG.md` section `## X.Y.Z`, and runs `scripts/sync-self.sh`. It starts the `docs`
-   workflow on that branch, because a pull request opened with `GITHUB_TOKEN` starts none. The
+   workflow on that branch with `workflow_dispatch`, which `GITHUB_TOKEN` may trigger. Whether
+   opening a pull request with `GITHUB_TOKEN` starts the `pull_request` workflows is an open
+   question: they started on #16, which a `version` run that the owner re-ran opened. The
    Version PR is exempt from the description sections of readiness: its description is generated.
    The workflows know it by its author, `github-actions[bot]`: readiness checks only its decision
    records, and `docs-review` and `code-review` skip it, since the action refuses runs a bot

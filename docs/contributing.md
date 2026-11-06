@@ -132,8 +132,8 @@ Everything written into git history and pull requests is in English, without exc
   reason nor names an existing path in backticks; an added marker in a Markdown file or a touched
   gate file that its section does not name; a Metrics table outside its forms, whose answers do
   not add up, or with a blocker as a limit. Whether a test proves
-  its identifier is left to the review. The `decisions` workflow runs it on every change and
-  does not block. A pull request waiting only on the owner stays open as "not ready to merge".
+  its identifier is left to the review. The `decisions` workflow runs it on every change, on the records
+  only for a pull request that `github-actions[bot]` opened, and does not block; one waiting only on the owner stays open as "not ready to merge".
 - The owner merges with a merge commit; `scripts/protect-branch.sh` allows no other merge method.
 
 ## 4. Before opening a pull request
@@ -167,7 +167,7 @@ template version, which `.afe-answers.json` records; the `update-template` skill
     Claude subagent; only the fix of a blocker is checked again;
   - high: one pass as for normal; the Santa loop is an optional module of the template.
 - In the pull request, `docs-review` reviews every pull request and `code-review` every one that changes code, contracts, checks, or workflows, once, when it
-  opens or leaves draft; a push does not run them again.
+  opens or leaves draft, except one that `github-actions[bot]` opened; a push does not run them again.
 - A finding names a file, a line, a class, and the rule it rests on; zero findings is valid, and
   style belongs to the linters. A `blocker`: merged as it is, the change breaks behaviour, a
   contract, security, or a product invariant (`docs/invariants.md`), loses data, fails an item of
