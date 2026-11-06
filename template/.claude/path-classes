@@ -33,23 +33,36 @@ gate scripts/checks.d/*
 gate .claude/hooks/project/*
 gate .claude/harness.conf
 
-# Gates of any stack: dependency updates, pre-commit hooks, task runners, and tool versions.
+# Gates of any stack: dependency updates, pre-commit hooks, task runners, and tool versions. The
+# `*/` lines and `*.mk` also cover the files of subdirectories and those a Makefile includes.
 gate .github/dependabot.y*ml
 gate renovate.json*
 gate .github/renovate.json*
 gate .renovaterc*
 gate .pre-commit-config.yaml
 gate Makefile
+gate */Makefile
 gate makefile
 gate GNUmakefile
+gate *.mk
 gate justfile
+gate */justfile
 gate Justfile
 gate .justfile
 gate Taskfile.y*ml
+gate */Taskfile.y*ml
+gate Taskfile.dist.y*ml
 gate taskfile.y*ml
+gate taskfile.dist.y*ml
 gate .tool-versions
 gate mise.toml
+gate mise.*.toml
 gate .mise.toml
+gate .mise.*.toml
+gate mise/config.toml
+gate .mise/config.toml
+gate .config/mise.toml
+gate .config/mise/*
 
 # Dependency manifests and lock files, and the configuration of linters, test runners, coverage,
 # and mutation testing.
