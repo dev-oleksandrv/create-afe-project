@@ -51,7 +51,9 @@ their validators and defaults, the Jinja rendering and conditional names, that e
 file is template-owned or seeded, and the reading of a Copier answers file.
 `scripts/checks.d/15-release.sh` runs `scripts/tag-release.sh` against a local origin: it tags
 without a changeset and with only an empty one, and not while a changeset with a release is
-pending.
+pending; and that such a changeset, which has no heading, passes markdownlint through
+`.changeset/.markdownlint.jsonc` with the other rules still on, and that this file stays the root
+configuration plus `MD041: false`.
 `scripts/checks.d/10-template.sh` is the template test suite. It renders the template with the
 command line of the working tree in four projects and runs `scripts/check.sh` in each, the line budgets of the rule documents included:
 
