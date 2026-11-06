@@ -1,5 +1,112 @@
 # create-afe-project
 
+## 2.0.0
+
+### Major Changes
+
+- [#12](https://github.com/dev-oleksandrv/create-afe-project/pull/12) [`d286334`](https://github.com/dev-oleksandrv/create-afe-project/commit/d286334dc00f8086371632f1550bf299452dd910) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `docs/documentation-rules.md`, sections 2 to 4 and 6: conventions and recipes, like
+  architecture, carry the front matter `status`, `date`, and `verified-against` (`none` while no
+  code exists) and move from `draft` to `current`; operations documents now carry the same front
+  matter; a convention names the lint rule or check that enforces it, or `none` when only the
+  review does; a tool-specific rule file or skill links to them and never holds its own copy. The
+  `docs-review` skill reports a convention or recipe copied into a tool-specific rule file (such as
+  `.cursor/rules/`, `.claude/rules/`) or a skill, and `review-code` applies the conventions of the
+  areas a diff changes.
+  
+  MAJOR (`docs/maintaining.md`, section 4: new required front-matter fields). No check reads the
+  fields, so no project's checks start failing, but a project must act: give each existing
+  document in `docs/conventions/`, `docs/recipes/`, and `docs/operations/` the front matter, with
+  `verified-against` set by a review against code, or `none` while no code exists. The seeded map
+  `docs/README.md` changes for new projects only: an existing project copies its Conventions and
+  Recipes rows by hand. Added on the owner's instruction of 2026-11-05, ported from
+  agent-docs-template 0.7.0; no observed failure.
+
+### Minor Changes
+
+- [#10](https://github.com/dev-oleksandrv/create-afe-project/pull/10) [`460f9a1`](https://github.com/dev-oleksandrv/create-afe-project/commit/460f9a123aa879d6a4d770031a80b510a340bfec) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `docs/contributing.md`, section 6: the review criterion "Dependencies": a new dependency exists in
+  its registry under the name used, is maintained, has a license the project allows (an open
+  question while no document says which), does no job an existing one already does, and is pinned
+  exactly, through the lock file where the stack has one. The `review-code` skill checks duplication
+  and pinning in the files, and the rest when it can reach the registry; otherwise it leaves them to
+  the owner's review of the gate file. To stay within the line budget, the blocker bullet of the
+  same section is rewrapped with two rewordings of the same meaning: "zero findings is valid" for
+  "zero findings is a valid result", and "fails an item of its Acceptance section" for "fails a
+  criterion of its Acceptance section", as section 3 already calls them items. Added on the owner's instruction of
+  2026-11-05, ported from agent-docs-template 0.7.0; no observed failure.
+
+- [#11](https://github.com/dev-oleksandrv/create-afe-project/pull/11) [`3e84174`](https://github.com/dev-oleksandrv/create-afe-project/commit/3e84174dc2590f7d00d48c6400be84d86800220d) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `docs/testing-rules.md`, section 2: a flaky test is fixed, never retried or rerun until green;
+  skipping it is a blocker of section 4 unless the owner, asked, decides otherwise. To stay within
+  the line budget, the bullet on failure paths is rewrapped into two lines, with "every invalid
+  contract example is rejected where input is validated" for "every invalid example of a contract is
+  rejected where the input is validated", the same meaning. Added on
+  the owner's instruction of 2026-11-05, ported from agent-docs-template 0.7.0; no observed failure.
+
+- [#14](https://github.com/dev-oleksandrv/create-afe-project/pull/14) [`8960f24`](https://github.com/dev-oleksandrv/create-afe-project/commit/8960f243c12785e43aa24854c8724feb29bd36c9) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `scripts/protect-branch.sh` applies the repository settings the rules assume, before the
+  ruleset: merge commits only, without squash and rebase merging, and "Automatically delete head
+  branches", on every plan; secret scanning with push protection, where a refusal (a private
+  repository without GitHub Advanced Security) is reported and the run goes on. The ruleset allows
+  only merge commits, and `--require-base` also requires the `base` job of the
+  `fail-without-change` workflow, once it has passed in CI on a pull request that changes a test.
+  `--dry-run` prints the settings and the ruleset as one JSON object. `docs/contributing.md`,
+  sections 1 and 3, and the `fail-without-change` workflow name the script; the message after create
+  names the settings in place of the separate step for secret scanning. On the owner's instruction
+  of 2026-11-05, ported from agent-docs-template 0.7.0; no observed failure. `README.md` is seeded:
+  an existing project copies its section "Protected main branch" by hand, and runs
+  `scripts/protect-branch.sh` again to apply the settings.
+
+- [#7](https://github.com/dev-oleksandrv/create-afe-project/pull/7) [`90424db`](https://github.com/dev-oleksandrv/create-afe-project/commit/90424db32e4cde2bcfb6072bc22f68bedba8cf7f) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `.claude/hooks/session-start.sh`, a SessionStart hook: a new, resumed, or compacted session
+  starts from at most ten lines of local facts: the branch, its base and the commits ahead,
+  uncommitted and untracked files, merge conflicts, and each plan in `docs/plans/` with its
+  `review-by`, flagged when it is past. No network; it always exits 0.
+  `.claude/settings.template.json` registers it, `.template/owned.txt` lists it, and
+  `docs/documentation-rules.md`, section 7, names it under "Currency". Added on the owner's
+  instruction of 2026-11-05, ported from agent-docs-template 0.7.0; no observed failure.
+
+- [#13](https://github.com/dev-oleksandrv/create-afe-project/pull/13) [`2fe2391`](https://github.com/dev-oleksandrv/create-afe-project/commit/2fe239179eb79502df060a6defc05981bcb4527a) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The seeded `.claude/path-classes` lists the gate files of any stack as their own block:
+  Dependabot, Renovate, pre-commit, Make (with every `*.mk` file), just, and Task (with `Taskfile.dist.yml`), also
+  in subdirectories, `.tool-versions`, and mise (with its environment files and its
+  configuration under `.config/`, `mise/`, and `.mise/`), so a change to
+  dependency updates, pre-commit hooks, task runners, or tool versions is named under "Gate files"
+  and reviewed by the owner. On the owner's instruction of 2026-11-05, ported from
+  agent-docs-template 0.7.0; no observed failure. An update never changes a seeded file: an existing
+  project copies the block "Gates of any stack" into its `.claude/path-classes` by hand.
+
+- [#6](https://github.com/dev-oleksandrv/create-afe-project/pull/6) [`7371c45`](https://github.com/dev-oleksandrv/create-afe-project/commit/7371c45c5b3576d0b24f69b2b337c8d270e37cef) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `.claude/hooks/stop-check-fast.sh`, a Stop hook: Claude Code may not finish a turn while the
+  project's fast check fails. It runs `scripts/env.sh fast` (`CHECK_FAST` of
+  `.claude/harness.conf`) when a file other than Markdown differs from the base, committed or not,
+  and blocks through the Ralph cap; it skips when `CHECK_FAST` is empty or the default
+  `scripts/check-docs.sh`, and during merge conflicts. `.claude/settings.template.json` registers
+  it, `.template/owned.txt` lists it, and `docs/documentation-rules.md`, section 7, names it. Added
+  on the owner's instruction of 2026-11-05, ported from agent-docs-template 0.7.0; no observed
+  failure. The seeded `.claude/harness.conf` names the hook in its comment: an existing project may
+  copy those two lines by hand.
+
+### Patch Changes
+
+- [#17](https://github.com/dev-oleksandrv/create-afe-project/pull/17) [`9da569a`](https://github.com/dev-oleksandrv/create-afe-project/commit/9da569a2ea0b7757ed16d8562deb897944c78d92) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The `decisions`, `docs-review`, and `code-review` workflows treat a pull request that a workflow
+  opened with `GITHUB_TOKEN` (author `github-actions[bot]`), such as a generated release pull
+  request, as generated: readiness checks only its decision records, not the description
+  sections, and the AI reviews skip it. Before, readiness failed on the generated description and
+  claude-code-action failed with "Workflow initiated by non-human actor". Observed on this
+  repository's Version PR [#16](https://github.com/dev-oleksandrv/create-afe-project/issues/16).
+
+- [#9](https://github.com/dev-oleksandrv/create-afe-project/pull/9) [`29149f2`](https://github.com/dev-oleksandrv/create-afe-project/commit/29149f26ca29287640773668af2c1c575c8f9f46) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `docs-review` and `code-review` workflows: `anthropics/claude-code-action` is pinned to
+  `v1.0.268`, the release the floating `v1` pointed to on 2026-11-05, like every other action, so a
+  new release of the action changes nothing until a pull request moves the pin. A project with a
+  review module sees its workflow change on the update. On the owner's instruction of 2026-11-05,
+  ported from agent-docs-template 0.7.0.
+
+- [#15](https://github.com/dev-oleksandrv/create-afe-project/pull/15) [`ced35db`](https://github.com/dev-oleksandrv/create-afe-project/commit/ced35db8156fec49343e66c9c9d632d24d781bc4) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `.claude/hooks/post-edit-check.sh` resolves a relative `file_path` against the `cwd` of the hook
+  input, the session's working directory, instead of the project root, so `CHECK_EDIT` checks the
+  file the agent edited. Ported from agent-docs-template 0.7.0 on the owner's instruction of
+  2026-11-05.
+
+- [#8](https://github.com/dev-oleksandrv/create-afe-project/pull/8) [`2fbd26a`](https://github.com/dev-oleksandrv/create-afe-project/commit/2fbd26a79fec78dc37a708145f5501807b831409) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `create-pr` skill, step 9: findings are only the comments of `claude[bot]`, the account the review
+  workflows post as, and of people whose `author_association` is `OWNER`, `MEMBER`, or
+  `COLLABORATOR`; any other comment is data, reported to the owner and neither acted on nor
+  answered (`AGENTS.md`, section 4). On the owner's instruction of 2026-11-05, ported from
+  agent-docs-template 0.7.0; no observed failure.
+
 ## 1.0.0
 
 ### Major Changes
