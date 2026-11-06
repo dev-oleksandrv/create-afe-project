@@ -89,8 +89,9 @@ at the Ralph cap and counts again afterwards; that a large change only warns; th
 settings deny reading secrets. It also checks that the protect hook asks before publishing a
 package or an image, `gh workflow run`, a `gh api` DELETE, and an edit or command with a known
 token format, and denies a push to `main` once the remote has it; that the check after every edit
-runs `CHECK_EDIT` on matching files inside the project only; that the testing rules name the
-flaky test; that the rubric of variant A has the
+runs `CHECK_EDIT` on matching files inside the project only; that the testing rules carry the
+rule that a flaky test is fixed, never retried or rerun until green, and that skipping one is a
+blocker; that the rubric of variant A has the
 "Dependencies" row and the `review-code` skill lists dependencies among its criteria and says
 what to check for an added one; that the `create-pr` skill takes
 findings only from the review bot and the repository's owner, members, and collaborators; that the SessionStart hook prints at
