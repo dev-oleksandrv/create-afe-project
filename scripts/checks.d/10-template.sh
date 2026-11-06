@@ -171,9 +171,14 @@ mkdir -p "$work/ghpb" && cat > "$work/ghpb/gh" <<'GH'
 in=; case " $* " in *" --input - "*) in=$(cat) ;; esac
 printf '%s | %s\n' "$*" "$in" >> "$work/ghpb.log"
 case "$*" in "repo view"*) echo example/sample; exit 0 ;; esac
-# With GHPB_RULESET set, the ruleset exists as id 7 and requires check, integrity, and base.
+# With GHPB_RULESET set, the ruleset exists as id 7 and requires check and integrity, with "base"
+# also base; with "fail", reading it fails.
 case "$*" in "api repos/example/sample/rulesets --jq"*) [ -z "${GHPB_RULESET:-}" ] || echo 7; exit 0 ;; esac
-case "$*" in "api repos/example/sample/rulesets/7 --jq"*) printf 'check\nintegrity\nbase\n'; exit 0 ;; esac
+case "$*:${GHPB_RULESET:-}" in
+  "api repos/example/sample/rulesets/7 --jq"*:fail) echo "HTTP 502" >&2; exit 1 ;;
+  "api repos/example/sample/rulesets/7 --jq"*:base) printf 'check\nintegrity\nbase\n'; exit 0 ;;
+  "api repos/example/sample/rulesets/7 --jq"*) printf 'check\nintegrity\n'; exit 0 ;;
+esac
 case "$in" in *security_and_analysis*) echo "HTTP 422: Secret scanning is not available for this repository" >&2; exit 1 ;; esac
 exit 0
 GH
@@ -183,9 +188,20 @@ expect_pass "protect-branch applies the settings, goes on past a refused secret 
   grep -q "^api --method PATCH repos/example/sample --input - | .*\"allow_squash_merge\":false.*\"delete_branch_on_merge\":true" "$work/ghpb.log" &&
   grep -q "^api --method POST repos/example/sample/rulesets --input - | .*\"allowed_merge_methods\":\[\"merge\"\]" "$work/ghpb.log" &&
   [ "$(grep -c "^api --method PATCH repos/example/sample " "$work/ghpb.log")" = 2 ] || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
-expect_pass "protect-branch keeps a required base check when it updates the ruleset" bash -c 'rm -f "$work/ghpb.log";
-  out=$(GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "requires \`base\`: kept" &&
+expect_pass "protect-branch keeps a required base check when it updates the ruleset" bash -c 'rm -f "$work/ghpb.log"; touch .github/workflows/fail-without-change.yml;
+  out=$(GHPB_RULESET=base PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "requires \`base\`: kept" &&
   grep -q "^api --method PUT repos/example/sample/rulesets/7 --input - | .*{\"context\":\"base\"}" "$work/ghpb.log" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch drops a required base check that no workflow reports" bash -c 'rm -f "$work/ghpb.log";
+  out=$(GHPB_RULESET=base PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "which no workflow of this project reports: dropped" &&
+  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"integrity\"}" &&
+  ! grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"base\"}" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch adds no base check to a ruleset without one" bash -c 'rm -f "$work/ghpb.log"; touch .github/workflows/fail-without-change.yml;
+  out=$(GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && ! printf "%s\n" "$out" | grep -q "requires \`base\`" &&
+  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"integrity\"}" &&
+  ! grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"base\"}" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch stops, changing no ruleset, when it cannot read the existing one" bash -c 'rm -f "$work/ghpb.log";
+  ! GHPB_RULESET=fail PATH="$work/ghpb:$PATH" scripts/protect-branch.sh > out.log 2>&1 && grep -q "cannot read the ruleset" out.log &&
+  ! grep -q "rulesets/7 --input" "$work/ghpb.log" || { cat out.log; cat "$work/ghpb.log"; exit 1; }'
 expect_fail "a link to a missing file" bash -c 'printf "# Note\n\nSee [x](docs/nope.md).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](docs/testing-rules.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of the same document" bash -c 'printf "# Note\n\n## Part\n\nSee [x](#parts).\n" > note.md && node scripts/check-links.mjs'

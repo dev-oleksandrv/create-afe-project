@@ -12,8 +12,10 @@
 #    pull requests merged with a merge commit whose `check` (`docs` workflow) and `integrity`
 #    (`decisions` workflow) jobs pass, with --require-base also `base`, and only these: `readiness`
 #    signals and AI review is a sensor; it cannot be force-pushed or deleted. Updating a ruleset
-#    that requires `base` keeps it without --require-base, and says so. Rulesets need a public repository, or a GitHub
-#    plan that offers them for private ones; without one, the rule rests on the owner and review.
+#    that requires `base` keeps it without --require-base while the fail-without-change workflow
+#    exists, drops it otherwise, and says which; a ruleset it cannot read stops the run unchanged.
+#    Rulesets need a public repository, or a GitHub plan that offers them for private ones;
+#    without one, the rule rests on the owner and review.
 #
 # Usage: scripts/protect-branch.sh [--dry-run] [--repo owner/name] [--require-base]
 #   --dry-run       print the settings and the ruleset as one JSON object and change nothing
@@ -76,10 +78,19 @@ else
   printf '== %s: secret scanning and push protection not set; a private repository may need GitHub Advanced Security:\n%s\n' "$repo" "$out" >&2
 fi
 id=$(gh api "repos/$repo/rulesets" --jq ".[] | select(.name == \"$name\") | .id" | head -n 1)
-if [ -n "$id" ] && [ -z "$base" ] &&
-  gh api "repos/$repo/rulesets/$id" --jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context' | grep -qx base; then
-  base=1
-  echo "== the ruleset \"$name\" requires \`base\`: kept (run with --require-base to say so)"
+if [ -n "$id" ] && [ -z "$base" ]; then
+  contexts=$(gh api "repos/$repo/rulesets/$id" --jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context') || {
+    echo "protect-branch: cannot read the ruleset \"$name\" (id $id) of $repo; it is left unchanged" >&2
+    exit 1
+  }
+  if printf '%s\n' "$contexts" | grep -qx base; then
+    if [ -f .github/workflows/fail-without-change.yml ]; then
+      base=1
+      echo "== the ruleset \"$name\" requires \`base\`: kept (run with --require-base to say so)"
+    else
+      echo "== the ruleset \"$name\" requires \`base\`, which no workflow of this project reports: dropped" >&2
+    fi
+  fi
 fi
 if [ -n "$id" ]; then
   part ruleset | gh api --method PUT "repos/$repo/rulesets/$id" --input - > /dev/null
