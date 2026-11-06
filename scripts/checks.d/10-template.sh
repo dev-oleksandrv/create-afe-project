@@ -407,6 +407,10 @@ mkdir -p "$a/sub" && printf 'bad\n' > "$a/sub/pe.txt" && printf 'bad\n' > "$a/pe
 [ $? -eq 0 ] || { cat "$work/pe.log"; fail "post-edit: a relative path missing in the input's cwd is taken from the project root"; }
 (cd "$a" && printf '%s' '{"tool_name":"Edit","tool_input":{"file_path":"pe.txt"},"cwd":"'"$a"'/sub"}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/post-edit-check.sh > "$work/pe.log" 2>&1)
 [ $? -eq 2 ] && grep -q "CHECK_EDIT failed on sub/pe.txt" "$work/pe.log" || { cat "$work/pe.log"; fail "post-edit: a relative path is not resolved against the input's cwd"; }
+for in_cwd in '' ',"cwd":""'; do
+  (cd "$a" && printf '%s' '{"tool_name":"Edit","tool_input":{"file_path":"pe-rel.txt"}'"$in_cwd"'}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/post-edit-check.sh > "$work/pe.log" 2>&1)
+  [ $? -eq 2 ] && grep -q "CHECK_EDIT failed on pe-rel.txt" "$work/pe.log" || { cat "$work/pe.log"; fail "post-edit: a relative path without a cwd ($in_cwd) is not resolved against the project root"; }
+done
 rm -rf "$a/sub" "$a/pe-rel.txt"
 pe "$work/outside.txt" || fail "post-edit: checks a file outside the project"
 printf 'CHECK_EDIT_GLOBS=src/*.py\n' >> "$a/.claude/harness.conf"
