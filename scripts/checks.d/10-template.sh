@@ -67,7 +67,7 @@ grep -qF 'exists, the last review against code: architecture, operations, conven
   grep -qF '`.claude/rules/`), holds instead of linking' "$a/.claude/skills/docs-review/SKILL.md" &&
   grep -qF 'convention that names neither the check that enforces it nor `none`' "$a/.claude/skills/docs-review/SKILL.md" &&
   grep -qF 'the command or file it relies on; front matter as for architecture |' "$a/docs/documentation-rules.md" &&
-  grep -qF 'or `none` when only the review does' "$a/docs/README.md" ||
+  grep -qF '| Conventions: the rules of one area that the code does not make obvious ([`documentation-rules.md`](documentation-rules.md), section 2) |' "$a/docs/README.md" ||
   fail "variant A: conventions and recipes lack verified-against, or the reviews do not apply them"
 
 echo "== initial commit: --no-git, an empty clone, a forced non-empty directory"
@@ -171,9 +171,14 @@ mkdir -p "$work/ghpb" && cat > "$work/ghpb/gh" <<'GH'
 in=; case " $* " in *" --input - "*) in=$(cat) ;; esac
 printf '%s | %s\n' "$*" "$in" >> "$work/ghpb.log"
 case "$*" in "repo view"*) echo example/sample; exit 0 ;; esac
-# With GHPB_RULESET set, the ruleset exists as id 7 and requires check, integrity, and base.
+# With GHPB_RULESET set, the ruleset exists as id 7 and requires check and integrity, with "base"
+# also base; with "fail", reading it fails.
 case "$*" in "api repos/example/sample/rulesets --jq"*) [ -z "${GHPB_RULESET:-}" ] || echo 7; exit 0 ;; esac
-case "$*" in "api repos/example/sample/rulesets/7 --jq"*) printf 'check\nintegrity\nbase\n'; exit 0 ;; esac
+case "$*:${GHPB_RULESET:-}" in
+  "api repos/example/sample/rulesets/7 --jq"*:fail) echo "HTTP 502" >&2; exit 1 ;;
+  "api repos/example/sample/rulesets/7 --jq"*:base) printf 'check\nintegrity\nbase\n'; exit 0 ;;
+  "api repos/example/sample/rulesets/7 --jq"*) printf 'check\nintegrity\n'; exit 0 ;;
+esac
 case "$in" in *security_and_analysis*) echo "HTTP 422: Secret scanning is not available for this repository" >&2; exit 1 ;; esac
 exit 0
 GH
@@ -183,9 +188,20 @@ expect_pass "protect-branch applies the settings, goes on past a refused secret 
   grep -q "^api --method PATCH repos/example/sample --input - | .*\"allow_squash_merge\":false.*\"delete_branch_on_merge\":true" "$work/ghpb.log" &&
   grep -q "^api --method POST repos/example/sample/rulesets --input - | .*\"allowed_merge_methods\":\[\"merge\"\]" "$work/ghpb.log" &&
   [ "$(grep -c "^api --method PATCH repos/example/sample " "$work/ghpb.log")" = 2 ] || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
-expect_pass "protect-branch keeps a required base check when it updates the ruleset" bash -c 'rm -f "$work/ghpb.log";
-  out=$(GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "requires \`base\`: kept" &&
+expect_pass "protect-branch keeps a required base check when it updates the ruleset" bash -c 'rm -f "$work/ghpb.log"; touch .github/workflows/fail-without-change.yml;
+  out=$(GHPB_RULESET=base PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "requires \`base\`: kept" &&
   grep -q "^api --method PUT repos/example/sample/rulesets/7 --input - | .*{\"context\":\"base\"}" "$work/ghpb.log" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch drops a required base check that no workflow reports" bash -c 'rm -f "$work/ghpb.log";
+  out=$(GHPB_RULESET=base PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "which no workflow of this project reports: dropped" &&
+  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"integrity\"}" &&
+  ! grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"base\"}" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch adds no base check to a ruleset without one" bash -c 'rm -f "$work/ghpb.log"; touch .github/workflows/fail-without-change.yml;
+  out=$(GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && ! printf "%s\n" "$out" | grep -q "requires \`base\`" &&
+  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"integrity\"}" &&
+  ! grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"base\"}" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch stops, changing no ruleset, when it cannot read the existing one" bash -c 'rm -f "$work/ghpb.log";
+  ! GHPB_RULESET=fail PATH="$work/ghpb:$PATH" scripts/protect-branch.sh > out.log 2>&1 && grep -q "cannot read the ruleset" out.log &&
+  ! grep -q "rulesets/7 --input" "$work/ghpb.log" || { cat out.log; cat "$work/ghpb.log"; exit 1; }'
 expect_fail "a link to a missing file" bash -c 'printf "# Note\n\nSee [x](docs/nope.md).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](docs/testing-rules.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of the same document" bash -c 'printf "# Note\n\n## Part\n\nSee [x](#parts).\n" > note.md && node scripts/check-links.mjs'
@@ -268,6 +284,7 @@ expect_pass "a touched gate file listed under Gate files" bash -c 'gatefile && r
 expect_pass "dependency updates, pre-commit hooks, task runners, and tool versions are class gate" bash -c 'fs=".github/dependabot.yml .github/dependabot.yaml
   renovate.json renovate.json5 .github/renovate.json .renovaterc .renovaterc.json .pre-commit-config.yaml Makefile svc/Makefile makefile GNUmakefile
   build/common.mk justfile svc/justfile Justfile .justfile Taskfile.yml Taskfile.yaml svc/Taskfile.yml Taskfile.dist.yml taskfile.yml taskfile.dist.yaml
+  svc/makefile svc/GNUmakefile svc/a/x.mk svc/Justfile svc/.justfile svc/Taskfile.dist.yml svc/taskfile.yml svc/taskfile.dist.yaml
   .tool-versions mise.toml mise.local.toml .mise.toml .mise.ci.toml mise/config.toml .mise/config.toml .config/mise.toml .config/mise/config.toml";
   . scripts/lib/classes.sh && for f in $fs; do [ "$(class_of "$f" HEAD)" = gate ] || { echo "not gate: $f"; exit 1; }; done &&
   mkdir -p svc && echo x > Makefile && echo x > svc/justfile && out=$(classes) && printf "%s\n" "$out" | grep -qx "gate	Makefile" &&
@@ -396,8 +413,8 @@ printf 'CHECK_EDIT_GLOBS=src/*.py\n' >> "$a/.claude/harness.conf"
 pe "$a/pe.txt" || fail "post-edit: checks a file that CHECK_EDIT_GLOBS leaves out"
 gitc "$a" checkout -q -- .claude/harness.conf && rm -f "$a/pe.txt" "$a/pe-ok.txt"
 # The fast check at a Stop: CHECK_FAST runs only when a file other than Markdown differs from the
-# base, never as the default scripts/check-docs.sh, blocks on a failure, and lets the agent stop
-# during a merge conflict.
+# base, never when empty or the default scripts/check-docs.sh, blocks on a failure, and lets the
+# agent stop during a merge conflict.
 (cd "$a" && "$work/sj" 's.hooks.Stop[0].hooks.filter(h => h.command.endsWith("/stop-check-fast.sh")).length === 1') ||
   fail "settings: the fast Stop hook is not registered once"
 fast() { (cd "$a" && printf '{"session_id":"fast"}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/stop-check-fast.sh > "$work/fast.log" 2>&1); }
@@ -405,6 +422,10 @@ start=$(git -C "$a" rev-parse HEAD)
 echo x > "$a/src.txt" && cp "$a/scripts/check-docs.sh" "$work/check-docs.keep" &&
   printf '#!/usr/bin/env bash\necho check-docs ran; exit 1\n' > "$a/scripts/check-docs.sh"
 fast; [ $? -eq 0 ] && [ ! -s "$work/fast.log" ] || { cat "$work/fast.log"; fail "stop-check-fast: the default CHECK_FAST runs"; }
+cp "$a/scripts/env.sh" "$work/env.keep" && printf '#!/usr/bin/env bash\ntouch "%s/env.ran"; exit 1\n' "$work" > "$a/scripts/env.sh" &&
+  sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
+fast; [ $? -eq 0 ] && [ ! -e "$work/env.ran" ] && [ ! -s "$work/fast.log" ] || { cat "$work/fast.log"; fail "stop-check-fast: an empty CHECK_FAST runs"; }
+cp "$work/env.keep" "$a/scripts/env.sh" && git -C "$a" checkout -q -- .claude/harness.conf
 cp "$work/check-docs.keep" "$a/scripts/check-docs.sh" && rm "$a/src.txt"
 sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=echo fast-ran; test ! -e $work/fail.flag#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
 gitc "$a" commit -q -am "fast check" && touch "$work/fail.flag"
@@ -585,9 +606,12 @@ render "$d" --data docs_review=true --data code_review=true --data dual_review=t
 (cd "$d" && scripts/check.sh > "$work/d.log" 2>&1) || { cat "$work/d.log"; fail "Python, all modules: scripts/check.sh fails (line budgets included)"; }
 grep -q 'scripts/fail-without-change.sh --base "origin/$BASE_REF" --allow-pass-on-base' "$d/.github/workflows/fail-without-change.yml" ||
   fail "Python: the fail-without-change workflow does not run the driver"
-# Every action of every workflow is pinned to an exact version or a commit, never a floating tag.
+# Every action of every workflow is pinned to an exact version or a commit, never a floating tag;
+# a project without a workflow file or a uses: line fails, so the test cannot pass on nothing.
 for p in "$a" "$d"; do
-  ! grep -h 'uses:' "$p"/.github/workflows/*.yml | grep -v -E '@(v[0-9]+\.[0-9]+\.[0-9]+|[0-9a-f]{40})( +#.*)?$' > "$work/pin.log" ||
+  grep -h 'uses:' "$p"/.github/workflows/*.yml "$p"/.github/workflows/*.yaml > "$work/uses.log" 2>/dev/null
+  [ -s "$work/uses.log" ] || fail "$p: no uses: line in any workflow; the pin test checks nothing"
+  ! grep -v -E '@(v[0-9]+\.[0-9]+\.[0-9]+|[0-9a-f]{40})( +#.*)?$' "$work/uses.log" > "$work/pin.log" ||
     { cat "$work/pin.log"; fail "$p: a workflow uses an action without an exact version or commit"; }
 done
 (cd "$d" && scripts/protect-branch.sh --dry-run --require-base) | node -e 'const p = JSON.parse(require("fs").readFileSync(0, "utf8"));
