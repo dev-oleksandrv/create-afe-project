@@ -93,14 +93,14 @@ package or an image, `gh workflow run`, a `gh api` DELETE, a change of repositor
 rulesets, or a branch protection, but not the replies and reads of the `create-pr` skill), and
 an edit or command with a known token format, and denies a push to `main` once the remote has it; that the check after every edit
 runs `CHECK_EDIT` on matching files inside the project only, with stdin from `/dev/null`, a
-relative path resolved against the input's `cwd`; that conventions, recipes, and operations
-carry `verified-against`, that the map's conventions row links section 2, and that docs-review
-reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
-rule file and a convention without its check or `none`, and review-code applies the conventions; that the testing rules carry the
+relative path resolved against the input's `cwd`; that the documentation rules state that conventions, recipes, and operations
+carry `verified-against`, that the map's conventions row links section 2, and that the docs-review
+skill states that it reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
+rule file and a convention without its check or `none`, and the review-code skill states that it applies the conventions; that the testing rules carry the
 rule that a flaky test is fixed, never retried or rerun until green, and that skipping one is a
 blocker; that the rubric of variant A has the
 "Dependencies" row and the `review-code` skill lists dependencies among its criteria and says
-what to check for an added one; that the `create-pr` skill takes
+what to check for an added one; that the `create-pr` skill states that it takes
 findings only from the review bot and the repository's owner, members, and collaborators; that the readiness step of the `decisions` workflow, run as
 written with the shell it declares, checks only the decision records of a pull request that
 `github-actions[bot]` opened, fails there when its `--classes` call fails, and still fails a person's empty description, and that the AI reviews skip such a pull request; that the SessionStart hook prints at
