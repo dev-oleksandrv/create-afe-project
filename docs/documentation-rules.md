@@ -123,11 +123,11 @@ These rules apply once code exists; they are fixed now so the first code follows
 | A new ADR meets the criteria of section 5 | none | `docs-review` reports it; the owner decides |
 | Template-owned files unchanged; one project block in `AGENTS.md`; the line budgets of the rule documents; `.claude/settings.json` generated, and every hook command it names exists (sections 2 and 9) | `scripts/check-template.sh`: Stop hook and `docs` workflow | none |
 | Each invariant names its check (section 2) | none | the review checks `docs/invariants.md` against the checks it names |
-| Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; a Stop hook only if the project adds one | as the project defines |
+| Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; in Claude Code, `CHECK_FAST` of `.claude/harness.conf` at a Stop when a file other than Markdown differs from the base, skipped when empty or the default `scripts/check-docs.sh` | as the project defines; what `CHECK_FAST` leaves out waits for `scripts/check.sh` |
 | Code and tests meet the review rubric and the testing rules (`contributing.md`, section 6; `testing-rules.md`) | the project's test checks in `scripts/checks.d/`; `code-review` workflow, a sensor | reviewer applies the rubric, by the class of the paths |
 | Merge readiness (`contributing.md`, section 3) | `scripts/check-decisions.sh --ready`, in the forms that section names; `decisions` workflow; signals, does not block | whether the tests prove their identifiers; no `blocker` open; the owner's merge confirms the listed markers |
 | Measurement of the sensors (`contributing.md`, section 3) | `scripts/pr-metrics.sh` aggregates the Metrics of merged pull requests | the owner removes a rule or check that never fires |
-| Finishing with failing checks | Stop hook in Claude Code | none |
+| Finishing with failing checks | Stop hooks in Claude Code: the documentation, decision, and template checks, `CHECK_FAST`, and the project's Stop hooks; a failing check blocks up to the Ralph cap (`contributing.md`, section 3) | none; the full `scripts/check.sh` runs before the pull request and in CI |
 | Class approval and irreversible actions (section 8) | protect hook: owner prompt in Claude Code, denied headless; deny rules of `.claude/settings.json` | explicit, separate, owner-approved |
 
 Semantic review checklist for any documentation change:
