@@ -30,7 +30,8 @@ commit. After the first push, a repository admin applies the repository settings
 ruleset once (`--dry-run` shows them first): merge commits only and "Automatically delete head
 branches", on every plan; secret scanning with push protection, which a private repository may
 need GitHub Advanced Security for; and a ruleset on `main` that requires a pull request, allows
-no deletion or force push, and requires the checks `check` and `integrity`, and only these.
+no deletion or force push, and requires the checks `check` and `integrity`{% if fail_without_change %} (and, once
+set as below, `base`){% endif %}, and only these.
 Rulesets need a public repository or, for a private one, a paid plan.
 
 ```bash

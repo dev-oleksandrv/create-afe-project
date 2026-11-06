@@ -162,7 +162,8 @@ expect_pass "protect-branch prints the settings and the ruleset of the default b
   process.exit(r.conditions.ref_name.include[0]===\"~DEFAULT_BRANCH\" && r.rules.some(x=>x.type===\"non_fast_forward\") && r.rules.some(x=>x.type===\"deletion\") && pr.parameters.allowed_merge_methods.join()===\"merge\" &&
   sc.parameters.required_status_checks.map(c=>c.context).join()===\"check,integrity\" && p.repository.allow_merge_commit===true && p.repository.allow_squash_merge===false && p.repository.allow_rebase_merge===false &&
   p.repository.delete_branch_on_merge===true && p.security.security_and_analysis.secret_scanning_push_protection.status===\"enabled\" ? 0 : 1)"'
-expect_fail "protect-branch --require-base without the fail-without-change workflow" scripts/protect-branch.sh --dry-run --require-base
+expect_pass "protect-branch --require-base refuses without the fail-without-change workflow" bash -c '! scripts/protect-branch.sh --dry-run --require-base 2> err.log &&
+  grep -q "needs the fail-without-change workflow" err.log'
 # A live run against a stand-in for gh: the repository settings, then secret scanning, which a
 # private repository may refuse without stopping the run, then the ruleset.
 mkdir -p "$work/ghpb" && cat > "$work/ghpb/gh" <<'GH'
@@ -170,6 +171,9 @@ mkdir -p "$work/ghpb" && cat > "$work/ghpb/gh" <<'GH'
 in=; case " $* " in *" --input - "*) in=$(cat) ;; esac
 printf '%s | %s\n' "$*" "$in" >> "$work/ghpb.log"
 case "$*" in "repo view"*) echo example/sample; exit 0 ;; esac
+# With GHPB_RULESET set, the ruleset exists as id 7 and requires check, integrity, and base.
+case "$*" in "api repos/example/sample/rulesets --jq"*) [ -z "${GHPB_RULESET:-}" ] || echo 7; exit 0 ;; esac
+case "$*" in "api repos/example/sample/rulesets/7 --jq"*) printf 'check\nintegrity\nbase\n'; exit 0 ;; esac
 case "$in" in *security_and_analysis*) echo "HTTP 422: Secret scanning is not available for this repository" >&2; exit 1 ;; esac
 exit 0
 GH
@@ -179,6 +183,9 @@ expect_pass "protect-branch applies the settings, goes on past a refused secret 
   grep -q "^api --method PATCH repos/example/sample --input - | .*\"allow_squash_merge\":false.*\"delete_branch_on_merge\":true" "$work/ghpb.log" &&
   grep -q "^api --method POST repos/example/sample/rulesets --input - | .*\"allowed_merge_methods\":\[\"merge\"\]" "$work/ghpb.log" &&
   [ "$(grep -c "^api --method PATCH repos/example/sample " "$work/ghpb.log")" = 2 ] || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch keeps a required base check when it updates the ruleset" bash -c 'rm -f "$work/ghpb.log";
+  out=$(GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "requires \`base\`: kept" &&
+  grep -q "^api --method PUT repos/example/sample/rulesets/7 --input - | .*{\"context\":\"base\"}" "$work/ghpb.log" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
 expect_fail "a link to a missing file" bash -c 'printf "# Note\n\nSee [x](docs/nope.md).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](docs/testing-rules.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of the same document" bash -c 'printf "# Note\n\n## Part\n\nSee [x](#parts).\n" > note.md && node scripts/check-links.mjs'

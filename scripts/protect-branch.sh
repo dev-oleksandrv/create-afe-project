@@ -10,8 +10,9 @@
 #    GitHub Advanced Security, so a refusal is reported and the script goes on.
 # 3. The repository ruleset "protect default branch": changes reach the default branch only through
 #    pull requests merged with a merge commit whose `check` (`docs` workflow) and `integrity`
-#    (`decisions` workflow) jobs pass, and only these: `readiness` signals and AI review is a
-#    sensor; it cannot be force-pushed or deleted. Rulesets need a public repository, or a GitHub
+#    (`decisions` workflow) jobs pass, with --require-base also `base`, and only these: `readiness`
+#    signals and AI review is a sensor; it cannot be force-pushed or deleted. Updating a ruleset
+#    that requires `base` keeps it without --require-base, and says so. Rulesets need a public repository, or a GitHub
 #    plan that offers them for private ones; without one, the rule rests on the owner and review.
 #
 # Usage: scripts/protect-branch.sh [--dry-run] [--repo owner/name] [--require-base]
@@ -38,7 +39,7 @@ if [ -n "$base" ] && [ ! -f .github/workflows/fail-without-change.yml ]; then
 fi
 
 name="protect default branch"
-plan=$(node -e '
+plan() { node -e '
   const [name, base] = process.argv.slice(1);
   const checks = ["check", "integrity", ...(base ? ["base"] : [])].map((context) => ({ context }));
   console.log(JSON.stringify({
@@ -57,13 +58,13 @@ plan=$(node -e '
             required_status_checks: checks } },
       ],
     },
-  }, null, 2));' "$name" "$base")
+  }, null, 2));' "$name" "$base"; }
 
 if [ -n "$dry" ]; then
-  printf '%s\n' "$plan"
+  plan
   exit 0
 fi
-part() { printf '%s' "$plan" | node -e 'console.log(JSON.stringify(JSON.parse(require("fs").readFileSync(0, "utf8"))[process.argv[1]]))' "$1"; }
+part() { plan | node -e 'console.log(JSON.stringify(JSON.parse(require("fs").readFileSync(0, "utf8"))[process.argv[1]]))' "$1"; }
 command -v gh > /dev/null || { echo "protect-branch: the GitHub CLI gh is required" >&2; exit 2; }
 [ -n "$repo" ] || repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 
@@ -75,6 +76,11 @@ else
   printf '== %s: secret scanning and push protection not set; a private repository may need GitHub Advanced Security:\n%s\n' "$repo" "$out" >&2
 fi
 id=$(gh api "repos/$repo/rulesets" --jq ".[] | select(.name == \"$name\") | .id" | head -n 1)
+if [ -n "$id" ] && [ -z "$base" ] &&
+  gh api "repos/$repo/rulesets/$id" --jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context' | grep -qx base; then
+  base=1
+  echo "== the ruleset \"$name\" requires \`base\`: kept (run with --require-base to say so)"
+fi
 if [ -n "$id" ]; then
   part ruleset | gh api --method PUT "repos/$repo/rulesets/$id" --input - > /dev/null
   echo "== updated the ruleset \"$name\" of $repo"

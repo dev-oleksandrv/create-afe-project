@@ -105,7 +105,7 @@ failure, and lets the agent stop during a merge conflict; that a hook command wh
 missing fails the template check; that the link check finds a missing file or anchor; that
 `scripts/protect-branch.sh --dry-run` prints the repository settings (merge commits only, head
 branches deleted, secret scanning) and the ruleset, that `--require-base` adds the `base` job only
-with its module, and that a live run against a stand-in for `gh` goes on past a refused secret
+with its module and an update keeps it, and that a live run against a stand-in for `gh` goes on past a refused secret
 scanning; that the `secret-scan` workflow
 appears only with its module; and that every action of the workflows of variant A and of the Python project is
 pinned to an exact version or a commit. It also checks that `update` keeps project content (the project
