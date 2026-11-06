@@ -333,8 +333,8 @@ printf 'CHECK_EDIT_GLOBS=src/*.py\n' >> "$a/.claude/harness.conf"
 pe "$a/pe.txt" || fail "post-edit: checks a file that CHECK_EDIT_GLOBS leaves out"
 gitc "$a" checkout -q -- .claude/harness.conf && rm -f "$a/pe.txt" "$a/pe-ok.txt"
 # The fast check at a Stop: CHECK_FAST runs only when a file other than Markdown differs from the
-# base, never as the default scripts/check-docs.sh, blocks on a failure, and lets the agent stop
-# during a merge conflict.
+# base, never when empty or the default scripts/check-docs.sh, blocks on a failure, and lets the
+# agent stop during a merge conflict.
 (cd "$a" && "$work/sj" 's.hooks.Stop[0].hooks.filter(h => h.command.endsWith("/stop-check-fast.sh")).length === 1') ||
   fail "settings: the fast Stop hook is not registered once"
 fast() { (cd "$a" && printf '{"session_id":"fast"}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/stop-check-fast.sh > "$work/fast.log" 2>&1); }
@@ -342,6 +342,10 @@ start=$(git -C "$a" rev-parse HEAD)
 echo x > "$a/src.txt" && cp "$a/scripts/check-docs.sh" "$work/check-docs.keep" &&
   printf '#!/usr/bin/env bash\necho check-docs ran; exit 1\n' > "$a/scripts/check-docs.sh"
 fast; [ $? -eq 0 ] && [ ! -s "$work/fast.log" ] || { cat "$work/fast.log"; fail "stop-check-fast: the default CHECK_FAST runs"; }
+cp "$a/scripts/env.sh" "$work/env.keep" && printf '#!/usr/bin/env bash\ntouch "%s/env.ran"; exit 1\n' "$work" > "$a/scripts/env.sh" &&
+  sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
+fast; [ $? -eq 0 ] && [ ! -e "$work/env.ran" ] && [ ! -s "$work/fast.log" ] || { cat "$work/fast.log"; fail "stop-check-fast: an empty CHECK_FAST runs"; }
+cp "$work/env.keep" "$a/scripts/env.sh" && git -C "$a" checkout -q -- .claude/harness.conf
 cp "$work/check-docs.keep" "$a/scripts/check-docs.sh" && rm "$a/src.txt"
 sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=echo fast-ran; test ! -e $work/fail.flag#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
 gitc "$a" commit -q -am "fast check" && touch "$work/fail.flag"
