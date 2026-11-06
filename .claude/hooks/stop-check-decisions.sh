@@ -13,10 +13,10 @@ set -uo pipefail
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$root" ] || exit 0
 cd "$root" || exit 0
-# During an unresolved merge conflict (a template update) the checks cannot pass yet; let the
+# During an unresolved merge conflict the checks cannot pass yet; let the
 # agent stop and ask instead of looping.
 if [ -n "$(git ls-files -u 2>/dev/null)" ]; then
-  echo "Unresolved merge conflicts: checks resume once they are resolved (docs/contributing.md, section 5)." >&2
+  echo "Unresolved merge conflicts: checks resume once they are resolved (git status lists them)." >&2
   exit 0
 fi
 RALPH_SESSION=$(node scripts/lib/json.mjs get session_id none 2>/dev/null || echo none)

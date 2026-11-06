@@ -1,7 +1,8 @@
 # Decision-record integrity and merge readiness (docs/documentation-rules.md, sections 5 and 7).
 # Same script as the local Stop hook
-# .claude/hooks/stop-check-decisions.sh. Without branch protection a failing job
-# does not block the merge: it tells the owner that merging now is a deliberate exception.
+# .claude/hooks/stop-check-decisions.sh. The ruleset of scripts/protect-branch.sh, once the owner
+# sets it, requires `integrity`; `readiness` is never required: a failing run tells the owner
+# that merging now is a deliberate exception.
 name: decisions
 
 on:
@@ -39,8 +40,10 @@ jobs:
       # The description goes through the environment, never into the command line.
       # Readiness reads the description and the diff (docs/contributing.md, section 3). A pull
       # request that a workflow opened with GITHUB_TOKEN has a generated description: only its
-      # decision records are checked.
+      # decision records are checked. `shell: bash` adds pipefail: a failing --classes is not
+      # hidden by the pipe into awk.
       - name: description ready, no added record still proposed
+        shell: bash
         env:
           BASE_REF: ${{ github.base_ref }}
           PR_BODY: ${{ github.event.pull_request.body }}
