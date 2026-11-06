@@ -117,7 +117,7 @@ These rules apply once code exists; they are fixed now so the first code follows
 | Status correctness | none | status matches the evidence (section 3) |
 | Invented facts | none | every new fact has a source or is marked unknown |
 | Duplication | none | new content links instead of copying |
-| Currency | none | `verified-against` and the map are updated |
+| Currency | the SessionStart hook flags each plan past its `review-by` (section 5), with the branch, its base, and the uncommitted files | `verified-against` and the map are updated |
 | Documentation updated together with code | {% if docs_review %}`docs-review` workflow on pull requests, one pass, a sensor{% else %}none{% endif %} | reviewer confirms the owner document changed |
 | ADRs on `main` change only their status line (section 5); new ADRs carry `scope` and `summary`; the decision index matches the records | `scripts/check-decisions.sh`: Stop hook and `decisions` workflow | none |
 | A new ADR meets the criteria of section 5 | none | {% if docs_review %}`docs-review` reports it; {% endif %}the owner decides |
