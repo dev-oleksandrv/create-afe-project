@@ -28,7 +28,7 @@ f3646228c31f39248167af0a03cecc9bfb8b32a2e2a2a2a14ff178dacbffbbc5  .claude/hooks/
 5c1cf91707d3a4d48651a650d25c154aef050d7dd55a420125ddc313cd592b2a  .claude/hooks/stop-check-template.sh
 a796ae0a9319e6eeda083c6f6b8e7711ed7a81338ab3941b4705c1587cbcb5c0  .claude/hooks/stop-check-fast.sh
 38f9678df4b01c932e551da81047132b28adeb37de5852456cde2ccc48230aea  .claude/hooks/stop-run-project-hooks.sh
-c1a7dc5d9d23232f6d67d14da8eeb23ae67fb4d638be39d2eaf2ff06af7b2ed2  .claude/skills/create-pr/SKILL.md
+0194a8371dc36db489f5ad91cd1a090300edec788bef7627ff39fc3042970527  .claude/skills/create-pr/SKILL.md
 70a9f59dcb93bdbcf2a8c6a72c8c48a22d14b9a9d65af9913b7842b0bbb52a6b  .claude/skills/afe-init/SKILL.md
 4d7dbe64590409479b0debd9bb1839a92e09980f7811db84d46064c3ea4d0486  .claude/skills/update-template/SKILL.md
 e098d701656455601c2ef45c2cfedfaca9e51551fc1369875a293945608b1af1  .claude/skills/docs-review/SKILL.md
