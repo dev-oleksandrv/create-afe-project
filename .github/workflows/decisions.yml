@@ -48,6 +48,8 @@ jobs:
         run: |
           if [ "$PR_AUTHOR" = 'github-actions[bot]' ]; then
             echo "== a pull request opened by a workflow: its generated description is not checked"
+            scripts/check-decisions.sh --base "origin/$BASE_REF" --classes |
+              awk -F '\t' '$1 == "gate" || $1 == "approval" {print "class " $1 ", for the owner'"'"'s review: " $2}'
             scripts/check-decisions.sh --base "origin/$BASE_REF" --ready
           else
             printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"

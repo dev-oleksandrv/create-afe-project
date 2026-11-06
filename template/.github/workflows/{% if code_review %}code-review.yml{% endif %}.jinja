@@ -23,7 +23,8 @@ permissions:
 jobs:
   review:
     # A pull request that a workflow opened with GITHUB_TOKEN, such as a generated release pull
-    # request, is not reviewed: the action refuses runs started by a bot, and the owner reviews it.
+    # request, is not reviewed: its content is generated and the owner reviews it; the action also
+    # refuses the runs a bot starts.
     if: {{ '${{' }} !github.event.pull_request.draft && github.event.pull_request.user.login != 'github-actions[bot]' {{ '}}' }}
     runs-on: {{ '${{' }} fromJSON(vars.CI_RUNS_ON || '{{ ci_runs_on_default }}') {{ '}}' }}
     timeout-minutes: 30

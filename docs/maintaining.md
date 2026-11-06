@@ -150,8 +150,12 @@ Before 1.0.0, MINOR takes the role of MAJOR.
    Version PR is exempt from the description sections of readiness: its description is generated.
    The workflows know it by its author, `github-actions[bot]`: readiness checks only its decision
    records, and `docs-review` and `code-review` skip it, since the action refuses runs a bot
-   starts. The repository setting "Allow GitHub Actions to create and approve pull requests" must
-   be on, or the `version` workflow cannot open the Version PR.
+   starts; readiness prints its gate and approval paths for the owner, who reviews them before the
+   merge, as part of the release decision. The repository setting "Allow GitHub Actions to create
+   and approve pull requests" must be on, or the `version` workflow cannot open the Version PR.
+   With it on, anyone with write access can have a workflow open a pull request as
+   `github-actions[bot]` and so skip the description sections and the reviews; the owner, who
+   merges every pull request, sees the author.
 2. Before merging it, the measurement of section 6 runs, and its proposals go to the owner.
    Merging the Version PR is the owner's release decision.
 3. The push of that merge finds no changeset pending (an empty changeset counts as none: it
