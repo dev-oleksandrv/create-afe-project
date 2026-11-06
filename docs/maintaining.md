@@ -78,7 +78,8 @@ readiness, and the forms readiness rejects (no Acceptance, an Acceptance item wi
 existing path (a root-level test file counts, a version does not), no Metrics, a Metrics row
 outside its forms, unanswered findings, a blocker as a limit, a missing or repeated measure (`Regression of` included), an added owner marker in a Markdown file or a touched gate file that
 the description does not name); the class of each kind of path and the review level of
-`--classes` (`contracts/` is high); the totals, distributions, regression rate, and hours to
+`--classes` (`contracts/` is high; dependency updates, pre-commit hooks, task runners, and tool
+versions are gate, each line of their block with a file it matches); the totals, distributions, regression rate, and hours to
 merge of `scripts/pr-metrics.sh` against a stand-in for `gh`, and its warning when `--limit`
 cuts the period; and which edits and commands the protect hook asks for (class
 approval, an `approval` line over a built-in allowance, secrets, the irreversible commands it

@@ -27,12 +27,53 @@ high *billing/*
 high *payments/*
 high contracts/*
 
-# Gates: workflows, the project's checks and Stop hooks, harness settings, dependency manifests
-# and lock files, and the configuration of linters, test runners, coverage, and mutation testing.
+# Gates: workflows, the project's checks and Stop hooks, and the harness settings.
 gate .github/workflows/*
 gate scripts/checks.d/*
 gate .claude/hooks/project/*
 gate .claude/harness.conf
+
+# Gates of any stack: dependency updates, pre-commit hooks, task runners, and tool versions. The
+# `*/` lines gate the files of Make, just, and Task in subdirectories too, and `*.mk` every file
+# with that extension; tool versions and mise are gated at the root only.
+gate .github/dependabot.y*ml
+gate renovate.json*
+gate .github/renovate.json*
+gate .renovaterc*
+gate .pre-commit-config.yaml
+gate Makefile
+gate */Makefile
+gate makefile
+gate */makefile
+gate GNUmakefile
+gate */GNUmakefile
+gate *.mk
+gate justfile
+gate */justfile
+gate Justfile
+gate */Justfile
+gate .justfile
+gate */.justfile
+gate Taskfile.y*ml
+gate */Taskfile.y*ml
+gate Taskfile.dist.y*ml
+gate */Taskfile.dist.y*ml
+gate taskfile.y*ml
+gate */taskfile.y*ml
+gate taskfile.dist.y*ml
+gate */taskfile.dist.y*ml
+gate .tool-versions
+gate mise.toml
+gate mise.*.toml
+gate .mise.toml
+gate .mise.*.toml
+gate mise/config.toml
+gate .mise/config.toml
+gate .config/mise.toml
+gate .config/mise/*
+
+# Dependency manifests and lock files, and the configuration of linters, test runners, coverage,
+# and mutation testing.
 gate package.json
 gate */package.json
 gate package-lock.json

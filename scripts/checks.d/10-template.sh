@@ -238,6 +238,14 @@ expect_pass "env.sh: an unset command is SKIP, a set one runs with its exit code
 expect_pass "settings deny reading secrets" bash -c 'for r in "Read(**/.env)" "Read(**/.env.*)" "Read(**/*.pem)" "Read(**/*.key)"; do "$work/sj" "s.permissions.deny.includes(process.argv[1])" "$r" || exit 1; done'
 expect_fail "a touched gate file not listed" bash -c 'gatefile && ready "$work/r-none.md"'
 expect_pass "a touched gate file listed under Gate files" bash -c 'gatefile && ready "$work/r-gate.md"'
+expect_pass "dependency updates, pre-commit hooks, task runners, and tool versions are class gate" bash -c 'fs=".github/dependabot.yml .github/dependabot.yaml
+  renovate.json renovate.json5 .github/renovate.json .renovaterc .renovaterc.json .pre-commit-config.yaml Makefile svc/Makefile makefile GNUmakefile
+  build/common.mk justfile svc/justfile Justfile .justfile Taskfile.yml Taskfile.yaml svc/Taskfile.yml Taskfile.dist.yml taskfile.yml taskfile.dist.yaml
+  svc/makefile svc/GNUmakefile svc/a/x.mk svc/Justfile svc/.justfile svc/Taskfile.dist.yml svc/taskfile.yml svc/taskfile.dist.yaml
+  .tool-versions mise.toml mise.local.toml .mise.toml .mise.ci.toml mise/config.toml .mise/config.toml .config/mise.toml .config/mise/config.toml";
+  . scripts/lib/classes.sh && for f in $fs; do [ "$(class_of "$f" HEAD)" = gate ] || { echo "not gate: $f"; exit 1; }; done &&
+  mkdir -p svc && echo x > Makefile && echo x > svc/justfile && out=$(classes) && printf "%s\n" "$out" | grep -qx "gate	Makefile" &&
+  printf "%s\n" "$out" | grep -qx "gate	svc/justfile"'
 expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/plans src/auth && echo x > docs/plans/x.md && echo x >> docs/README.md &&
   echo x > src/app.py && echo x > src/auth/login.py && echo "{}" > .mcp.json && echo x >> docs/contributing.md && record 0001 accepted &&
   out=$(classes) && for l in "gate	scripts/checks.d/20-x.sh" "low	docs/plans/x.md" "approval	docs/README.md" "normal	src/app.py" \
