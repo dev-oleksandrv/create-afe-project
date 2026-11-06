@@ -299,6 +299,22 @@ expect_pass "review: one for code" bash -c 'mkdir -p src && echo x > src/app.py 
 expect_pass "review: none for a template update" bash -c 'echo x >> docs/contributing.md && echo x >> scripts/check.sh && echo " " >> .afe-answers.json && echo x >> .claude/harness.conf && classes | grep -qx "review	none"'
 expect_pass "review: one for template-owned edits without an update" bash -c 'echo x >> docs/contributing.md && echo x >> scripts/check.sh && classes | grep -qx "review	one"'
 
+# A pull request that a workflow opened with GITHUB_TOKEN (a generated release pull request) has
+# a generated description: the readiness step of the workflow, run as written, checks only its
+# decision records, and the AI reviews skip it; a person's empty description still fails.
+awk '/name: description ready/ {f = 1} f && /run: \|/ {r = 1; next} r && !/^          / {exit} r {sub(/^          /, ""); print}' \
+  "$a/.github/workflows/decisions.yml" > "$work/ready.sh"
+[ -s "$work/ready.sh" ] || fail "decisions.yml: no readiness step to run"
+git -C "$a" update-ref refs/remotes/origin/ready-base HEAD
+(cd "$a" && BASE_REF=ready-base RUNNER_TEMP="$work" PR_BODY= PR_AUTHOR='github-actions[bot]' bash "$work/ready.sh" > "$work/ready.log" 2>&1) ||
+  { cat "$work/ready.log"; fail "readiness: checks the generated description of a pull request a workflow opened"; }
+(cd "$a" && BASE_REF=ready-base RUNNER_TEMP="$work" PR_BODY= PR_AUTHOR=someone bash "$work/ready.sh" > "$work/ready.log" 2>&1) &&
+  fail "readiness: passes the empty description of a pull request a person opened"
+git -C "$a" update-ref -d refs/remotes/origin/ready-base
+for w in docs-review code-review; do
+  grep -qF "if: \${{ !github.event.pull_request.draft && github.event.pull_request.user.login != 'github-actions[bot]' }}" "$a/.github/workflows/$w.yml" ||
+    fail "$w.yml: reviews a pull request that a workflow opened"
+done
 echo "== metrics of merged pull requests on variant A"
 # A stand-in for gh that answers `gh pr list` with three merged pull requests: two in the period,
 # one of them without a Metrics section, and one before it.

@@ -99,7 +99,9 @@ rule that a flaky test is fixed, never retried or rerun until green, and that sk
 blocker; that the rubric of variant A has the
 "Dependencies" row and the `review-code` skill lists dependencies among its criteria and says
 what to check for an added one; that the `create-pr` skill takes
-findings only from the review bot and the repository's owner, members, and collaborators; that the SessionStart hook prints at
+findings only from the review bot and the repository's owner, members, and collaborators; that the readiness step of the `decisions` workflow, run as
+written, checks only the decision records of a pull request that `github-actions[bot]` opened and
+still fails a person's empty description, and that the AI reviews skip such a pull request; that the SessionStart hook prints at
 most ten lines of local state (the branch, its base and the commits ahead, uncommitted and
 untracked files, merge conflicts, plans and their `review-by`, past ones first and counted when
 not shown), only the plans outside a repository, and nothing in an empty directory; that the fast Stop hook runs
@@ -146,6 +148,10 @@ Before 1.0.0, MINOR takes the role of MAJOR.
    `CHANGELOG.md` section `## X.Y.Z`, and runs `scripts/sync-self.sh`. It starts the `docs`
    workflow on that branch, because a pull request opened with `GITHUB_TOKEN` starts none. The
    Version PR is exempt from the description sections of readiness: its description is generated.
+   The workflows know it by its author, `github-actions[bot]`: readiness checks only its decision
+   records, and `docs-review` and `code-review` skip it, since the action refuses runs a bot
+   starts. The repository setting "Allow GitHub Actions to create and approve pull requests" must
+   be on, or the `version` workflow cannot open the Version PR.
 2. Before merging it, the measurement of section 6 runs, and its proposals go to the owner.
    Merging the Version PR is the owner's release decision.
 3. The push of that merge finds no changeset pending (an empty changeset counts as none: it

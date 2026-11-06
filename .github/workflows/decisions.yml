@@ -37,11 +37,19 @@ jobs:
           fetch-depth: 0
 
       # The description goes through the environment, never into the command line.
-      # Readiness reads the description and the diff (docs/contributing.md, section 3).
+      # Readiness reads the description and the diff (docs/contributing.md, section 3). A pull
+      # request that a workflow opened with GITHUB_TOKEN has a generated description: only its
+      # decision records are checked.
       - name: description ready, no added record still proposed
         env:
           BASE_REF: ${{ github.base_ref }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
-          scripts/check-decisions.sh --base "origin/$BASE_REF" --ready --pr-body "$RUNNER_TEMP/pr-body.md"
+          if [ "$PR_AUTHOR" = 'github-actions[bot]' ]; then
+            echo "== a pull request opened by a workflow: its generated description is not checked"
+            scripts/check-decisions.sh --base "origin/$BASE_REF" --ready
+          else
+            printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+            scripts/check-decisions.sh --base "origin/$BASE_REF" --ready --pr-body "$RUNNER_TEMP/pr-body.md"
+          fi
