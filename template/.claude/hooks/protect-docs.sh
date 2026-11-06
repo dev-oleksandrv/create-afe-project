@@ -16,6 +16,10 @@
 # runs, such as a template update. This is a guard against unreviewed changes, not a security
 # boundary: a command that hides the target path (for example inside a script file, behind a
 # variable, or in a directory changed by a script) is not detected.
+# Not in GitHub Actions: claude-code-action restores .claude/ from the base branch there, but
+# scripts/lib/json.mjs, which this hook runs and which writes its answer, stays at the pull
+# request's head, next to the review job's credentials (docs/documentation-rules.md, section 7).
+[ -z "${GITHUB_ACTIONS:-}" ] || exit 0
 set -uo pipefail
 [ "${DOCS_GUARD:-on}" = "off" ] && exit 0
 

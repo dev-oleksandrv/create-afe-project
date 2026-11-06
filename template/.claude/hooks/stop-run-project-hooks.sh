@@ -3,6 +3,10 @@
 # the same input (docs/documentation-rules.md, section 9). A project hook blocks the agent by
 # exiting with 2; its output goes to the agent. A hook that is not executable blocks too, because
 # a silent gate is worse than a loud one. Other exit codes are reported without blocking.
+# Not in GitHub Actions: claude-code-action restores .claude/ from the base branch there, but the
+# scripts this hook runs or sources, and the project's Stop hooks, stay at the pull request's
+# head, next to the review job's credentials (docs/documentation-rules.md, section 7).
+[ -z "${GITHUB_ACTIONS:-}" ] || exit 0
 set -uo pipefail
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$root" ] || exit 0

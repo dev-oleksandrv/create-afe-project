@@ -2,6 +2,10 @@
 # Stop hook: Claude Code may not finish a turn while a template-owned file differs from the template
 # or AGENTS.md lost its project block (docs/documentation-rules.md, section 9). Exit 2 sends the
 # agent back with the check output. DOCS_GUARD=off disables it, as for the protect hook.
+# Not in GitHub Actions: claude-code-action restores .claude/ from the base branch there, but the
+# scripts this hook runs or sources stay at the pull request's head, next to the review job's
+# credentials (docs/documentation-rules.md, section 7).
+[ -z "${GITHUB_ACTIONS:-}" ] || exit 0
 set -uo pipefail
 [ "${DOCS_GUARD:-on}" = "off" ] && exit 0
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"

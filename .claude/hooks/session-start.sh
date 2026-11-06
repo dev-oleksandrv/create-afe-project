@@ -6,6 +6,10 @@
 # its review-by date, flagged when the date is past (section 5), past ones first. At most 10 lines
 # and local facts only: no network. Outside a git repository only the plans are shown. What it
 # cannot determine it leaves out; it always exits 0.
+# Not in GitHub Actions: claude-code-action restores .claude/ from the base branch there, but the
+# scripts this hook runs or sources stay at the pull request's head, next to the review job's
+# credentials (docs/documentation-rules.md, section 7).
+[ -z "${GITHUB_ACTIONS:-}" ] || exit 0
 set -uo pipefail
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$root" ] || exit 0
