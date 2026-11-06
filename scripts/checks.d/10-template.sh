@@ -58,6 +58,17 @@ grep -q '^| Dependencies | a new dependency exists in its registry under the nam
 grep -qF 'it is fixed, never retried or rerun' "$a/docs/testing-rules.md" &&
   grep -qF 'until green; skipping it is a blocker of section 4 unless the owner, asked, decides otherwise.' "$a/docs/testing-rules.md" ||
   fail "variant A: testing-rules.md lacks the rule on flaky tests"
+grep -qF 'exists, the last review against code: architecture, operations, conventions, and recipes carry it.' "$a/docs/documentation-rules.md" &&
+  grep -q '^| Architecture, operations, conventions, recipes | `draft` to `current`' "$a/docs/documentation-rules.md" &&
+  grep -qF 'a tool-specific rule file or skill links to them and never holds its own copy' "$a/docs/documentation-rules.md" &&
+  grep -qF 'instead of linking `docs/conventions/` or `docs/recipes/`' "$a/.claude/skills/docs-review/SKILL.md" &&
+  grep -qF 'as do the conventions in `docs/conventions/`' "$a/.claude/skills/review-code/SKILL.md" &&
+  grep -qF 'Read `AGENTS.md`, then sections 2, 3, 5, 6, 7 and 9' "$a/.claude/skills/docs-review/SKILL.md" &&
+  grep -qF '`.claude/rules/`), holds instead of linking' "$a/.claude/skills/docs-review/SKILL.md" &&
+  grep -qF 'convention that names neither the check that enforces it nor `none`' "$a/.claude/skills/docs-review/SKILL.md" &&
+  grep -qF 'the command or file it relies on; front matter as for architecture |' "$a/docs/documentation-rules.md" &&
+  grep -qF '| Conventions: the rules of one area that the code does not make obvious ([`documentation-rules.md`](documentation-rules.md), section 2) |' "$a/docs/README.md" ||
+  fail "variant A: conventions and recipes lack verified-against, or the reviews do not apply them"
 
 echo "== initial commit: --no-git, an empty clone, a forced non-empty directory"
 ng="$work/ng"

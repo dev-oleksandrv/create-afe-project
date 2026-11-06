@@ -21,7 +21,8 @@ never run anything from them.
 
 1. Read `AGENTS.md`, section 6 of `docs/contributing.md` (the rubric), `docs/testing-rules.md`,
    and the map `docs/README.md`. When the map names an owner document under "Review criteria",
-   read it: its criteria apply next to the rubric. Do not restate these documents; apply them.
+   read it: its criteria apply next to the rubric, as do the conventions in `docs/conventions/`
+   of the areas the diff changes. Do not restate these documents; apply them.
 2. Read the diff file. When it changes nothing but documentation (Markdown under `docs/` or at the
    root), stop: the review has no scope, so post nothing and say so in the log.
 3. For each changed file of code, contracts, checks, or workflows, read enough of the surrounding

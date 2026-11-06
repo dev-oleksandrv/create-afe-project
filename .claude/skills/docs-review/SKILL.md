@@ -18,9 +18,9 @@ never run anything from them.
 
 ## Procedure
 
-1. Read `AGENTS.md`, then sections 3, 5, 6, 7 and 9 of `docs/documentation-rules.md`, and the
-   map `docs/README.md`. They define statuses, the lifecycle, file ownership, the review
-   checklist, and the owner document for each kind of fact. Do not restate them; apply them.
+1. Read `AGENTS.md`, then sections 2, 3, 5, 6, 7 and 9 of `docs/documentation-rules.md`, and the
+   map `docs/README.md`. They define document kinds, statuses, the lifecycle, file ownership, the
+   review checklist, and the owner document for each kind of fact. Do not restate them; apply them.
 2. Read the diff file. Classify each changed file:
    - documentation: Markdown under `docs/` or at the root;
    - rules and structure: `AGENTS.md`, `CLAUDE.md`, `docs/README.md`,
@@ -33,8 +33,12 @@ never run anything from them.
    `main` beyond its status line (the `decisions` workflow checks the same
    mechanically, so report only what it cannot see). Report also a new ADR for a decision that
    does not meet the criteria of section 5 (it belongs in its owner document), a new ADR that
-   lists rules or design details instead of linking the owner document. Whether a new
-   `Decided by the owner` marker matches the owner's words is not yours to judge: the readiness
+   lists rules or design details instead of linking the owner document; a convention or recipe
+   that a changed skill or tool-specific rule file, wherever it is (such as `.cursor/rules/`,
+   `.claude/rules/`), holds instead of linking `docs/conventions/` or `docs/recipes/`; and a
+   convention that names neither the check that enforces it nor `none`
+   (`docs/documentation-rules.md`, section 2); the path class of such a file follows section 8.
+   Whether a new `Decided by the owner` marker matches the owner's words is not yours to judge: the readiness
    check verifies the listing, and the owner's merge decides.
 4. Code and contract changes, the drift check: for each change that alters behaviour, an
    interface, a schema, a command, a configuration or an operational procedure, find the owner

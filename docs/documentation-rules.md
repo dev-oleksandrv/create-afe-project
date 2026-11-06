@@ -29,8 +29,8 @@ template (section 8). It has at most 200 lines (checked): an addition pays with 
 | Invariants register | `docs/invariants.md` | one `INV-NN` per invariant that must hold everywhere (`testing-rules.md`, section 4); fields `statement`, `source` (the requirement or owner decision), `enforced-by` (the test or project check that fails when it breaks, or `none`, which is an open question) |
 | Architecture | `docs/architecture/` | the system map: components, domain ownership, public interfaces and the dependency rules a project check enforces; explanation and reference; front matter `status`, `date`, `verified-against` (commit, or `none` while no code exists) |
 | Contract | `contracts/` | machine-readable, for example OpenAPI or JSON Schema; the file is the contract; prose links to it |
-| Operations | `docs/operations/` | how-to; every procedure names the command or file it relies on |
-| Conventions and recipes | `docs/conventions/`, `docs/recipes/` | one area or task per file; a convention names the check that enforces it, or `none`; a recipe lists its steps and commands, and skills link to it |
+| Operations | `docs/operations/` | how-to; every procedure names the command or file it relies on; front matter as for architecture |
+| Conventions and recipes | `docs/conventions/<area>.md`, `docs/recipes/<task>.md` | conventions: reference, the rules of one area that the code does not make obvious, each naming the lint rule or check that enforces it, or `none` when only the review does; component boundaries and dependency rules stay in architecture; recipes: how-to, the steps of one repeated development task, each naming the command or file it relies on, while running the system stays in operations; a tool-specific rule file or skill links to them and never holds its own copy; front matter as for architecture |
 
 This is the fixed set of document kinds the template defines; another project document, such as
 a changelog, exists only when the owner approves it and the map lists it. Front matter is YAML
@@ -43,7 +43,7 @@ between `---` lines at the top of the file.
 | ADR | `proposed` to `accepted` or `rejected`; `accepted` to `deprecated` or `superseded by ADR-NNNN` | owner; agents create `proposed` |
 | Requirement | `draft` to `approved` to `implemented` or `retired` | owner; `implemented` needs a linked test |
 | Plan | `active`, then the file is deleted when done or abandoned | the change that completes or abandons it |
-| Architecture, operations | `draft` to `current`; `current` with a stale `verified-against` is suspect | the reviewer who verified it against code |
+| Architecture, operations, conventions, recipes | `draft` to `current`; `current` with a stale `verified-against` is suspect | the reviewer who verified it against code |
 | Owner decision in an owner document | a statement carries its document's status until the owner decides it; then it ends with, or its section opens with, `Decided by the owner, YYYY-MM-DD.` | owner; an agent adds the marker only on the owner's explicit instruction and lists it in the pull request (`contributing.md`, section 3); the owner's merge confirms it |
 
 Wording rules for behaviour:
@@ -59,8 +59,8 @@ Wording rules for behaviour:
 ## 4. Currency
 
 A document is current when its content agrees with its owner source (code, contract, decision).
-`date` records the last content change. `verified-against: <commit>` records the last review
-against code and is required for architecture and operations documents once code exists.
+`date` records the last content change; `verified-against: <commit>`, or `none` while no code
+exists, the last review against code: architecture, operations, conventions, and recipes carry it.
 Touching a file or bumping a date is not verification.
 
 ## 5. Lifecycle
@@ -102,7 +102,7 @@ These rules apply once code exists; they are fixed now so the first code follows
   that describes behaviour links to the test or module. A described behaviour without a test is
   `proposed`, not `implemented`.
 - CI runs the documentation checks, the contract checks, and the tests on every pull request.
-- Architecture documents carry `verified-against`; a review against code updates it.
+- The documents of section 4 carry `verified-against`; a review against code updates it.
 - With the first code: the project adds its code checks to `scripts/checks.d/` (section 9), and
   `docs/README.md` moves "implemented behaviour" to existing.
 
