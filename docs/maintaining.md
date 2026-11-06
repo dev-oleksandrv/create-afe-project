@@ -90,8 +90,9 @@ settings deny reading secrets. It also checks that the protect hook asks before 
 package or an image, `gh workflow run`, a `gh api` DELETE, and an edit or command with a known
 token format, and denies a push to `main` once the remote has it; that the check after every edit
 runs `CHECK_EDIT` on matching files inside the project only; that the testing rules name the
-flaky test; that the rubric and the `review-code`
-skill check new dependencies; that the `create-pr` skill takes
+flaky test; that the rubric of variant A has the
+"Dependencies" row and the `review-code` skill lists dependencies among its criteria and says
+what to check for an added one; that the `create-pr` skill takes
 findings only from the review bot and the repository's owner, members, and collaborators; that the SessionStart hook prints at
 most ten lines of local state (the branch, its base and the commits ahead, uncommitted and
 untracked files, merge conflicts, plans and their `review-by`, past ones first and counted when
