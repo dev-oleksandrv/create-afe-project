@@ -230,9 +230,13 @@ write_targets() {
 # --force-if-includes, --delete, --mirror, --prune, or --tags, a short option that contains f or
 # d (-f, -uf, -d), a refspec that starts with + or :, or a tag (refs/tags/..., or v followed by a
 # digit, the form of a release); `gh pr merge`; `gh release create` or `gh release delete`;
-# `gh repo delete`; `gh workflow run`; `gh api` with the method DELETE; and publishing a package
-# or an image: `npm`, `pnpm`, `yarn`, `bun`, `cargo`, `poetry`, or `uv publish`, `twine upload`,
-# `gem push`, `dotnet nuget push`, `docker` or `podman push`.
+# `gh repo delete`; `gh workflow run`; `gh api` with the method DELETE; a change of repository
+# settings: `scripts/protect-branch.sh` (by any path, or through bash, sh, zsh, or source) without
+# --dry-run, and `gh api` with the method PATCH, PUT, or POST (-X, --method, or POST implied by
+# -f, -F, --field, --raw-field, or --input) on `repos/OWNER/REPO` itself, its `rulesets`, or a
+# `branches/BRANCH/protection`, while other endpoints such as comments and replies pass; and
+# publishing a package or an image: `npm`, `pnpm`, `yarn`, `bun`, `cargo`, `poetry`, or
+# `uv publish`, `twine upload`, `gem push`, `dotnet nuget push`, `docker` or `podman push`.
 # With "push" as $2 it prints instead the words of the first `git push` that are not options:
 # the remote and the refspecs, one per line, or "-" alone when there are none.
 irreversible() {
@@ -262,8 +266,33 @@ irreversible() {
       if (cmd == "gh" && ((sub1 == "pr" && sub2 == "merge") || (sub1 == "release" && sub2 ~ /^(create|delete)$/) || (sub1 == "repo" && sub2 == "delete") || (sub1 == "workflow" && sub2 == "run"))) {
         print "gh " sub1 " " sub2; exit
       }
+      scr = cmd; x = k
+      if (cmd ~ /^(bash|sh|zsh|source|\.)$/) { x = k + 1; while (x <= m && w[x] ~ /^-/) x++; scr = w[x]; sub(/.*\//, "", scr) }
+      gsub(/["\047]/, "", scr)
+      if (scr == "protect-branch.sh") {
+        dry = 0
+        for (j = x + 1; j <= m; j++) { a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a); if (a == "--dry-run") dry = 1 }
+        if (!dry) { print "scripts/protect-branch.sh without --dry-run"; exit }
+      }
       if (cmd == "gh" && sub1 == "api") {
-        for (j = s + 1; j <= m; j++) if ((w[j] ~ /^(-X|--method)$/ && toupper(w[j + 1]) == "DELETE") || toupper(w[j]) ~ /^(-XDELETE|--METHOD=DELETE)$/) { print "gh api DELETE"; exit }
+        meth = ""; body = 0; ep = ""
+        for (j = s + 1; j <= m; j++) {
+          a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a)
+          if (a ~ /^(-X|--method)$/) { meth = w[j + 1]; j++ }
+          else if (a ~ /^--method=/) meth = substr(a, 10)
+          else if (a ~ /^-X./) meth = substr(a, 3)
+          else if (a ~ /^(-f|-F|--field|--raw-field|--input)$/) { body = 1; j++ }
+          else if (a ~ /^(-f|-F)./ || a ~ /^--(field|raw-field|input)=/) body = 1
+          else if (a ~ /^(-H|--header|-q|--jq|-t|--template|--hostname|-p|--preview|--cache)$/) j++
+          else if (a !~ /^-/ && ep == "") ep = a
+        }
+        gsub(/["\047]/, "", meth); meth = toupper(meth)
+        if (meth == "" && body) meth = "POST"
+        if (meth == "DELETE") { print "gh api DELETE"; exit }
+        sub(/^\//, "", ep); sub(/\?.*/, "", ep)
+        if (meth ~ /^(PATCH|PUT|POST)$/ && (ep ~ /^repos\/[^\/]+(\/[^\/]+)?\/?$/ || ep ~ /^repos\/[^\/]+(\/[^\/]+)?\/(rulesets|branches\/.+\/protection)(\/|$)/)) {
+          print "gh api " meth " " ep; exit
+        }
       }
       if ((cmd ~ /^(npm|pnpm|yarn|bun|cargo|poetry|uv)$/ && sub1 == "publish") || (cmd == "twine" && sub1 == "upload") || (cmd == "gem" && sub1 == "push") ||
           (cmd ~ /^(docker|podman)$/ && sub1 == "push") || (cmd == "dotnet" && sub1 == "nuget" && sub2 == "push")) {
