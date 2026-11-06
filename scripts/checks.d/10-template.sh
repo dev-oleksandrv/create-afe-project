@@ -55,6 +55,9 @@ grep -q '^| Dependencies | a new dependency exists in its registry under the nam
   grep -qF 'correctness, tests, errors, security, dependencies, statuses' "$a/.claude/skills/review-code/SKILL.md" &&
   grep -qF 'For a changed dependency manifest or lock file, check each added dependency' "$a/.claude/skills/review-code/SKILL.md" ||
   fail "variant A: the rubric or the review-code skill lacks the Dependencies criterion"
+grep -qF 'it is fixed, never retried or rerun' "$a/docs/testing-rules.md" &&
+  grep -qF 'until green; skipping it is a blocker of section 4 unless the owner, asked, decides otherwise.' "$a/docs/testing-rules.md" ||
+  fail "variant A: testing-rules.md lacks the rule on flaky tests"
 
 echo "== initial commit: --no-git, an empty clone, a forced non-empty directory"
 ng="$work/ng"
