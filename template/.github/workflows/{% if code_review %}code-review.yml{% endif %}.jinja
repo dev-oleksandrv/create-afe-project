@@ -43,7 +43,7 @@ jobs:
       # the Skill tool is allowed explicitly because a headless run denies it otherwise. No plugin
       # is installed: the review rests on the repository's own rules.
       - name: Review
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@v1.0.268
         with:
           claude_code_oauth_token: {{ '${{' }} secrets.CLAUDE_CODE_OAUTH_TOKEN {{ '}}' }}
           track_progress: "true"
