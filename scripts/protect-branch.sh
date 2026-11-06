@@ -7,7 +7,8 @@
 # 1. Merge commits only, without squash and rebase merging, and "Automatically delete head
 #    branches": these work on every plan.
 # 2. Secret scanning with push protection: public repositories have them; a private one may need
-#    GitHub Advanced Security, so a refusal is reported and the script goes on.
+#    GitHub Advanced Security, so a refusal by the plan is reported and the script goes on; any
+#    other error stops it before the ruleset.
 # 3. The repository ruleset "protect default branch": changes reach the default branch only through
 #    pull requests merged with a merge commit whose `check` (`docs` workflow) and `integrity`
 #    (`decisions` workflow) jobs pass, with --require-base also `base`, and only these: `readiness`
@@ -15,7 +16,8 @@
 #    that requires `base` keeps it without --require-base while the fail-without-change workflow
 #    exists, drops it otherwise, and says which; a ruleset it cannot read stops the run unchanged.
 #    Rulesets need a public repository, or a GitHub plan that offers them for private ones;
-#    without one, the rule rests on the owner and review.
+#    without one, the rule rests on the owner and review, and the script says so and ends without
+#    error. It looks the ruleset up by name among the repository's own, not inherited ones.
 #
 # Usage: scripts/protect-branch.sh [--dry-run] [--repo owner/name] [--require-base]
 #   --dry-run       print the settings and the ruleset as one JSON object and change nothing
@@ -70,14 +72,42 @@ part() { plan | node -e 'console.log(JSON.stringify(JSON.parse(require("fs").rea
 command -v gh > /dev/null || { echo "protect-branch: the GitHub CLI gh is required" >&2; exit 2; }
 [ -n "$repo" ] || repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 
+# On an HTTP error, gh api prints the response body on stdout, "gh: <message> (HTTP <status>)" on
+# stderr, and exits with 1; status prints that status, or nothing when no response came.
+status() { printf '%s\n' "$1" | sed -n 's/.*(HTTP \([0-9][0-9]*\))$/\1/p' | tail -n 1; }
+
 part repository | gh api --method PATCH "repos/$repo" --input - > /dev/null
 echo "== $repo: merge commits only, head branches deleted after the merge"
-if out=$(part security | gh api --method PATCH "repos/$repo" --input - 2>&1 > /dev/null); then
+# A refusal by the plan (HTTP 403 or 422 that names Advanced Security, an upgrade, a purchase, or
+# the feature as not available) goes on; any other error stops the run before the ruleset.
+if out=$(part security | gh api --method PATCH "repos/$repo" --input - 2>&1); then
   echo "== $repo: secret scanning and push protection on"
 else
+  case "$(status "$out")" in
+    403|422) printf '%s\n' "$out" | grep -qiE 'advanced security|not available|purchase|upgrade' && refused=1 || refused= ;;
+    *) refused= ;;
+  esac
+  if [ -z "$refused" ]; then
+    printf 'protect-branch: cannot enable secret scanning on %s; the ruleset is left unchanged:\n%s\n' "$repo" "$out" >&2
+    exit 1
+  fi
   printf '== %s: secret scanning and push protection not set; a private repository may need GitHub Advanced Security:\n%s\n' "$repo" "$out" >&2
 fi
-id=$(gh api "repos/$repo/rulesets" --jq ".[] | select(.name == \"$name\") | .id" | head -n 1)
+# All pages, and only the repository's own rulesets, not those inherited from an organisation.
+# With --paginate, gh applies --jq to each page and prints the results one after the other.
+err=$(mktemp)
+trap 'rm -f "$err"' EXIT
+if ! ids=$(gh api --paginate "repos/$repo/rulesets?includes_parents=false" --jq ".[] | select(.name == \"$name\") | .id" 2> "$err"); then
+  out=$(cat "$err")
+  case "$(status "$out")" in
+    403|404)
+      printf '== %s: rulesets are not available for this repository on its plan; the settings above are applied, and the rule on the default branch rests on the owner and review:\n%s\n' "$repo" "$out" >&2
+      exit 0 ;;
+  esac
+  printf 'protect-branch: cannot list the rulesets of %s:\n%s\n' "$repo" "$out" >&2
+  exit 1
+fi
+id=$(printf '%s\n' "$ids" | head -n 1)
 if [ -n "$id" ] && [ -z "$base" ]; then
   contexts=$(gh api "repos/$repo/rulesets/$id" --jq '.rules[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context') || {
     echo "protect-branch: cannot read the ruleset \"$name\" (id $id) of $repo; it is left unchanged" >&2
