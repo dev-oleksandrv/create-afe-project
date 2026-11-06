@@ -31,7 +31,7 @@ a796ae0a9319e6eeda083c6f6b8e7711ed7a81338ab3941b4705c1587cbcb5c0  .claude/hooks/
 0194a8371dc36db489f5ad91cd1a090300edec788bef7627ff39fc3042970527  .claude/skills/create-pr/SKILL.md
 70a9f59dcb93bdbcf2a8c6a72c8c48a22d14b9a9d65af9913b7842b0bbb52a6b  .claude/skills/afe-init/SKILL.md
 4d7dbe64590409479b0debd9bb1839a92e09980f7811db84d46064c3ea4d0486  .claude/skills/update-template/SKILL.md
-e7275f0f639751feb97e52443896bad4082d9af1a2466820807ffb31987a32e7  .claude/skills/docs-review/SKILL.md
+d37811dac552b99d5a730c5ca5abd30f0ffa93e97a1334e8b7acdf7c736e8f84  .claude/skills/docs-review/SKILL.md
 9c326bb6ee0e571f6ad736f3980aebf1f24a58f9c945bc1f6e93ce9cdb9b0beb  .claude/skills/review-code/SKILL.md
 5445671ef51e11641bb8ab249c745c9aa9e14b522f8fbce5b005c7ff59845a00  .github/workflows/docs.yml
 dcb9e13956a9371169186b38a0cbb4ad29a43912d8e8a8ec0f02933fa49b0b91  .github/workflows/decisions.yml

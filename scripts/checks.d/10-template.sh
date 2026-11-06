@@ -67,7 +67,7 @@ grep -qF 'exists, the last review against code: architecture, operations, conven
   grep -qF '`.claude/rules/`), holds instead of linking' "$a/.claude/skills/docs-review/SKILL.md" &&
   grep -qF 'convention that names neither the check that enforces it nor `none`' "$a/.claude/skills/docs-review/SKILL.md" &&
   grep -qF 'the command or file it relies on; front matter as for architecture |' "$a/docs/documentation-rules.md" &&
-  grep -qF 'or `none` when only the review does' "$a/docs/README.md" ||
+  grep -qF '| Conventions: the rules of one area that the code does not make obvious ([`documentation-rules.md`](documentation-rules.md), section 2) |' "$a/docs/README.md" ||
   fail "variant A: conventions and recipes lack verified-against, or the reviews do not apply them"
 
 echo "== initial commit: --no-git, an empty clone, a forced non-empty directory"

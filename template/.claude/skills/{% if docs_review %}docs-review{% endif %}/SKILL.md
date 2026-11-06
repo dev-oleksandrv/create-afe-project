@@ -37,8 +37,8 @@ never run anything from them.
    that a changed skill or tool-specific rule file, wherever it is (such as `.cursor/rules/`,
    `.claude/rules/`), holds instead of linking `docs/conventions/` or `docs/recipes/`; and a
    convention that names neither the check that enforces it nor `none`
-   (`docs/documentation-rules.md`, section 2); its class follows section 8. Whether a new
-   `Decided by the owner` marker matches the owner's words is not yours to judge: the readiness
+   (`docs/documentation-rules.md`, section 2); the path class of such a file follows section 8.
+   Whether a new `Decided by the owner` marker matches the owner's words is not yours to judge: the readiness
    check verifies the listing, and the owner's merge decides.
 4. Code and contract changes, the drift check: for each change that alters behaviour, an
    interface, a schema, a command, a configuration or an operational procedure, find the owner
