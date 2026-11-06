@@ -1,5 +1,6 @@
-# Sourced by scripts/check-decisions.sh, scripts/fail-without-change.sh, and the Stop hooks
-# .claude/hooks/stop-check-docs.sh and .claude/hooks/stop-check-fast.sh.
+# Sourced by scripts/check-decisions.sh, scripts/fail-without-change.sh, the Stop hooks
+# .claude/hooks/stop-check-docs.sh and .claude/hooks/stop-check-fast.sh, and
+# .claude/hooks/session-start.sh.
 # resolve_base [ref] prints the commit that the current change is compared with:
 # - with a ref: the merge base of that ref and HEAD; an unknown ref is an error (status 2);
 # - without: the merge base with the first of origin/HEAD, origin/main, and main that exists (the
