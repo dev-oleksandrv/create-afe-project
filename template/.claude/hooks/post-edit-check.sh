@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# PostToolUse hook (Edit, Write, MultiEdit): the check after every edit (docs/testing-rules.md,
-# section 4). It runs the project's fast per-file check, CHECK_EDIT of .claude/harness.conf, with
+# PostToolUse hook (Edit, Write, MultiEdit): the check after every edit (docs/documentation-rules.md,
+# section 7). It runs the project's fast per-file check, CHECK_EDIT of .claude/harness.conf, with
 # the changed file as its last argument, and sends a failure back to the agent in the same
 # session (exit 2), before the Stop hooks and CI. CHECK_EDIT_GLOBS (shell globs separated by
 # spaces, * also matches /) limits it to matching files; empty: every file. A relative path is

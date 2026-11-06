@@ -53,8 +53,7 @@ Wording rules for behaviour:
   Proposals say "proposed", accepted decisions "accepted" or "decided", unknown things "not
   decided" or "unknown", never guessed.
 - A statement about a check (a lint rule, a test check, a hook, a workflow) names the forms it
-  catches and what is left to the review; an absolute claim about a check needs a test for each
-  form it covers.
+  catches and what is left to the review; an absolute claim needs a test for each form it covers.
 
 ## 4. Currency
 
@@ -123,7 +122,7 @@ These rules apply once code exists; they are fixed now so the first code follows
 | A new ADR meets the criteria of section 5 | none | `docs-review` reports it; the owner decides |
 | Template-owned files unchanged; one project block in `AGENTS.md`; the line budgets of the rule documents; `.claude/settings.json` generated, and every hook command it names exists (sections 2 and 9) | `scripts/check-template.sh`: Stop hook and `docs` workflow | none |
 | Each invariant names its check (section 2) | none | the review checks `docs/invariants.md` against the checks it names |
-| Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; in Claude Code, `CHECK_FAST` of `.claude/harness.conf` at a Stop when a file other than Markdown differs from the base, skipped when empty or the default `scripts/check-docs.sh` | as the project defines; what `CHECK_FAST` leaves out waits for `scripts/check.sh` |
+| Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; in Claude Code, the commands of `.claude/harness.conf`: `CHECK_EDIT` on each file in the project that an Edit, Write, or MultiEdit call changes and `CHECK_EDIT_GLOBS` matches, and `CHECK_FAST` at a Stop when a file other than Markdown differs from the base; each skips when empty, `CHECK_FAST` also when it is the default `scripts/check-docs.sh` | as the project defines; a file changed by a shell command, and what neither command covers, wait for `scripts/check.sh` |
 | Code and tests meet the review rubric and the testing rules (`contributing.md`, section 6; `testing-rules.md`) | the project's test checks in `scripts/checks.d/`; `code-review` workflow, a sensor | reviewer applies the rubric, by the class of the paths |
 | Merge readiness (`contributing.md`, section 3) | `scripts/check-decisions.sh --ready`, in the forms that section names; `decisions` workflow; signals, does not block | whether the tests prove their identifiers; no `blocker` open; the owner's merge confirms the listed markers |
 | Measurement of the sensors (`contributing.md`, section 3) | `scripts/pr-metrics.sh` aggregates the Metrics of merged pull requests | the owner removes a rule or check that never fires |
@@ -195,6 +194,7 @@ run in name order by `scripts/check.sh` and the `docs` workflow, which provision
 need beyond Git, bash, and Node.js; Stop hooks in `.claude/hooks/project/stop/*.sh`, which
 receive the Stop hook input and block the agent by exiting with 2; its own workflows in
 `.github/workflows/`; its path classes in `.claude/path-classes`; its harness settings in
-`.claude/harness.conf` (the Ralph cap, the identifier pattern, test globs, test commands); and
-its Claude Code settings in `.claude/settings.project.json`. Checks and Stop hooks keep their
-executable bit. Personal settings go into `.claude/settings.local.json`, never committed.
+`.claude/harness.conf` (the Ralph cap, the identifier pattern, test globs, the environment and
+test commands, `CHECK_EDIT` and `CHECK_EDIT_GLOBS`); and its Claude Code settings in
+`.claude/settings.project.json`. Checks and Stop hooks keep their executable bit. Personal
+settings go into `.claude/settings.local.json`, never committed.

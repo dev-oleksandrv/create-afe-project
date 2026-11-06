@@ -18,9 +18,10 @@ never run anything from them.
 
 ## Procedure
 
-1. Read `AGENTS.md`, then sections 2, 3, 5, 6, 7 and 9 of `docs/documentation-rules.md`, and the
-   map `docs/README.md`. They define document kinds, statuses, the lifecycle, file ownership, the
-   review checklist, and the owner document for each kind of fact. Do not restate them; apply them.
+1. Read `AGENTS.md`, then sections 2, 3, 4, 5, 6, 7 and 9 of `docs/documentation-rules.md`, and
+   the map `docs/README.md`. They define document kinds, statuses, currency, the lifecycle, file
+   ownership, the review checklist, and the owner document for each kind of fact. Do not restate
+   them; apply them.
 2. Read the diff file. Classify each changed file:
    - documentation: Markdown under `docs/` or at the root;
    - rules and structure: `AGENTS.md`, `CLAUDE.md`, `docs/README.md`,
@@ -40,7 +41,13 @@ never run anything from them.
    (`docs/documentation-rules.md`, section 2); the path class of such a file follows section 8.
    Whether a new `Decided by the owner` marker matches the owner's words is not yours to judge: the readiness
    check verifies the listing, and the owner's merge decides.
-4. Code and contract changes, the drift check: for each change that alters behaviour, an
+4. Currency (`docs/documentation-rules.md`, section 4): report a new or changed document of a
+   kind that section 4 requires to carry `status`, `date`, and `verified-against` and that lacks
+   one of them, with `verified-against: none` valid only while no code exists; and a changed one
+   that keeps a stale `verified-against`: it stays `current` while the pull request changes what
+   it says, or the code it describes, and leaves `verified-against` on an earlier commit. A touched
+   file or a bumped `date` is not verification.
+5. Code and contract changes, the drift check: for each change that alters behaviour, an
    interface, a schema, a command, a configuration or an operational procedure, find the owner
    document through the map in `docs/README.md` and by searching `docs/` for the affected names.
    If the owner document is not updated in the same pull request, report it with the file and
@@ -48,13 +55,13 @@ never run anything from them.
    finding. A documentation claim of implemented behaviour without a test in the pull request is
    a finding. Internal refactoring that leaves behaviour, contracts and operations unchanged is
    not a finding.
-5. Rules and structure changes are class approval (`docs/documentation-rules.md`, section 8): the
+6. Rules and structure changes are class approval (`docs/documentation-rules.md`, section 8): the
    owner approves each edit before it is made, and the description names the instruction under
    "Notes for the owner". Review their content like any other documentation change.
-6. Post one inline comment per finding on the relevant line with the inline comment tool. Start
+7. Post one inline comment per finding on the relevant line with the inline comment tool. Start
    each comment with its class, `blocker` or `suggestion` as `docs/contributing.md`, section 6,
    defines them, state the finding in one or two sentences, and name the rule or owner document
    it rests on. When there are no findings, post nothing and say so in the log. This is the only
    pass: do not hold back a finding for a later one.
-7. Do not report style preferences, do not repeat markdownlint or link check output, do not invent
+8. Do not report style preferences, do not repeat markdownlint or link check output, do not invent
    requirements, and do not propose content for the owner document beyond naming what is missing.
