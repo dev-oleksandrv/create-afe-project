@@ -241,6 +241,7 @@ expect_pass "a touched gate file listed under Gate files" bash -c 'gatefile && r
 expect_pass "dependency updates, pre-commit hooks, task runners, and tool versions are class gate" bash -c 'fs=".github/dependabot.yml .github/dependabot.yaml
   renovate.json renovate.json5 .github/renovate.json .renovaterc .renovaterc.json .pre-commit-config.yaml Makefile svc/Makefile makefile GNUmakefile
   build/common.mk justfile svc/justfile Justfile .justfile Taskfile.yml Taskfile.yaml svc/Taskfile.yml Taskfile.dist.yml taskfile.yml taskfile.dist.yaml
+  svc/makefile svc/GNUmakefile svc/a/x.mk svc/Justfile svc/.justfile svc/Taskfile.dist.yml svc/taskfile.yml svc/taskfile.dist.yaml
   .tool-versions mise.toml mise.local.toml .mise.toml .mise.ci.toml mise/config.toml .mise/config.toml .config/mise.toml .config/mise/config.toml";
   . scripts/lib/classes.sh && for f in $fs; do [ "$(class_of "$f" HEAD)" = gate ] || { echo "not gate: $f"; exit 1; }; done &&
   mkdir -p svc && echo x > Makefile && echo x > svc/justfile && out=$(classes) && printf "%s\n" "$out" | grep -qx "gate	Makefile" &&
