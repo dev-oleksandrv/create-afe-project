@@ -92,8 +92,8 @@ package or an image, `gh workflow run`, a `gh api` DELETE, a change of repositor
 (`scripts/protect-branch.sh` without `--dry-run`, a `gh api` write on the repository, its
 rulesets, or a branch protection, but not the replies and reads of the `create-pr` skill), and
 an edit or command with a known token format, and denies a push to `main` once the remote has it; that the check after every edit
-runs `CHECK_EDIT` on matching files inside the project only, a relative path resolved against the
-input's `cwd`; that conventions, recipes, and operations
+runs `CHECK_EDIT` on matching files inside the project only, with stdin from `/dev/null`, a
+relative path resolved against the input's `cwd`; that conventions, recipes, and operations
 carry `verified-against`, that the map's conventions row links section 2, and that docs-review
 reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
 rule file and a convention without its check or `none`, and review-code applies the conventions; that the testing rules carry the
@@ -102,13 +102,14 @@ blocker; that the rubric of variant A has the
 "Dependencies" row and the `review-code` skill lists dependencies among its criteria and says
 what to check for an added one; that the `create-pr` skill takes
 findings only from the review bot and the repository's owner, members, and collaborators; that the readiness step of the `decisions` workflow, run as
-written, checks only the decision records of a pull request that `github-actions[bot]` opened and
-still fails a person's empty description, and that the AI reviews skip such a pull request; that the SessionStart hook prints at
+written with the shell it declares, checks only the decision records of a pull request that
+`github-actions[bot]` opened, fails there when its `--classes` call fails, and still fails a person's empty description, and that the AI reviews skip such a pull request; that the SessionStart hook prints at
 most ten lines of local state (the branch, its base and the commits ahead, uncommitted and
 untracked files, merge conflicts, plans and their `review-by`, past ones first and counted when
 not shown), only the plans outside a repository, and nothing in an empty directory; that the fast Stop hook runs
 `CHECK_FAST` only for a change to a file other than Markdown, never as the default, blocks on a
-failure, and lets the agent stop during a merge conflict; that in GitHub Actions every hook but
+failure; that every Stop hook lets the agent stop during a merge conflict and, like the
+SessionStart hook, points to `git status`, not to the update of `contributing.md`, section 5; that in GitHub Actions every hook but
 the protect hook exits 0 before it runs a script of the working tree or a project Stop hook, the
 protect hook still asks and runs no such script, and the review jobs disable all hooks; that a
 hook command whose script is
