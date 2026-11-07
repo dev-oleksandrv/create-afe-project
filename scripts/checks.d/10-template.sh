@@ -175,14 +175,15 @@ in=; case " $* " in *" --input - "*) in=$(cat) ;; esac
 printf '%s | %s\n' "$*" "$in" >> "$work/ghpb.log"
 err() { printf '{"message":"%s","status":"%s"}' "$2" "$1"; printf 'gh: %s (HTTP %s)\n' "$2" "$1" >&2; exit 1; }
 case "$*" in "repo view"*) echo example/sample; exit 0 ;; esac
-# The list of rulesets. GHPB_LIST=403 refuses it as GitHub Free does for a private repository;
-# GHPB_LIST=500 fails otherwise. With GHPB_PARENT set, an organisation ruleset of the same name,
+# The list of rulesets. GHPB_LIST=403 refuses it as GitHub Free does for a private repository,
+# GHPB_LIST=404 as not found; GHPB_LIST=500 fails otherwise. With GHPB_PARENT set, an organisation ruleset of the same name,
 # id 9, comes first unless the query asks for the repository's own (includes_parents=false). With
 # GHPB_RULESET set, the ruleset exists as id 7: on the first page, or with "page2" on the second,
 # which only --paginate reads.
 case "$*" in *"repos/example/sample/rulesets --jq"*|*"repos/example/sample/rulesets?"*" --jq"*)
   case "${GHPB_LIST:-}" in
     403) err 403 "Upgrade to GitHub Pro or make this repository public to enable this feature." ;;
+    404) err 404 "Not Found" ;;
     500) err 500 "Server Error" ;;
   esac
   case "$*" in *includes_parents=false*) ;; *) [ -z "${GHPB_PARENT:-}" ] || echo 9 ;; esac
@@ -196,10 +197,12 @@ case "$*:${GHPB_RULESET:-}" in
   "api repos/example/sample/rulesets/7 --jq"*:base) printf 'check\nintegrity\nbase\n'; exit 0 ;;
   "api repos/example/sample/rulesets/7 --jq"*) printf 'check\nintegrity\n'; exit 0 ;;
 esac
-# Secret scanning: refused by the plan by default; GHPB_SECRET=admin refuses it for a missing
-# permission, =invalid rejects the payload, =network fails without a response, =ok enables it.
+# Secret scanning: refused by the plan by default, with HTTP 422, or with GHPB_SECRET=upgrade with
+# HTTP 403; GHPB_SECRET=admin refuses it for a missing permission, =invalid rejects the payload,
+# =network fails without a response, =ok enables it.
 case "$in:${GHPB_SECRET:-}" in
   *security_and_analysis*:ok) ;;
+  *security_and_analysis*:upgrade) err 403 "Upgrade to GitHub Pro or make this repository public to enable this feature." ;;
   *security_and_analysis*:admin) err 403 "Must have admin rights to Repository." ;;
   *security_and_analysis*:invalid) err 422 "Validation Failed" ;;
   *security_and_analysis*:network) echo "error connecting to api.github.com" >&2; exit 1 ;;
@@ -214,6 +217,9 @@ expect_pass "protect-branch applies the settings, goes on past secret scanning t
   grep -q "^api --method PATCH repos/example/sample --input - | .*\"allow_squash_merge\":false.*\"delete_branch_on_merge\":true" "$work/ghpb.log" &&
   grep -q "^api --method POST repos/example/sample/rulesets --input - | .*\"allowed_merge_methods\":\[\"merge\"\]" "$work/ghpb.log" &&
   [ "$(grep -c "^api --method PATCH repos/example/sample " "$work/ghpb.log")" = 2 ] || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+expect_pass "protect-branch goes on past secret scanning the plan refuses with HTTP 403" bash -c 'rm -f "$work/ghpb.log";
+  out=$(GHPB_SECRET=upgrade PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "secret scanning and push protection not set" &&
+  grep -q "^api --method POST repos/example/sample/rulesets " "$work/ghpb.log" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
 expect_pass "protect-branch still applies the ruleset, then fails naming secret scanning, when it fails for a reason other than the plan" bash -c 'for e in admin invalid network; do rm -f "$work/ghpb.log";
   GHPB_SECRET=$e PATH="$work/ghpb:$PATH" scripts/protect-branch.sh > out.log 2>&1; code=$?;
   [ $code = 1 ] && grep -q "cannot enable secret scanning" out.log && { [ $e = network ] || grep -q "(HTTP 4" out.log; } &&
@@ -222,12 +228,12 @@ expect_pass "protect-branch still applies the ruleset, then fails naming secret 
 expect_pass "protect-branch names a failed secret scanning when the plan then offers no rulesets" bash -c 'rm -f "$work/ghpb.log";
   out=$(GHPB_LIST=403 GHPB_SECRET=admin PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1); code=$?;
   [ $code = 1 ] && printf "%s\n" "$out" | grep -q "rulesets are not available" && printf "%s\n" "$out" | tail -n 1 | grep -q "secret scanning" || { echo "exit $code:"; printf "%s\n" "$out"; exit 1; }'
-expect_pass "protect-branch ends without error after the settings when the plan offers no rulesets" bash -c 'rm -f "$work/ghpb.log";
-  out=$(GHPB_LIST=403 GHPB_SECRET=ok PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) &&
+expect_pass "protect-branch ends without error after the settings when the plan offers no rulesets" bash -c 'for l in 403 404; do rm -f "$work/ghpb.log";
+  out=$(GHPB_LIST=$l GHPB_SECRET=ok PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) &&
   printf "%s\n" "$out" | grep -q "rulesets are not available" && printf "%s\n" "$out" | grep -q "rests on the owner and review" &&
   printf "%s\n" "$out" | grep -q "secret scanning and push protection on" &&
   grep -q "^api --method PATCH repos/example/sample --input - | .*\"delete_branch_on_merge\":true" "$work/ghpb.log" &&
-  ! grep -Eq "^api --method (PUT|POST) " "$work/ghpb.log" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
+  ! grep -Eq "^api --method (PUT|POST) " "$work/ghpb.log" || { echo "case $l:"; printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }; done'
 expect_pass "protect-branch fails with the gh output when listing the rulesets fails otherwise" bash -c 'rm -f "$work/ghpb.log";
   ! GHPB_LIST=500 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh > out.log 2>&1 && grep -q "Server Error (HTTP 500)" out.log &&
   ! grep -q "rulesets are not available" out.log && ! grep -Eq "^api --method (PUT|POST) " "$work/ghpb.log" || { cat out.log; cat "$work/ghpb.log"; exit 1; }'
