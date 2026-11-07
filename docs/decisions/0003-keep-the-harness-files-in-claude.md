@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-11-07
 decision-makers: dev-oleksandrv (repository owner)
 scope: architecture
@@ -17,7 +17,7 @@ migration, because the scripts, hooks, and checks of every tool read them. Relea
 port the move, and no document said why (the 2.0.0 review of 2026-11-06). Upstream 0.8.0 and
 0.9.0 build on `.harness/`, for example `TEST_PLAN` in `.harness/harness.conf`. Where do the
 harness files of a generated project live? The owner chose the option below in the review
-session of 2026-11-06; accepting this record is the owner's step. The two other choices of that
+session of 2026-11-06 and accepted this record on 2026-11-07. The two other choices of that
 port, the ecosystem gate lines and English-only documents, are owner decisions in
 [`docs/maintaining.md`](../maintaining.md), section 1.
 
