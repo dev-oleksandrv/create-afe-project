@@ -72,11 +72,14 @@ grep -qF 'exists, the last review against code: architecture, operations, conven
   grep -qF '| Conventions: the rules of one area that the code does not make obvious ([`documentation-rules.md`](documentation-rules.md), section 2) |' "$a/docs/README.md" ||
   fail "variant A: conventions and recipes lack verified-against, or the reviews do not apply them"
 grep -qF 'Currency (`docs/documentation-rules.md`, section 4): report a new or changed document' "$a/.claude/skills/docs-review/SKILL.md" &&
+  grep -qF 'that sections 2 and 4 require to carry `status`, `date`, and `verified-against` and that lacks' "$a/.claude/skills/docs-review/SKILL.md" &&
   grep -qF 'that keeps a stale `verified-against`' "$a/.claude/skills/docs-review/SKILL.md" ||
   fail "variant A: docs-review does not check the front matter and verified-against of section 4"
 grep -qF '`CHECK_EDIT` on each file in the project that an Edit, Write, or MultiEdit call changes and `CHECK_EDIT_GLOBS` matches' "$a/docs/documentation-rules.md" &&
   grep -qF 'test commands, `CHECK_EDIT` and `CHECK_EDIT_GLOBS`); and its Claude Code settings in' "$a/docs/documentation-rules.md" &&
-  grep -qF 'the check after every edit (docs/documentation-rules.md,' "$a/.claude/hooks/post-edit-check.sh" ||
+  grep -qF 'a file changed by a shell command, and what neither command covers, wait for `scripts/check.sh` |' "$a/docs/documentation-rules.md" &&
+  grep -qF 'the check after every edit (docs/documentation-rules.md,' "$a/.claude/hooks/post-edit-check.sh" &&
+  grep -qF '# section 7). It runs the project' "$a/.claude/hooks/post-edit-check.sh" ||
   fail "variant A: documentation-rules.md, sections 7 and 9, or the post-edit hook do not name CHECK_EDIT"
 grep -qF '| Product name and purpose; the repository settings the owner sets once | [`README.md`](../README.md) |' "$a/docs/README.md" ||
   fail "variant A: the map does not name the repository settings that README.md owns"

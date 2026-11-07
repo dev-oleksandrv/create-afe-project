@@ -41,12 +41,12 @@ never run anything from them.
    (`docs/documentation-rules.md`, section 2); the path class of such a file follows section 8.
    Whether a new `Decided by the owner` marker matches the owner's words is not yours to judge: the readiness
    check verifies the listing, and the owner's merge decides.
-4. Currency (`docs/documentation-rules.md`, section 4): report a new or changed document of a
-   kind that section 4 requires to carry `status`, `date`, and `verified-against` and that lacks
+4. Currency (`docs/documentation-rules.md`, section 4): report a new or changed document of a kind
+   that sections 2 and 4 require to carry `status`, `date`, and `verified-against` and that lacks
    one of them, with `verified-against: none` valid only while no code exists; and a changed one
    that keeps a stale `verified-against`: it stays `current` while the pull request changes what
-   it says, or the code it describes, and leaves `verified-against` on an earlier commit. A touched
-   file or a bumped `date` is not verification.
+   it says, or the code it describes, and leaves `verified-against` on an earlier commit. A
+   touched file or a bumped `date` is not verification.
 5. Code and contract changes, the drift check: for each change that alters behaviour, an
    interface, a schema, a command, a configuration or an operational procedure, find the owner
    document through the map in `docs/README.md` and by searching `docs/` for the affected names.
