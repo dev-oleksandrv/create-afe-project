@@ -240,7 +240,17 @@ write_targets() {
 # With "push" as $2 it prints instead the words of the first `git push` that are not options:
 # the remote and the refspecs, one per line, or "-" alone when there are none.
 irreversible() {
-  printf '%s\n' "$1" | awk -v mode="${2:-}" '{
+  printf '%s\n' "$1" | awk -v mode="${2:-}" '
+  # The last word of an option value that starts in word j as v: past the closing quote when v
+  # opens one, so that a quoted value with spaces ("Accept: x") is not read as an argument.
+  function vend(j, v,   q, c) {
+    if (match(v, /["\047]/)) {
+      q = substr(v, RSTART, 1); c = gsub(q, q, v)
+      if (c % 2) while (j < m) { j++; if (index(w[j], q)) break }
+    }
+    return j
+  }
+  {
     n = split($0, segs, /[|;&]+/)
     for (i = 1; i <= n; i++) {
       m = split(segs[i], w, /[ \t]+/); k = 1
@@ -271,7 +281,7 @@ irreversible() {
       gsub(/["\047]/, "", scr)
       if (scr == "protect-branch.sh") {
         dry = 0
-        for (j = x + 1; j <= m; j++) { a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a); if (a == "--dry-run") dry = 1 }
+        for (j = x + 1; j <= m; j++) { a = w[j]; if (a ~ /^#/) break; gsub(/^["\047]+|["\047]+$/, "", a); if (a == "--dry-run") dry = 1 }
         if (!dry) { print "scripts/protect-branch.sh without --dry-run"; exit }
       }
       if (cmd == "gh" && sub1 == "api") {
@@ -281,9 +291,10 @@ irreversible() {
           if (a ~ /^(-X|--method)$/) { meth = w[j + 1]; j++ }
           else if (a ~ /^--method=/) meth = substr(a, 10)
           else if (a ~ /^-X./) meth = substr(a, 3)
-          else if (a ~ /^(-f|-F|--field|--raw-field|--input)$/) { body = 1; j++ }
-          else if (a ~ /^(-f|-F)./ || a ~ /^--(field|raw-field|input)=/) body = 1
-          else if (a ~ /^(-H|--header|-q|--jq|-t|--template|--hostname|-p|--preview|--cache)$/) j++
+          else if (a ~ /^(-f|-F|--field|--raw-field|--input)$/) { body = 1; j = vend(j + 1, w[j + 1]) }
+          else if (a ~ /^(-f|-F)./ || a ~ /^--(field|raw-field|input)=/) { body = 1; j = vend(j, w[j]) }
+          else if (a ~ /^(-H|--header|-q|--jq|-t|--template|--hostname|-p|--preview|--cache)$/) j = vend(j + 1, w[j + 1])
+          else if (a ~ /^--(header|jq|template|hostname|preview|cache)=/) j = vend(j, w[j])
           else if (a !~ /^-/ && ep == "") ep = a
         }
         gsub(/["\047]/, "", meth); meth = toupper(meth)

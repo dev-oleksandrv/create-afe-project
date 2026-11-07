@@ -479,13 +479,16 @@ for c in "scripts/protect-branch.sh" "./scripts/protect-branch.sh --repo o/r" "b
   "$a/scripts/protect-branch.sh" "cd scripts && ./protect-branch.sh" "gh api --method PATCH repos/o/r" "gh api -X PUT repos/o/r/rulesets/1" \
   "gh api --method=POST /repos/o/r/rulesets --input -" "gh api -XPUT repos/o/r/branches/main/protection --input p.json" \
   "gh api -X patch 'repos/{owner}/{repo}'" "gh api repos/o/r/rulesets -f name=x" "gh api repos/o/r -F allow_squash_merge=false" \
-  "gh api repos/o/r --input settings.json" "gh api --field=enforcement=active repos/o/r/rulesets/2"; do
+  "gh api repos/o/r --input settings.json" "gh api --field=enforcement=active repos/o/r/rulesets/2" \
+  "gh api --method PUT -H 'Accept: application/vnd.github+json' /repos/o/r/branches/main/protection --input p.json" \
+  "scripts/protect-branch.sh # --dry-run" "gh api -XDELETE repos/o/r/x" "gh api --method=delete repos/o/r/x" "gh api -H 'Accept: x' -X DELETE repos/o/r/x"; do
   hook ask '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 for c in "scripts/protect-branch.sh --dry-run" "./scripts/protect-branch.sh --repo o/r --dry-run" \
   "gh api repos/{owner}/{repo}/pulls/3/comments/7/replies -f body=Fixed" "gh api repos/{owner}/{repo}/issues/3/comments" \
   "gh api repos/{owner}/{repo}/pulls/3/comments" "gh api repos/o/r/rulesets" "gh api repos/o/r --jq .default_branch" \
-  "gh api -X GET repos/o/r/rulesets -f includes_parents=true" "gh api --method POST repos/o/r/issues/3/comments -f body=x"; do
+  "gh api -X GET repos/o/r/rulesets -f includes_parents=true" "gh api --method POST repos/o/r/issues/3/comments -f body=x" \
+  "gh api -f 'body=see repos/o/r' repos/{owner}/{repo}/pulls/3/comments/7/replies"; do
   hook allow '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 # An approval line of .claude/path-classes asks even where a built-in rule would allow the edit.
