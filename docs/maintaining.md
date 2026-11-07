@@ -113,8 +113,10 @@ hook command whose script is
 missing fails the template check; that the link check finds a missing file or anchor; that
 `scripts/protect-branch.sh --dry-run` prints the repository settings (merge commits only, head
 branches deleted, secret scanning) and the ruleset, that `--require-base` adds the `base` job only
-with its module and an update keeps it, and that a live run against a stand-in for `gh` goes on past a refused secret
-scanning; that the `secret-scan` workflow
+with its module and an update keeps it, and that a live run against a stand-in for `gh` goes on past secret
+scanning the plan refuses, still applies the ruleset and then fails after any other secret-scanning
+error, ends without error when the plan offers no rulesets, and finds its ruleset on a later page
+and not one inherited from an organisation; that the `secret-scan` workflow
 appears only with its module; and that every action of the workflows of variant A and of the Python project is
 pinned to an exact version or a commit. It also checks that `update` keeps project content (the project
 block, seeded files, project checks), creates a missing seeded file, removes a file the template
