@@ -1,5 +1,200 @@
 # create-afe-project
 
+## 2.1.0
+
+### Minor Changes
+
+- [#24](https://github.com/dev-oleksandrv/create-afe-project/pull/24) [`3aaf8e7`](https://github.com/dev-oleksandrv/create-afe-project/commit/3aaf8e7aa43476f4b6016887bbf599a6fcce3e41) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `docs/documentation-rules.md`, sections 7 and 9, now name the check after every edit: the
+  "Project checks" row says that `CHECK_EDIT` runs on each file an Edit, Write, or MultiEdit call
+  changes and `CHECK_EDIT_GLOBS` matches, and that a file changed by a shell command waits for
+  `scripts/check.sh`. The harness settings of section 9 list the environment and test commands,
+  `CHECK_EDIT`, and `CHECK_EDIT_GLOBS`. The header of `.claude/hooks/post-edit-check.sh` now cites `docs/documentation-rules.md`,
+  section 7, instead of `docs/testing-rules.md`, section 4. The `docs-review` skill reads section 4
+  (Currency) and reports two findings: a document of a kind that section 4 requires to carry
+  `status`, `date`, and `verified-against` but lacks one of them, and a changed one that keeps a
+  stale `verified-against`.
+  
+  The seeded map `docs/README.md` changes for new projects only. Its README row now also names "the
+  repository settings the owner sets once". An existing project copies that row by hand. These
+  fixes come from the 2.0.0 review, on the owner's instruction of 2026-11-06. Nothing went wrong
+  because of these gaps.
+
+- [#18](https://github.com/dev-oleksandrv/create-afe-project/pull/18) [`a479656`](https://github.com/dev-oleksandrv/create-afe-project/commit/a479656c9cf6161363022adc5c06270f3fe834c3) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The seeded `.claude/path-classes` lists the gate files of every ecosystem, one commented block
+  each: Node.js (with Bun and Deno), Python, Go, Rust, JVM, Ruby, PHP, .NET, Swift, and Dart, with
+  the `*/` lines for the modules of a monorepo. Before, it named only some manifests of Node.js,
+  Python, Go, and Rust, so a change to a manifest, lock file, toolchain file, or package-source file
+  was class normal and missed "Gate files": every one in a JVM, Ruby, PHP, .NET, Swift, Dart, Bun,
+  or Deno project, such as `pom.xml`, `Gemfile.lock`, `*.csproj`, or `bun.lockb`, and some in
+  Node.js, Python, Go, and Rust, such as `npm-shrinkwrap.json`, `.npmrc`, `setup.py`, `go.work`, or
+  `rust-toolchain.toml`. The lines are
+  ported from agent-docs-template 0.7.0; on the owner's decision of 2026-11-06 every block is
+  seeded and the `ecosystems` question of that version is not adopted. From the 2.0.0 review, on
+  the owner's instruction of 2026-11-06. An update never changes a seeded file: an existing project
+  replaces its block "Dependency manifests and lock files" in `.claude/path-classes` by hand with
+  the block "Gates of each ecosystem" and the ten ecosystem blocks below it.
+
+- [#23](https://github.com/dev-oleksandrv/create-afe-project/pull/23) [`27b6ac0`](https://github.com/dev-oleksandrv/create-afe-project/commit/27b6ac0a5ebfbc43aa005a8255e8316872f2f34e) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The protect hook (`.claude/hooks/protect-docs.sh`) treats a change of repository settings as an
+  irreversible action and asks the owner first: `scripts/protect-branch.sh` without `--dry-run`, by
+  any path or through `bash`, `sh`, `zsh`, or `source`, and `gh api` with the method PATCH, PUT, or
+  POST (`-X`, `--method`, or POST implied by `-f`, `-F`, `--field`, `--raw-field`, or `--input`) on
+  `repos/OWNER/REPO` itself, its `rulesets`, or a `branches/BRANCH/protection`. Before, the header
+  of `scripts/protect-branch.sh` said an agent runs it only on the owner's explicit instruction, but
+  nothing enforced it. Reads, `--dry-run`, and the comment replies and reads of the `create-pr`
+  skill still pass without a prompt. An existing project gets the hook with the template update and
+  does nothing by hand; a headless run (CI) that ran `scripts/protect-branch.sh` without
+  `--dry-run` through Claude Code is now denied. From the 2.0.0 review, on the owner's instruction
+  of 2026-11-06.
+
+- [#32](https://github.com/dev-oleksandrv/create-afe-project/pull/32) [`d6b551d`](https://github.com/dev-oleksandrv/create-afe-project/commit/d6b551d8b2204f28b053303e2187204d906a3c28) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The protect hook (`.claude/hooks/protect-docs.sh`) asks the owner before more commands that
+  change a repository for good: `gh repo edit` in any form (visibility, merge methods, default
+  branch, branch deletion, and the other settings), `gh repo rename`, and `gh repo archive`; and a
+  GraphQL mutation through `gh api graphql`, a `query=` field (`-f`, `-F`, `--field`, or
+  `--raw-field`) that holds the keyword `mutation`. When the hook cannot read the query, from
+  `-F query=@file`, `--input`, a shell expansion such as `query="$(cat q.graphql)"`, or a quoted
+  query over several lines (the hook reads a command line by line), it asks too and says so in its
+  reason; a read-only query over several lines therefore asks as well. A `gh api` endpoint given
+  as a full URL (`https://api.github.com/graphql`, `https://HOST/api/v3/repos/...`) is now judged
+  like its path. `gh repo view` and the other read-only `gh repo` subcommands, and a
+  GraphQL query without a mutation, still pass. `docs/documentation-rules.md`, section 8, now names
+  every command class the hook asks on, condensed to stay within the file's 200 lines. A command
+  split across lines with `\`, or behind `env`, `time`, or `nohup`, is still not detected, as the
+  hook's header says. An existing project gets both files with the template update and does nothing
+  by hand; a headless run (CI) that runs one of these commands through Claude Code is now denied.
+  Added on the owner's instruction of 2026-11-07, round 2 of the 2.0.0 review fixes.
+
+### Patch Changes
+
+- [#20](https://github.com/dev-oleksandrv/create-afe-project/pull/20) [`fce22fd`](https://github.com/dev-oleksandrv/create-afe-project/commit/fce22fd647673c03342af5644014637d901f9e4f) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `update` of a project generated by the Copier template 0.7.0 or later keeps its harness settings
+  and path classes: a migration (2.0.1) moves `.harness/harness.conf` and `.harness/path-classes`
+  back to `.claude/harness.conf` and `.claude/path-classes`, with `.harness/` paths in their lines
+  renamed to `.claude/`, and removes `.harness/` when it is empty. Before, 2.0.0 seeded the default
+  `.claude/` files next to them, so the project's own settings and `approval` and `gate` lines no
+  longer applied. The migration also runs for a project that already converted with 2.0.0: a
+  `.claude/` file that is still the default is replaced. When the project has changed both copies,
+  both stay, and the update prints `Warning: merge .harness/<file> into .claude/<file> by hand`;
+  do that merge, then delete `.harness/`. A file that is not template-owned and still names a
+  moved `.harness/` file, such as the seeded `docs/README.md`, is reported as
+  `Warning: replace .harness/ with .claude/ in <file> by hand`.
+  
+  The conversion of `.copier-answers.yml` now names the answers it drops. `ecosystems` is dropped:
+  the seeded `.claude/path-classes` gates the files of all ecosystems without a question. A
+  `docs_language` other than English is dropped with a warning: documents stay in English
+  (`AGENTS.md`, section 5). The update report gains `Warning:` lines for what is left to do by hand,
+  and the `update-template` skill lists them for the owner.
+  
+  From the 2.0.0 review, on the owner's instruction of 2026-11-06.
+
+- [#25](https://github.com/dev-oleksandrv/create-afe-project/pull/25) [`2984847`](https://github.com/dev-oleksandrv/create-afe-project/commit/298484719290003db1105df519d03469a80946de) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - Hooks and the `decisions` workflow: stale references and two masked failures.
+  
+  - `.claude/hooks/session-start.sh` and the Stop hooks `stop-check-fast.sh`, `stop-check-docs.sh`,
+    `stop-check-decisions.sh`, and `stop-check-template.sh` no longer tie a merge conflict to a
+    template update or point to `docs/contributing.md`, section 5, which since 1.0.0 is the npm
+    update and produces no conflict markers; their message now says that `git status` lists the
+    conflicts.
+  - `.claude/hooks/post-edit-check.sh` runs `CHECK_EDIT` with stdin from `/dev/null`, as upstream
+    does, instead of the hook's input pipe, which the hook has already read to its end; a command
+    that behaves differently when stdin is a pipe no longer sees one.
+  - `.github/workflows/decisions.yml`: the header says that the ruleset of
+    `scripts/protect-branch.sh` requires `integrity` once it is set, and that `readiness` is never
+    required. The readiness step runs with `shell: bash`, so pipefail applies and a failing
+    `--classes` call for a pull request that a workflow opened fails the step instead of being
+    hidden by the pipe into `awk`.
+  
+  PATCH (`docs/maintaining.md`, section 4: wording and script bugs). All the files are
+  template-owned: `update` replaces them, and an existing project does nothing by hand. From the
+  review of 2.0.0, on the owner's instruction of 2026-11-06.
+
+- [#21](https://github.com/dev-oleksandrv/create-afe-project/pull/21) [`1eeacb4`](https://github.com/dev-oleksandrv/create-afe-project/commit/1eeacb41be6fcb6504cb71eb63187f1534871d4e) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - Security: the `code-review` and `docs-review` workflows ran code of the pull request next to
+  `CLAUDE_CODE_OAUTH_TOKEN` and `id-token: write`. claude-code-action restores `.claude/` from the
+  base branch but leaves every other file at the pull request's head, so the base hooks, and the
+  project's Stop hooks in `.claude/hooks/project/stop/` that they start, ran the head's
+  `scripts/lib/json.mjs`, `scripts/lib/git-base.sh`, `scripts/lib/harness-conf.sh`,
+  `scripts/check-*.sh`, `scripts/env.sh fast`, and `CHECK_EDIT`. Now every template hook in
+  `.claude/hooks/` but `protect-docs.sh` exits 0
+  at its first command when `GITHUB_ACTIONS` is set, and both review workflows pass
+  `--settings '{"disableAllHooks": true}'` in `claude_args`, which outranks the project settings
+  and also covers hooks a project adds in `.claude/settings.project.json`. The protect hook stays
+  on in GitHub Actions, on the owner's decision of 2026-11-07: it no longer reads
+  `scripts/lib/json.mjs` but reads its input and writes its answer with `node -e` code of its own,
+  so it runs no file of the working tree, and it still guards a project's own Claude Code
+  workflows; it still reads `.template/owned.txt` from the head, so a pull request can shorten that
+  list for the run. The token formats it asks for moved with it: `json.mjs fields` no longer takes
+  `@secret` and fails on it, so a project script that still asks for it must check secrets itself. `docs/documentation-rules.md`, section 7, says so. Claude Code sessions outside GitHub
+  Actions are unchanged; a project that runs Claude Code in its own workflows no longer gets the
+  other harness hooks there. An update applies the change to the template-owned hooks, scripts,
+  workflows, and rules; nothing is to do by hand. Ported from agent-docs-template 0.9.0, adapted
+  to this template, from the 2.0.0 review on the owner's instruction of 2026-11-06.
+
+- [#26](https://github.com/dev-oleksandrv/create-afe-project/pull/26) [`9f562aa`](https://github.com/dev-oleksandrv/create-afe-project/commit/9f562aaa0c98fb2b7a9dffe027cff06b7400d84e) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - Erratum for the 2.0.0 entry of `CHANGELOG.md`, which stays as released. First, the entry of [#6](https://github.com/dev-oleksandrv/create-afe-project/issues/6)
+  (`.claude/hooks/stop-check-fast.sh`) says that an existing project may "copy those two lines by
+  hand"; the comment that names the hook in the seeded `.claude/harness.conf` is three lines,
+  starting with the line "Once set to something other than scripts/check-docs.sh". Second, the
+  same entry is listed under Minor Changes, but a Stop hook that blocks on a failing `CHECK_FAST`
+  is a stricter check that existing content can fail, which `docs/maintaining.md`, section 4, makes
+  MAJOR; the 2.0.0 release is MAJOR anyway, so only the label was wrong. No file of a generated
+  project changes and no project needs to act. From the 2.0.0 review, on the owner's instruction
+  of 2026-11-06.
+
+- [#31](https://github.com/dev-oleksandrv/create-afe-project/pull/31) [`c46ca4e`](https://github.com/dev-oleksandrv/create-afe-project/commit/c46ca4eac2f13d86021188ae4da08e8d82347a22) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The seeded `.claude/path-classes` gates the manifests, lock files, toolchain files, and
+  package-source files of the modules of a monorepo evenly: every ecosystem block now has a `*/` line
+  next to each root line for a file that a module can have of its own. Before, only some had one, so
+  a change to a file such as `svc/uv.lock`, `svc/poetry.lock`, `web/yarn.lock`, `web/.npmrc`,
+  `crates/x/Cargo.lock`, or `ios/Podfile.lock` was class normal and missed "Gate files". Workspace
+  files (`pnpm-workspace.yaml`, `go.work`, `melos.yaml`), wrappers, tool configuration, and
+  `global.json`, a name that other files use too, stay gated at the root only. The lines came from
+  agent-docs-template 0.7.0. From the review of pull request [#18](https://github.com/dev-oleksandrv/create-afe-project/issues/18), on the owner's instruction of
+  2026-11-07.
+  
+  An update never changes a seeded file: an existing project adds these lines to
+  `.claude/path-classes` by hand, each next to its root line:
+  
+  - Node.js: `gate */package-lock.json`, `gate */npm-shrinkwrap.json`, `gate */pnpm-lock.yaml`,
+    `gate */yarn.lock`, `gate */.yarnrc.yml`, `gate */bun.lock`, `gate */bun.lockb`,
+    `gate */deno.json`, `gate */deno.jsonc`, `gate */deno.lock`, `gate */.npmrc`, `gate */.nvmrc`,
+    `gate */.node-version`
+  - Python: `gate */setup.py`, `gate */setup.cfg`, `gate */uv.lock`, `gate */poetry.lock`,
+    `gate */requirements*.in`, `gate */Pipfile`, `gate */Pipfile.lock`, `gate */.python-version`
+  - Rust: `gate */Cargo.lock`, `gate */.cargo/config.toml`, `gate */rust-toolchain`,
+    `gate */rust-toolchain.toml`
+  - JVM: `gate */settings.gradle*`, `gate */gradle.properties`, `gate */gradle/libs.versions.toml`
+  - Ruby: `gate */.ruby-version`
+  - .NET: `gate */nuget.config`, `gate */NuGet.Config`, `gate */.config/dotnet-tools.json`
+  - Swift: `gate */Podfile`, `gate */Podfile.lock`
+
+- [#28](https://github.com/dev-oleksandrv/create-afe-project/pull/28) [`a5a669f`](https://github.com/dev-oleksandrv/create-afe-project/commit/a5a669f17a866fa42e09098984d3297fc4516a82) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - Security: every action in the workflows is pinned to a full 40-character commit SHA with its
+  release as a comment, such as `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`,
+  instead of a tag. A tag can move, and the `code-review` and `docs-review` jobs hold
+  `CLAUDE_CODE_OAUTH_TOKEN`. The versions are unchanged: `actions/checkout` v7.0.1,
+  `actions/setup-node` v7.1.0, `DavidAnson/markdownlint-cli2-action` v25.0.0, and
+  `anthropics/claude-code-action` v1.0.268. A project sees these workflows change on the update:
+  `.github/workflows/docs.yml` and `.github/workflows/decisions.yml`, and with their modules
+  `.github/workflows/secret-scan.yml`, `.github/workflows/docs-review.yml`,
+  `.github/workflows/code-review.yml`, and `.github/workflows/fail-without-change.yml`. The update
+  replaces them; nothing is to do by hand. From the owner's instruction of 2026-11-07, before the 2.1.0 release.
+
+- [#22](https://github.com/dev-oleksandrv/create-afe-project/pull/22) [`5eb600d`](https://github.com/dev-oleksandrv/create-afe-project/commit/5eb600dddea40e0dd5d7013842472c8d9b48d847) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `scripts/protect-branch.sh` handles the errors of a plan without rulesets or Advanced Security.
+  When GitHub refuses the list of rulesets with HTTP 403 or 404, as it does for a private
+  repository on GitHub Free, the script says that the settings are applied and the rule rests on
+  the owner and review, and ends without error; before, it stopped with the raw `gh` error. It
+  reads all pages of the list and only the repository's own rulesets (`includes_parents=false`),
+  so it no longer misses its ruleset past the first page or picks one of the same name inherited
+  from an organisation. Secret scanning refused by the plan still warns and goes on. Any other
+  secret-scanning error (a missing permission, an invalid payload, no connection) is printed with
+  the `gh` output; the ruleset is still applied, then the script fails and names that error again
+  in its last line. It fails also when the list of rulesets then returns HTTP 403 or 404, after
+  the message on rulesets. `--dry-run` is unchanged. An update replaces the file; an existing
+  project does nothing by hand. From the 2.0.0 review, on the owner's instructions of 2026-11-06
+  and 2026-11-07.
+
+- [#30](https://github.com/dev-oleksandrv/create-afe-project/pull/30) [`7d24045`](https://github.com/dev-oleksandrv/create-afe-project/commit/7d240456c455f027835dd2ff31d5002194892e5a) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The rule documents now match the 2.0.1 migration, which can replace an existing seeded file such
+  as a default `.claude/harness.conf` or `.claude/path-classes`. `docs/contributing.md`, section 5,
+  said that an update never changes an existing seeded file and leaves project files untouched; it
+  now says that an update changes an existing seeded or project file only through a migration
+  that the update report and the changelog name (2.0.1 also removes `.harness/`). The Seeded row of
+  `docs/documentation-rules.md`, section 9, and step 4 of the `update-template` skill say the same.
+  These files are template-owned, so an existing project gets the new wording on its next update,
+  with nothing to do by hand. From the 2.0.1 docs review, on the owner's instruction of 2026-11-07.
+
 ## 2.0.0
 
 ### Major Changes
