@@ -163,7 +163,7 @@ shell writes of the forms its comments name, and on irreversible commands: a for
 mirroring, pruning, or tag `git push`; `gh pr merge`; `gh workflow run`; `gh release create` and
 `delete`; `gh repo delete`, `rename`, `archive`, and `edit`; `gh api` DELETE, settings writes,
 GraphQL mutations or unreadable queries; `protect-branch.sh` without `--dry-run`; publishing
-(`npm publish`, `docker push`). What a script, variable, alias, or tool hides is left to the review.
+(`npm publish`, `docker push`). Its comments name what it misses, which is left to the review.
 
 Access control comes before prompts: an agent gets no credentials or tools for irreversible or
 production actions outside its task. `.claude/settings.json` denies force pushes and deletions

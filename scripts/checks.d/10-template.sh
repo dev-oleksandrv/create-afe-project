@@ -514,7 +514,8 @@ for c in "scripts/protect-branch.sh" "./scripts/protect-branch.sh --repo o/r" "b
   "gh api graphql --raw-field 'query=mutation{deleteRef}'" "gh api /graphql --field=query='mutation X { y }'" "gh api graphql --input q.json" \
   "gh api graphql -f query=\$(cat m.graphql)" "gh api graphql -f query='\n  mutation {\n    x\n  }'" "gh api graphql -f 'query=\nmutation { x }'" \
   "gh api graphql -f query='query { a }\nmutation M { x }'" "gh api https://api.github.com/graphql -f query='mutation { x }'" \
-  "gh api https://ghe.example.com/api/v3/repos/o/r -X PATCH -f private=true"; do
+  "gh api https://ghe.example.com/api/v3/repos/o/r -X PATCH -f private=true" "gh api graphql -fquery='mutation { x }'" \
+  "gh api graphql -Fquery=@m.graphql" "gh api graphql -F query=@-" "gh api graphql -f query=\`cat m.graphql\`"; do
   hook ask '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 for c in "scripts/protect-branch.sh --dry-run" "./scripts/protect-branch.sh --repo o/r --dry-run" \
