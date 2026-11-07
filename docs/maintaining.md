@@ -136,8 +136,11 @@ with its module and an update keeps it, and that a live run against a stand-in f
 scanning the plan refuses, still applies the ruleset and then fails after any other secret-scanning
 error, ends without error when the plan offers no rulesets, and finds its ruleset on a later page
 and not one inherited from an organisation; that the `secret-scan` workflow
-appears only with its module; and that every action of the workflows of variant A and of the Python project is
-pinned to an exact version or a commit. It also checks that `update` keeps project content (the project
+appears only with its module; and that every action of the workflows of variant A, variant B,
+the documentation-only project, the Python project, and this repository is pinned to a full
+commit SHA with its `# v<version>` comment, never to a tag. The test checks that form only; the
+review checks that the SHA is the commit of the version in the comment and that one action
+carries the same SHA and comment in every workflow. It also checks that `update` keeps project content (the project
 block, seeded files, project checks), creates a missing seeded file, removes a file the template
 no longer owns, refuses a dirty working tree and a downgrade, reports and replaces a local edit
 of a template-owned file, converts a Copier answers file, and runs the 0.5.0 migration and the

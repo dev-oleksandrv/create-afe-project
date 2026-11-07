@@ -29,7 +29,7 @@ jobs:
     runs-on: {{ '${{' }} fromJSON(vars.CI_RUNS_ON || '{{ ci_runs_on_default }}') {{ '}}' }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -49,7 +49,7 @@ jobs:
       # --settings, above the project settings, disables the hooks; all but the protect hook, which
       # runs no file of the head, also skip themselves.
       - name: Review
-        uses: anthropics/claude-code-action@v1.0.268
+        uses: anthropics/claude-code-action@c0949c50a78c1ec8ce2647db36629b870e715d0c # v1.0.268
         with:
           claude_code_oauth_token: {{ '${{' }} secrets.CLAUDE_CODE_OAUTH_TOKEN {{ '}}' }}
           track_progress: "true"
