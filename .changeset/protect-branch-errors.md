@@ -11,7 +11,7 @@ so it no longer misses its ruleset past the first page or picks one of the same 
 from an organisation. Secret scanning refused by the plan still warns and goes on. Any other
 secret-scanning error (a missing permission, an invalid payload, no connection) is printed with
 the `gh` output; the ruleset is still applied, then the script fails and names that error again
-in its last line. When the list of rulesets fails as well, that error decides the exit as above,
-and the last line still names the secret-scanning error. `--dry-run` is unchanged. An update replaces the file;
-an existing project does nothing by hand. From the 2.0.0 review, on the owner's instruction of
-2026-11-06.
+in its last line. It fails also when the list of rulesets then returns HTTP 403 or 404, after
+the message on rulesets. `--dry-run` is unchanged. An update replaces the file; an existing
+project does nothing by hand. From the 2.0.0 review, on the owner's instructions of 2026-11-06
+and 2026-11-07.

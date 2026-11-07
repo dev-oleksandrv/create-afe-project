@@ -220,8 +220,8 @@ expect_pass "protect-branch still applies the ruleset, then fails naming secret 
   grep -q "^api --method POST repos/example/sample/rulesets --input - | .*\"allowed_merge_methods\":\[\"merge\"\]" "$work/ghpb.log" &&
   grep -q "created the ruleset" out.log && tail -n 1 out.log | grep -q "secret scanning" || { echo "case $e, exit $code:"; cat out.log; cat "$work/ghpb.log"; exit 1; }; done'
 expect_pass "protect-branch names a failed secret scanning when the plan then offers no rulesets" bash -c 'rm -f "$work/ghpb.log";
-  out=$(GHPB_LIST=403 GHPB_SECRET=admin PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) &&
-  printf "%s\n" "$out" | grep -q "rulesets are not available" && printf "%s\n" "$out" | tail -n 1 | grep -q "secret scanning" || { printf "%s\n" "$out"; exit 1; }'
+  out=$(GHPB_LIST=403 GHPB_SECRET=admin PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1); code=$?;
+  [ $code = 1 ] && printf "%s\n" "$out" | grep -q "rulesets are not available" && printf "%s\n" "$out" | tail -n 1 | grep -q "secret scanning" || { echo "exit $code:"; printf "%s\n" "$out"; exit 1; }'
 expect_pass "protect-branch ends without error after the settings when the plan offers no rulesets" bash -c 'rm -f "$work/ghpb.log";
   out=$(GHPB_LIST=403 GHPB_SECRET=ok PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) &&
   printf "%s\n" "$out" | grep -q "rulesets are not available" && printf "%s\n" "$out" | grep -q "rests on the owner and review" &&

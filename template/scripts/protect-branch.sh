@@ -18,7 +18,7 @@
 #    exists, drops it otherwise, and says which; a ruleset it cannot read stops the run unchanged.
 #    Rulesets need a public repository, or a GitHub plan that offers them for private ones;
 #    without one, the rule rests on the owner and review, and the script says so and ends without
-#    error. It looks the ruleset up by name among the repository's own, not inherited ones.
+#    error, unless secret scanning failed as in 2. It looks the ruleset up by name among the repository's own, not inherited ones.
 #
 # Usage: scripts/protect-branch.sh [--dry-run] [--repo owner/name] [--require-base]
 #   --dry-run       print the settings and the ruleset as one JSON object and change nothing
@@ -108,6 +108,7 @@ if ! ids=$(gh api --paginate "repos/$repo/rulesets?includes_parents=false" --jq 
   case "$(status "$out")" in
     403|404)
       printf '== %s: rulesets are not available for this repository on its plan; the settings above are applied, and the rule on the default branch rests on the owner and review:\n%s\n' "$repo" "$out" >&2
+      [ -z "$secret" ] || exit 1
       exit 0 ;;
   esac
   printf 'protect-branch: cannot list the rulesets of %s:\n%s\n' "$repo" "$out" >&2
