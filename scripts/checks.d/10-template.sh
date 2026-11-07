@@ -639,8 +639,9 @@ while IFS= read -r f; do
   first=$(grep -v -E '^[[:space:]]*(#|$)' "$f" | head -n 1)
   [ "$first" = '[ -z "${GITHUB_ACTIONS:-}" ] || exit 0' ] || fail "$f: the first command is not the GitHub Actions guard"
 done < <(find template/.claude/hooks -type f -name '*.sh' ! -name protect-docs.sh)
+# A script of the project root, or one an interpreter runs by path, counts as a file it runs.
 grep -v -E '^[[:space:]]*#' template/.claude/hooks/protect-docs.sh |
-  grep -n -E 'GITHUB_ACTIONS|scripts/lib|(^|[;&|(]|then|do|else)[[:space:]]*(\.|source)[[:space:]]' &&
+  grep -n -E 'GITHUB_ACTIONS|scripts/lib|(^|[;&|(]|then|do|else)[[:space:]]*(\.|source)[[:space:]]|"?\$\{?(root|project|cwd)\}?/[^"[:space:]]*\.(sh|mjs|cjs|js|py)|(^|[;&|(]|then|do|else)[[:space:]]*(bash|sh|node|python3?)[[:space:]]+[^-[:space:]]' &&
   fail "protect-docs.sh skips GitHub Actions, or runs or sources a file of the working tree, which a pull request supplies there"
 # Each script a hook runs or sources, and a project Stop hook, records that it ran.
 mark="$work/head-code-ran"
