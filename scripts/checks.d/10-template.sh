@@ -481,7 +481,7 @@ for c in "scripts/protect-branch.sh" "./scripts/protect-branch.sh --repo o/r" "b
   "gh api -X patch 'repos/{owner}/{repo}'" "gh api repos/o/r/rulesets -f name=x" "gh api repos/o/r -F allow_squash_merge=false" \
   "gh api repos/o/r --input settings.json" "gh api --field=enforcement=active repos/o/r/rulesets/2" \
   "gh api --method PUT -H 'Accept: application/vnd.github+json' /repos/o/r/branches/main/protection --input p.json" \
-  "scripts/protect-branch.sh # --dry-run" "gh api -XDELETE repos/o/r/x" "gh api --method=delete repos/o/r/x" "gh api -H 'Accept: x' -X DELETE repos/o/r/x"; do
+  "scripts/protect-branch.sh # --dry-run" "bash -o pipefail scripts/protect-branch.sh" "bash --rcfile x.rc ./scripts/protect-branch.sh" "gh api -XDELETE repos/o/r/x" "gh api --method=delete repos/o/r/x" "gh api -H 'Accept: x' -X DELETE repos/o/r/x"; do
   hook ask '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 for c in "scripts/protect-branch.sh --dry-run" "./scripts/protect-branch.sh --repo o/r --dry-run" \

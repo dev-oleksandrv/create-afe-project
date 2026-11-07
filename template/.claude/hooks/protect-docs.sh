@@ -277,7 +277,7 @@ irreversible() {
         print "gh " sub1 " " sub2; exit
       }
       scr = cmd; x = k
-      if (cmd ~ /^(bash|sh|zsh|source|\.)$/) { x = k + 1; while (x <= m && w[x] ~ /^-/) x++; scr = w[x]; sub(/.*\//, "", scr) }
+      if (cmd ~ /^(bash|sh|zsh|source|\.)$/) { x = k + 1; while (x <= m && w[x] ~ /^[-+]/) x += (w[x] ~ /^([-+][oO]|--rcfile|--init-file)$/) ? 2 : 1; scr = w[x]; sub(/.*\//, "", scr) }
       gsub(/["\047]/, "", scr)
       if (scr == "protect-branch.sh") {
         dry = 0
