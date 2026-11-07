@@ -135,8 +135,18 @@ export function messageAfterCreate(a, commit = { done: false }) {
   return `${a.project_name} is ready. Next:\n${steps.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}`;
 }
 
+// The seeded .claude/harness.conf and .claude/path-classes as 2.0.0 created them, by Git blob hash
+// (git hash-object): a project that converted from Copier with 2.0.0 got these defaults next to
+// its own .harness/ files.
+const SEEDED_2_0_0 = {
+  'harness.conf': '8392606ca3dd50295ef24be237f7d69cdfb6bef8',
+  'path-classes': '8cf0e645771ce2d60146eccfa09a0987fbddc99e',
+};
+
 // Migrations of an update, by the version that introduces them. `before` runs before the template
-// files are written, `after` after them; both run in the project directory, as bash commands.
+// files are written, `after` after them; both run in the project directory, as bash commands,
+// with AFE_TEMPLATE set to the template directory of this package and AFE_NOTES to a file whose
+// lines the update reports as things to do by hand.
 // A migration runs when its version is above the project's recorded version and at most the
 // package's.
 export const MIGRATIONS = [
@@ -148,4 +158,46 @@ export const MIGRATIONS = [
     after:
       "[ ! -f .claude/protected-paths.pre-0.5 ] || { grep -v -E '^[[:space:]]*(#|$)' .claude/protected-paths.pre-0.5 | sed 's/^/approval /' >> .claude/path-classes; rm -f .claude/protected-paths.pre-0.5 .claude/protected-paths; }",
   },
+  // 2.0.1 moves .harness/harness.conf and .harness/path-classes, where the Copier template keeps
+  // them since its 0.7.0, back to .claude/, with the reverse of that release's rename in their
+  // lines; 2.0.0 ignored them and seeded the defaults. A .claude/ file is replaced only when it is
+  // a default (of 2.0.0 or of this package); otherwise both stay, and the update reports the merge
+  // by hand. .harness/ is removed when nothing else is left in it. After a move, the files that are
+  // not template-owned and still name the .harness/ paths, such as the seeded map docs/README.md, are
+  // reported for a change by hand.
+  {
+    version: '2.0.1',
+    after: [
+      `[ -f "$AFE_NOTES.moved" ] || exit 0`,
+      `grep -rlE '[.]harness/(harness[.]conf|path-classes)' --exclude-dir=.git --exclude-dir=.harness --exclude-dir=node_modules . 2> /dev/null |`,
+      `  sed 's#^[.]/##' | { [ -f .template/owned.txt ] && grep -v -x -F -f .template/owned.txt || cat; } |`,
+      `  sed 's#.*#replace .harness/ with .claude/ in & by hand: it names a .harness/ file that moved to .claude/#' >> "$AFE_NOTES"`,
+      `exit 0`,
+    ].join('\n'),
+    before: [
+      `for f in harness.conf path-classes; do`,
+      `  [ -f .harness/$f ] || continue`,
+      `  case $f in harness.conf) old=${SEEDED_2_0_0['harness.conf']} ;; *) old=${SEEDED_2_0_0['path-classes']} ;; esac`,
+      `  if [ -f .claude/$f ] && [ "$(git hash-object --no-filters .claude/$f 2> /dev/null)" != "$old" ] && ! cmp -s .claude/$f "$AFE_TEMPLATE/.claude/$f"; then`,
+      `    echo "merge .harness/$f into .claude/$f by hand, then delete .harness/$f: both exist, and .claude/$f is not the template's default" >> "$AFE_NOTES"`,
+      `    continue`,
+      `  fi`,
+      `  mkdir -p .claude && sed 's#[.]harness/harness[.]conf#.claude/harness.conf#g; s#[.]harness/path-classes#.claude/path-classes#g' .harness/$f > .claude/$f.tmp &&`,
+      `    mv .claude/$f.tmp .claude/$f && rm .harness/$f && : > "$AFE_NOTES.moved" || exit 1`,
+      `done`,
+      `[ ! -d .harness ] || rmdir .harness 2> /dev/null || true`,
+    ].join('\n'),
+  },
 ];
+
+// Warnings about the answers of a Copier answers file that have no question here and are dropped:
+// a docs_language other than English, since documents are English only (AGENTS.md, section 5).
+// ecosystems gets none: the seeded .claude/path-classes gates the ecosystems without a question.
+export function legacyNotes(answers) {
+  const notes = [];
+  const language = answers.docs_language;
+  if (language != null && String(language).trim() !== '' && !/^\s*(english|en)\s*$/i.test(String(language))) {
+    notes.push(`docs_language was ${language}; it is not carried over: documents stay in English (AGENTS.md, section 5)`);
+  }
+  return notes;
+}

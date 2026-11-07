@@ -30,7 +30,7 @@ a796ae0a9319e6eeda083c6f6b8e7711ed7a81338ab3941b4705c1587cbcb5c0  .claude/hooks/
 38f9678df4b01c932e551da81047132b28adeb37de5852456cde2ccc48230aea  .claude/hooks/stop-run-project-hooks.sh
 0194a8371dc36db489f5ad91cd1a090300edec788bef7627ff39fc3042970527  .claude/skills/create-pr/SKILL.md
 70a9f59dcb93bdbcf2a8c6a72c8c48a22d14b9a9d65af9913b7842b0bbb52a6b  .claude/skills/afe-init/SKILL.md
-4d7dbe64590409479b0debd9bb1839a92e09980f7811db84d46064c3ea4d0486  .claude/skills/update-template/SKILL.md
+08e9503df38f85406e3db967a4eb13c0d7aa19f9a7b4d1b0f3f02e798c399c89  .claude/skills/update-template/SKILL.md
 d37811dac552b99d5a730c5ca5abd30f0ffa93e97a1334e8b7acdf7c736e8f84  .claude/skills/docs-review/SKILL.md
 9c326bb6ee0e571f6ad736f3980aebf1f24a58f9c945bc1f6e93ce9cdb9b0beb  .claude/skills/review-code/SKILL.md
 5445671ef51e11641bb8ab249c745c9aa9e14b522f8fbce5b005c7ff59845a00  .github/workflows/docs.yml

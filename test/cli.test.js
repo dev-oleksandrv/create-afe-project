@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { UsageError, coerce, collectAnswers, compareVersions, readAnswers } from '../src/answers.js';
-import { SEEDED, messageAfterCreate } from '../src/config.js';
+import { SEEDED, legacyNotes, messageAfterCreate } from '../src/config.js';
 import { TEMPLATE_DIR } from '../src/project.js';
 import { renderString, renderTemplate } from '../src/render.js';
 
@@ -98,6 +98,12 @@ test('a Copier answers file is read with its version, without private keys', () 
   writeFileSync(join(dir, '.afe-answers.json'), JSON.stringify({ _note: 'n', _version: '0.7.0', project_name: 't' }));
   assert.deepEqual(readAnswers(dir), { version: '0.7.0', answers: { project_name: 't' }, legacy: false });
   assert.equal(readFileSync(join(dir, '.copier-answers.yml'), 'utf8').length > 0, true);
+});
+
+test('a Copier docs_language other than English gets a warning that documents stay in English', () => {
+  assert.match(legacyNotes({ docs_language: 'German', ecosystems: ['node'] }).join('\n'), /^docs_language was German; .*English \(AGENTS\.md, section 5\)$/);
+  for (const docs_language of ['English', 'en', '', null]) assert.deepEqual(legacyNotes({ docs_language }), []);
+  assert.deepEqual(legacyNotes({ ecosystems: ['node'] }), []);
 });
 
 test('the message after create numbers the next steps and says whether the initial commit was made', () => {

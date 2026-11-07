@@ -64,6 +64,7 @@ async function main() {
     const r = await update(process.cwd(), { ...common, allowDirty: Boolean(values['allow-dirty']) });
     const lines = [`Updated the template from ${r.from ?? 'an unrecorded version'} to ${r.to}.`];
     if (r.legacy) lines.push('Converted .copier-answers.yml to .afe-answers.json.');
+    if (r.dropped.length) lines.push(`Answers not carried over (no question here): ${r.dropped.join(', ')}.`);
     if (r.migrations.length) lines.push(`Migrations run: ${r.migrations.join(', ')}.`);
     if (r.removed.length) lines.push(`Removed, no longer template-owned: ${r.removed.join(', ')}.`);
     if (r.seeded.length) lines.push(`Created missing seeded files: ${r.seeded.join(', ')}.`);
@@ -71,6 +72,7 @@ async function main() {
     if (r.edited.length) {
       lines.push(`Replaced local edits of template-owned files; review them in git diff: ${r.edited.join(', ')}.`);
     }
+    for (const note of r.notes) lines.push(`Warning: ${note}.`);
     lines.push('Next: scripts/check.sh, then a pull request (docs/contributing.md, section 5).');
     return void (interactive ? p.outro(lines.join('\n')) : console.log(lines.join('\n')));
   }

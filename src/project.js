@@ -1,11 +1,12 @@
 // Creates a project from the template, and updates a project to the template of this package.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { UsageError, collectAnswers, compareVersions, readAnswers, writeAnswers } from './answers.js';
-import { LEGACY_ANSWERS_FILE, MIGRATIONS, SEEDED, TASKS, messageAfterCreate } from './config.js';
+import { LEGACY_ANSWERS_FILE, MIGRATIONS, QUESTIONS, SEEDED, TASKS, legacyNotes, messageAfterCreate } from './config.js';
 import { renderTemplate } from './render.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,9 +25,10 @@ function writeFile(dir, rel, { content, mode }) {
   chmodSync(target, mode & 0o777);
 }
 
-function run(dir, command, quiet) {
+function run(dir, command, quiet, env) {
   const r = spawnSync('bash', ['-c', command], {
     cwd: dir,
+    env: env ? { ...process.env, ...env } : process.env,
     stdio: ['ignore', quiet ? 'pipe' : 'inherit', quiet ? 'pipe' : 'inherit'],
     encoding: 'utf8',
   });
@@ -162,8 +164,9 @@ export function initialCommit(dir) {
 /**
  * Updates the project in `dir` to this package's template. Template-owned files are replaced, the
  * project block of AGENTS.md is kept, files the template no longer owns are removed, missing
- * seeded files are created and existing ones never changed, the migrations between the two
- * versions run, and the generated files are rebuilt.
+ * seeded files are created and existing ones changed only by a migration, the migrations between the two
+ * versions run, and the generated files are rebuilt. The result names, besides the files, the
+ * answers of a Copier answers file that are dropped, and notes: what is left to do by hand.
  * @param {string} dir
  * @param {{ given?: Record<string, unknown>, useDefaults?: boolean, interactive?: boolean,
  *   allowDirty?: boolean, quiet?: boolean }} options
@@ -186,32 +189,46 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
   const oldOwnedFile = join(dir, OWNED_LIST);
   const oldOwned = existsSync(oldOwnedFile) ? listed(readFileSync(oldOwnedFile, 'utf8')) : [];
   const edited = editedOwnedFiles(dir);
+  // Answers of a Copier answers file without a question here are dropped, some with a warning.
+  const dropped = recorded.legacy ? Object.keys(recorded.answers).filter((k) => !QUESTIONS.some((q) => q.name === k)) : [];
+  const notes = recorded.legacy ? legacyNotes(recorded.answers) : [];
   const pending = MIGRATIONS.filter(
     (m) => compareVersions(m.version, recorded.version) > 0 && compareVersions(m.version, VERSION) <= 0,
   );
-
-  for (const m of pending) if (m.before) run(dir, m.before, quiet);
-
-  const removed = oldOwned.filter((rel) => !newOwned.includes(rel) && existsSync(join(dir, rel)));
-  for (const rel of removed) rmSync(join(dir, rel));
-
+  // A migration appends what is left to do by hand, one line each, to the file AFE_NOTES.
+  const scratch = mkdtempSync(join(tmpdir(), 'afe-update-'));
+  const env = { AFE_TEMPLATE: TEMPLATE_DIR, AFE_NOTES: join(scratch, 'notes') };
+  let removed = [];
   const seeded = [];
   const unowned = [];
-  for (const [rel, file] of rendered) {
-    const exists = existsSync(join(dir, rel));
-    if (newOwned.includes(rel)) {
-      const content = rel === 'AGENTS.md' && block ? withBlock(String(file.content), block) : file.content;
-      writeFile(dir, rel, { ...file, content });
-    } else if (!exists) {
-      writeFile(dir, rel, file);
-      (SEEDED.includes(rel) ? seeded : unowned).push(rel);
-    }
-  }
-  writeAnswers(dir, VERSION, answers);
-  if (recorded.legacy) rmSync(join(dir, LEGACY_ANSWERS_FILE));
+  try {
+    for (const m of pending) if (m.before) run(dir, m.before, quiet, env);
 
-  for (const m of pending) if (m.after) run(dir, m.after, quiet);
+    removed = oldOwned.filter((rel) => !newOwned.includes(rel) && existsSync(join(dir, rel)));
+    for (const rel of removed) rmSync(join(dir, rel));
+
+    for (const [rel, file] of rendered) {
+      const exists = existsSync(join(dir, rel));
+      if (newOwned.includes(rel)) {
+        const content = rel === 'AGENTS.md' && block ? withBlock(String(file.content), block) : file.content;
+        writeFile(dir, rel, { ...file, content });
+      } else if (!exists) {
+        writeFile(dir, rel, file);
+        (SEEDED.includes(rel) ? seeded : unowned).push(rel);
+      }
+    }
+    writeAnswers(dir, VERSION, answers);
+    if (recorded.legacy) rmSync(join(dir, LEGACY_ANSWERS_FILE));
+
+    for (const m of pending) if (m.after) run(dir, m.after, quiet, env);
+    if (existsSync(env.AFE_NOTES)) notes.push(...listed(readFileSync(env.AFE_NOTES, 'utf8')));
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
   runTasks(dir, quiet);
 
-  return { from: recorded.version, to: VERSION, removed, edited, seeded, unowned, migrations: pending.map((m) => m.version), legacy: recorded.legacy };
+  return {
+    from: recorded.version, to: VERSION, removed, edited, seeded, unowned,
+    migrations: pending.map((m) => m.version), legacy: recorded.legacy, dropped, notes,
+  };
 }
