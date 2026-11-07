@@ -44,7 +44,7 @@ if git rev-parse --git-dir > /dev/null 2>&1; then
   fi
   conflicts=$(git ls-files -u 2> /dev/null | cut -f2 | sort -u | grep -c .)
   [ "${conflicts:-0}" -gt 0 ] &&
-    lines+=("unresolved merge conflicts in $conflicts files: resolve them first (docs/contributing.md, section 5)")
+    lines+=("unresolved merge conflicts in $conflicts files: resolve them first (git status lists them)")
 fi
 
 shopt -s nullglob

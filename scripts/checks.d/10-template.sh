@@ -387,10 +387,22 @@ expect_pass "review: one for template-owned edits without an update" bash -c 'ec
 awk '/name: description ready/ {f = 1} f && /run: \|/ {r = 1; next} r && /^[[:space:]]*$/ {print ""; next}
      r && !/^          / {exit} r {sub(/^          /, ""); print}' "$a/.github/workflows/decisions.yml" > "$work/ready.sh"
 [ -s "$work/ready.sh" ] || fail "decisions.yml: no readiness step to run"
-ready() { (cd "$a" && BASE_REF=ready-base RUNNER_TEMP="$work" PR_BODY= PR_AUTHOR="$1" bash -e "$work/ready.sh" > "$work/ready.log" 2>&1); }
+# The step runs as GitHub runs it on Linux: `bash -e` by default, with pipefail for `shell: bash`.
+ready_shell=$(awk '/name: description ready/ {f = 1; next} f && /^      - / {exit} f && /^        shell:/ {print $2; exit}' "$a/.github/workflows/decisions.yml")
+case "$ready_shell" in
+  bash) ready_sh=(bash --noprofile --norc -eo pipefail) ;;
+  *) ready_sh=(bash -e) ;;
+esac
+ready() { (cd "$a" && BASE_REF=ready-base RUNNER_TEMP="$work" PR_BODY= PR_AUTHOR="$1" "${ready_sh[@]}" "$work/ready.sh" > "$work/ready.log" 2>&1); }
 git -C "$a" update-ref refs/remotes/origin/ready-base HEAD
 ready 'github-actions[bot]' && grep -q "opened by a workflow: its generated description is not checked" "$work/ready.log" ||
   { cat "$work/ready.log"; fail "readiness: checks the generated description of a pull request a workflow opened"; }
+# A failing --classes call fails the step; the pipe into awk does not hide it.
+cp "$a/scripts/check-decisions.sh" "$work/check-decisions.keep" &&
+  printf '#!/usr/bin/env bash\ncase " $* " in *" --classes "*) echo classes-failed >&2; exit 3 ;; esac\n' > "$a/scripts/check-decisions.sh"
+ready 'github-actions[bot]'; [ $? -ne 0 ] && grep -q classes-failed "$work/ready.log" ||
+  { cat "$work/ready.log"; fail "readiness: a failing --classes call of a pull request a workflow opened passes the step"; }
+cp "$work/check-decisions.keep" "$a/scripts/check-decisions.sh"
 ready someone; [ $? -eq 1 ] && grep -q "no '## Metrics' section" "$work/ready.log" ||
   { cat "$work/ready.log"; fail "readiness: does not fail the empty description of a pull request a person opened on its sections"; }
 grep -qF 'only for a pull request that `github-actions[bot]` opened, and does not block' "$a/docs/contributing.md" &&
@@ -526,6 +538,10 @@ pe "$a/pe.txt" || fail "post-edit: runs although CHECK_EDIT is empty"
 printf 'CHECK_EDIT=grep -q ok\n' >> "$a/.claude/harness.conf"
 pe "$a/pe.txt"; [ $? -eq 2 ] && grep -q "CHECK_EDIT failed on pe.txt" "$work/pe.log" || { cat "$work/pe.log"; fail "post-edit: a failing CHECK_EDIT is not reported"; }
 pe "$a/pe-ok.txt" || { cat "$work/pe.log"; fail "post-edit: a passing CHECK_EDIT is reported"; }
+# CHECK_EDIT reads /dev/null, not the hook's spent input pipe: a command never sees a pipe on stdin.
+printf 'CHECK_EDIT=test ! -p /dev/stdin && true\n' >> "$a/.claude/harness.conf"
+pe "$a/pe.txt" || { cat "$work/pe.log"; fail "post-edit: CHECK_EDIT gets the hook's stdin, not /dev/null"; }
+printf 'CHECK_EDIT=grep -q ok\n' >> "$a/.claude/harness.conf"
 mkdir -p "$a/sub" && printf 'bad\n' > "$a/sub/pe.txt" && printf 'bad\n' > "$a/pe-rel.txt"
 (cd "$a" && printf '%s' '{"tool_name":"Edit","tool_input":{"file_path":"pe-rel.txt"},"cwd":"'"$a"'/sub"}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/post-edit-check.sh > "$work/pe.log" 2>&1)
 [ $? -eq 0 ] || { cat "$work/pe.log"; fail "post-edit: a relative path missing in the input's cwd is taken from the project root"; }
@@ -570,6 +586,15 @@ gitc "$a" switch -q -c c2 && echo b > "$a/src.txt" && gitc "$a" commit -q -am b
 gitc "$a" switch -q fastbr && echo c > "$a/src.txt" && gitc "$a" commit -q -am c
 gitc "$a" merge -q c2 > /dev/null 2>&1
 fast; [ $? -eq 0 ] && grep -q "Unresolved merge conflicts" "$work/fast.log" || { cat "$work/fast.log"; fail "stop-check-fast: blocks during a merge conflict"; }
+# Every Stop hook lets the agent stop during the conflict and points to where the conflicts are
+# listed, not to a procedure that the documents do not have.
+for h in docs decisions template fast; do
+  (cd "$a" && printf '{}' | CLAUDE_PROJECT_DIR="$a" ".claude/hooks/stop-check-$h.sh" > "$work/conflict.log" 2>&1)
+  [ $? -eq 0 ] && grep -qxF "Unresolved merge conflicts: checks resume once they are resolved (git status lists them)." "$work/conflict.log" ||
+    { cat "$work/conflict.log"; fail "stop-check-$h: blocks or gives no pointer during a merge conflict"; }
+done
+! grep -n -i -E 'conflict.*(template update|contributing\.md, section 5)' "$a"/.claude/hooks/* > "$work/conflict.log" ||
+  { cat "$work/conflict.log"; fail "hooks: a merge conflict is tied to a template update or to contributing.md, section 5"; }
 gitc "$a" merge --abort && rm -f "$work/fail.flag" "$a/docs/plans/x.md"
 gitc "$a" switch -q main && git -C "$a" reset -q --hard "$start" && gitc "$a" branch -q -D fastbr c2 &&
   rm -f "$(git -C "$a" rev-parse --absolute-git-dir)"/ralph-stops-*
@@ -586,7 +611,7 @@ gitc "$a" switch -q -c statebr && echo a > "$a/src.txt" && gitc "$a" add src.txt
 gitc "$a" switch -q -c c2 && echo b > "$a/src.txt" && gitc "$a" commit -q -am b
 gitc "$a" switch -q statebr && echo c > "$a/src.txt" && gitc "$a" commit -q -am c
 gitc "$a" merge -q c2 > /dev/null 2>&1
-state; grep -qx -- "- unresolved merge conflicts in 1 files: resolve them first (docs/contributing.md, section 5)" "$work/state.log" ||
+state; grep -qx -- "- unresolved merge conflicts in 1 files: resolve them first (git status lists them)" "$work/state.log" ||
   { cat "$work/state.log"; fail "session-start: no line for the merge conflict"; }
 gitc "$a" merge --abort
 # Seven plans: one past its review-by, one without it, five ahead; the output stays within 10 lines.

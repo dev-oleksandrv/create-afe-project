@@ -38,7 +38,7 @@ if [ -n "$globs" ]; then
   [ -n "$match" ] || exit 0
 fi
 
-out=$(bash -c "$cmd \"\$1\"" check-edit "$rel" 2>&1)
+out=$(bash -c "$cmd \"\$1\"" check-edit "$rel" 2>&1 < /dev/null)
 code=$?
 [ "$code" -eq 0 ] && exit 0
 printf 'CHECK_EDIT failed on %s (exit %s); fix it before you go on:\n%s\n' "$rel" "$code" "$(printf '%s\n' "$out" | tail -n 40)" >&2
