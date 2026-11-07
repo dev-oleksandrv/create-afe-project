@@ -158,12 +158,12 @@ that applies, from the template's built-in rules and the project's `.claude/path
 | high | security, secrets, access and authentication, data migrations, money and billing, public contracts (`contracts/`) | nothing | {% if dual_review %}Santa loop{% else %}one reviewer; the Santa loop comes with the review module{% endif %} |
 | approval | `AGENTS.md`, the template-owned files, the generated manifest, answers file, and `.claude/settings.json`, the map, `.claude/path-classes`, `.claude/settings.project.json`, `.mcp.json`, credentials, ADRs on `main` or not `proposed` | the protect hook asks the owner; a headless run is denied | by the class of the content |
 
-The protect hook (`.claude/hooks/protect-docs.sh`) asks on an Edit, Write, or MultiEdit call and on
-a shell command of a form its comments name (a redirect, `cp`, `mv`, `tee`, `rm`, `sed -i`, and the
-like), and on the irreversible commands it names: `git push` that forces, deletes, mirrors, prunes,
-or pushes tags (a release); `gh pr merge`; `gh release create` and `delete`; `gh repo delete`. A
-side effect of a tool, a path or command named only inside a script or behind a variable, an alias,
-or a directory a script changes is not caught and is left to the review of the diff.
+The protect hook (`.claude/hooks/protect-docs.sh`) asks on Edit, Write, and MultiEdit calls, on
+shell writes of the forms its comments name, and on irreversible commands: a forced, deleting,
+mirroring, pruning, or tag `git push`; `gh pr merge`; `gh workflow run`; `gh release create` and
+`delete`; `gh repo delete`, `rename`, `archive`, and `edit`; `gh api` DELETE, settings writes,
+GraphQL mutations or unreadable queries; `protect-branch.sh` without `--dry-run`; publishing
+(`npm publish`, `docker push`). Its comments name what it misses, which is left to the review.
 
 Access control comes before prompts: an agent gets no credentials or tools for irreversible or
 production actions outside its task. `.claude/settings.json` denies force pushes and deletions

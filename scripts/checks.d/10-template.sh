@@ -15,6 +15,9 @@ export work
 trap 'rm -rf "$work"' EXIT
 # The harness hooks do nothing in GitHub Actions; the tests set GITHUB_ACTIONS where they test that.
 unset GITHUB_ACTIONS
+# DOCS_GUARD=off turns the protect hook and the decisions and template Stop hooks off; inherited,
+# it would make their tests fail or pass without testing them.
+unset DOCS_GUARD
 failures=0
 # sj <expression> [argument]: true when the JavaScript expression holds for s, the parsed
 # .claude/settings.json of the current directory.
@@ -377,9 +380,15 @@ expect_pass "the manifests, lock files, toolchain, and tool configuration of eve
   src/Directory.Build.props packages.lock.json src/App/packages.lock.json nuget.config NuGet.Config .config/dotnet-tools.json
   global.json Package.swift svc/Package.swift Package.resolved Podfile Podfile.lock .swiftlint.yml pubspec.yaml pubspec.lock
   app/pubspec.lock melos.yaml analysis_options.yaml src/App/App.vbproj svc/Gemfile svc/composer.lock app/pubspec.yaml
-  svc/Package.resolved svc/build.gradle .golangci.toml"; . scripts/lib/classes.sh &&
+  svc/Package.resolved svc/build.gradle .golangci.toml
+  web/package-lock.json web/npm-shrinkwrap.json web/pnpm-lock.yaml web/yarn.lock web/.yarnrc.yml web/bun.lock web/bun.lockb
+  web/deno.json web/deno.jsonc web/deno.lock web/.npmrc web/.nvmrc web/.node-version svc/setup.py svc/setup.cfg svc/uv.lock
+  svc/poetry.lock svc/requirements-dev.in svc/Pipfile svc/Pipfile.lock svc/.python-version crates/x/Cargo.lock
+  crates/x/.cargo/config.toml crates/x/rust-toolchain crates/x/rust-toolchain.toml svc/settings.gradle.kts svc/gradle.properties
+  svc/gradle/libs.versions.toml svc/.ruby-version src/nuget.config src/NuGet.Config src/.config/dotnet-tools.json ios/Podfile
+  ios/Podfile.lock"; . scripts/lib/classes.sh &&
   for f in $fs; do [ "$(class_of "$f" HEAD)" = gate ] || { echo "not gate: $f"; exit 1; }; done &&
-  for f in src/main.go src/App/Program.cs lib/app.rb src/main.rs app/models/user.py; do
+  for f in src/main.go src/App/Program.cs lib/app.rb src/main.rs app/models/user.py locales/en/global.json; do
     [ "$(class_of "$f" HEAD)" = normal ] || { echo "not normal: $f"; exit 1; }; done'
 expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/plans src/auth && echo x > docs/plans/x.md && echo x >> docs/README.md &&
   echo x > src/app.py && echo x > src/auth/login.py && echo "{}" > .mcp.json && echo x >> docs/contributing.md && record 0001 accepted &&
@@ -508,21 +517,32 @@ for c in "git push --force origin main" "git push -uf origin feature" "git push 
 done
 # A change of repository settings: scripts/protect-branch.sh without --dry-run in any path form,
 # and a gh api write, explicit or implied by -f, -F, or --input, on the repository, its rulesets,
-# or a branch protection. Reads, a dry run, and the replies and reads of the create-pr skill pass.
+# or a branch protection; gh repo edit, rename, and archive; a GraphQL mutation, and a gh api
+# graphql query the hook cannot read (a file, --input, a command substitution, several lines);
+# a full URL as the endpoint. Reads, a dry run,
+# GraphQL queries, and the replies and reads of the create-pr skill pass.
 for c in "scripts/protect-branch.sh" "./scripts/protect-branch.sh --repo o/r" "bash scripts/protect-branch.sh --require-base" \
   "$a/scripts/protect-branch.sh" "cd scripts && ./protect-branch.sh" "gh api --method PATCH repos/o/r" "gh api -X PUT repos/o/r/rulesets/1" \
   "gh api --method=POST /repos/o/r/rulesets --input -" "gh api -XPUT repos/o/r/branches/main/protection --input p.json" \
   "gh api -X patch 'repos/{owner}/{repo}'" "gh api repos/o/r/rulesets -f name=x" "gh api repos/o/r -F allow_squash_merge=false" \
   "gh api repos/o/r --input settings.json" "gh api --field=enforcement=active repos/o/r/rulesets/2" \
   "gh api --method PUT -H 'Accept: application/vnd.github+json' /repos/o/r/branches/main/protection --input p.json" \
-  "scripts/protect-branch.sh # --dry-run" "bash -o pipefail scripts/protect-branch.sh" "bash --rcfile x.rc ./scripts/protect-branch.sh" "gh api -XDELETE repos/o/r/x" "gh api --method=delete repos/o/r/x" "gh api -H 'Accept: x' -X DELETE repos/o/r/x"; do
+  "scripts/protect-branch.sh # --dry-run" "bash -o pipefail scripts/protect-branch.sh" "bash --rcfile x.rc ./scripts/protect-branch.sh" "gh api -XDELETE repos/o/r/x" "gh api --method=delete repos/o/r/x" "gh api -H 'Accept: x' -X DELETE repos/o/r/x" \
+  "gh repo edit --visibility public" "gh repo edit o/r --enable-squash-merge" "gh repo rename sample2" "gh repo archive o/r --yes" \
+  "gh api graphql -f query='mutation { addStar(input: {}) { clientMutationId } }'" "gh api graphql -F query=@m.graphql" \
+  "gh api graphql --raw-field 'query=mutation{deleteRef}'" "gh api /graphql --field=query='mutation X { y }'" "gh api graphql --input q.json" \
+  "gh api graphql -f query=\$(cat m.graphql)" "gh api graphql -f query='\n  mutation {\n    x\n  }'" "gh api graphql -f 'query=\nmutation { x }'" \
+  "gh api graphql -f query='query { a }\nmutation M { x }'" "gh api https://api.github.com/graphql -f query='mutation { x }'" \
+  "gh api https://ghe.example.com/api/v3/repos/o/r -X PATCH -f private=true" "gh api graphql -fquery='mutation { x }'" \
+  "gh api graphql -Fquery=@m.graphql" "gh api graphql -F query=@-" "gh api graphql -f query=\`cat m.graphql\`"; do
   hook ask '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 for c in "scripts/protect-branch.sh --dry-run" "./scripts/protect-branch.sh --repo o/r --dry-run" \
   "gh api repos/{owner}/{repo}/pulls/3/comments/7/replies -f body=Fixed" "gh api repos/{owner}/{repo}/issues/3/comments" \
   "gh api repos/{owner}/{repo}/pulls/3/comments" "gh api repos/o/r/rulesets" "gh api repos/o/r --jq .default_branch" \
   "gh api -X GET repos/o/r/rulesets -f includes_parents=true" "gh api --method POST repos/o/r/issues/3/comments -f body=x" \
-  "gh api -f 'body=see repos/o/r' repos/{owner}/{repo}/pulls/3/comments/7/replies"; do
+  "gh api -f 'body=see repos/o/r' repos/{owner}/{repo}/pulls/3/comments/7/replies" "gh repo view" "gh repo view o/r --json name" \
+  "gh repo clone o/r" "gh api graphql -f query='query { viewer { login } }'" "gh api graphql -F query='{ viewer { mutationsCount: login } }'"; do
   hook allow '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 # An approval line of .claude/path-classes asks even where a built-in rule would allow the edit.
