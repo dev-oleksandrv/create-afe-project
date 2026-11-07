@@ -16,14 +16,48 @@
 # runs, such as a template update. This is a guard against unreviewed changes, not a security
 # boundary: a command that hides the target path (for example inside a script file, behind a
 # variable, or in a directory changed by a script) is not detected.
+# It stays on in GitHub Actions, unlike the other hooks: claude-code-action restores .claude/
+# from the base branch there, and this hook runs no file of the working tree, which a pull request
+# supplies. It reads its input and writes its answer with `node -e` code of its own, not
+# scripts/lib/json.mjs, and only reads the lists it names as data (docs/documentation-rules.md,
+# section 7).
 set -uo pipefail
 [ "${DOCS_GUARD:-on}" = "off" ] && exit 0
 
 # Without Node.js the hook cannot read the tool call; block it rather than allow everything.
 command -v node >/dev/null || { echo "protect-docs: Node.js is required (README.md, Checks)" >&2; exit 2; }
-json="$(cd "$(dirname "$0")/../.." && pwd)/scripts/lib/json.mjs"
+# Prints the tool, the cwd, the file path, the command, and the kind of the first known token
+# format in what the call writes (content, new_string, edits, command), each followed by a NUL
+# byte, an empty string when missing. A match asks the owner; it does not prove a live secret.
+read_input='
+const SECRETS = [
+  ["AWS access key", /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
+  ["GitHub token", /\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{60,}/],
+  ["GitLab token", /\bglpat-[A-Za-z0-9_-]{20,}/],
+  ["Slack token", /\bxox[abposr]-[A-Za-z0-9-]{10,}/],
+  ["Stripe live key", /\b[rs]k_live_[A-Za-z0-9]{20,}/],
+  ["Google API key", /\bAIza[0-9A-Za-z_-]{35}\b/],
+  ["Anthropic API key", /\bsk-ant-[A-Za-z0-9_-]{20,}/],
+  ["OpenAI API key", /\bsk-(?:proj-)?[A-Za-z0-9_-]{40,}/],
+  ["npm token", /\bnpm_[A-Za-z0-9]{36}\b/],
+  ["private key", /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----/],
+];
+let d = null;
+try { d = JSON.parse(require("node:fs").readFileSync(0, "utf8") || "null"); } catch {}
+const t = (d && d.tool_input) || {};
+const s = (v) => (v == null ? "" : typeof v === "string" ? v : JSON.stringify(v));
+const edits = Array.isArray(t.edits) ? t.edits.map((e) => e && e.new_string) : [];
+const text = [t.content, t.new_string, t.command, ...edits].filter((x) => typeof x === "string").join("\n");
+const hit = SECRETS.find(([, re]) => re.test(text));
+process.stdout.write([s(d && d.tool_name), s(d && d.cwd), s(t.file_path), s(t.command), hit ? hit[0] : ""].map((x) => x + "\0").join(""));
+'
 { IFS= read -r -d '' tool; IFS= read -r -d '' cwd; IFS= read -r -d '' file_path; IFS= read -r -d '' cmd
-  IFS= read -r -d '' secret; } < <(node "$json" fields tool_name cwd tool_input.file_path tool_input.command @secret)
+  IFS= read -r -d '' secret; } < <(node -e "$read_input")
+# Prints the PreToolUse answer: $1 the decision (ask or deny), $2 the reason.
+answer() {
+  node -e 'const [, decision, reason] = process.argv;
+process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: decision, permissionDecisionReason: reason } }) + "\n");' "$1" "$2"
+}
 [ -n "$cwd" ] && [ -d "$cwd" ] || cwd=$PWD
 project="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$project" ] && project=$(cd "$project" 2>/dev/null && pwd -P) || project=
@@ -263,17 +297,17 @@ pushes_default() {
 }
 
 ask_owner() {
-  node "$json" ask "Protected file: $1 ($2). Changing it needs an explicit owner instruction (AGENTS.md, section 4). Approve only if you asked for this change; otherwise the agent must report it as an open question."
+  answer ask "Protected file: $1 ($2). Changing it needs an explicit owner instruction (AGENTS.md, section 4). Approve only if you asked for this change; otherwise the agent must report it as an open question."
   exit 0
 }
 
 deny_push() {
-  node "$json" deny "Pushing to the default branch $1 is not allowed: changes reach it only through a pull request (AGENTS.md, section 4; docs/contributing.md, section 1). Push a branch and open a pull request instead."
+  answer deny "Pushing to the default branch $1 is not allowed: changes reach it only through a pull request (AGENTS.md, section 4; docs/contributing.md, section 1). Push a branch and open a pull request instead."
   exit 0
 }
 
 ask_action() {
-  node "$json" ask "Irreversible action: $1. It needs an explicit owner instruction (AGENTS.md, section 4; docs/documentation-rules.md, section 8). Approve only if you asked for it."
+  answer ask "Irreversible action: $1. It needs an explicit owner instruction (AGENTS.md, section 4; docs/documentation-rules.md, section 8). Approve only if you asked for it."
   exit 0
 }
 
@@ -286,7 +320,7 @@ fi
 
 # A known token format in what the call writes: secrets never go into the repository.
 if [ -n "$secret" ] && [[ "$tool" =~ ^(Edit|Write|MultiEdit|Bash)$ ]]; then
-  node "$json" ask "Possible secret ($secret) in this change. Secrets never go into the repository or a command line; use an environment variable or the CI secret store. Approve only if it is a placeholder or a test fixture."
+  answer ask "Possible secret ($secret) in this change. Secrets never go into the repository or a command line; use an environment variable or the CI secret store. Approve only if it is a placeholder or a test fixture."
   exit 0
 fi
 

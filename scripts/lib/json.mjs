@@ -3,9 +3,7 @@
 //
 // Usage: node scripts/lib/json.mjs <command> [arguments]
 //   fields <path>...         read JSON from stdin; print the value at each dotted path, each
-//                            followed by a NUL byte, an empty string when missing; the path
-//                            @secret prints the kind of the first known token format in the text
-//                            a PreToolUse input writes (content, new_string, edits, command)
+//                            followed by a NUL byte, an empty string when missing
 //   get <path> [default]     read JSON from stdin; print the value at the path, or the default
 //   ask <reason>             print the PreToolUse decision that asks the owner, with the reason
 //   deny <reason>            print the PreToolUse decision that denies the action, with the reason
@@ -29,27 +27,6 @@ function parse(input) {
   } catch {
     return null;
   }
-}
-
-// High-confidence token formats; a match asks the owner, it does not prove a live secret.
-const SECRETS = [
-  ['AWS access key', /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
-  ['GitHub token', /\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bgithub_pat_[A-Za-z0-9_]{60,}/],
-  ['GitLab token', /\bglpat-[A-Za-z0-9_-]{20,}/],
-  ['Slack token', /\bxox[abposr]-[A-Za-z0-9-]{10,}/],
-  ['Stripe live key', /\b[rs]k_live_[A-Za-z0-9]{20,}/],
-  ['Google API key', /\bAIza[0-9A-Za-z_-]{35}\b/],
-  ['Anthropic API key', /\bsk-ant-[A-Za-z0-9_-]{20,}/],
-  ['OpenAI API key', /\bsk-(?:proj-)?[A-Za-z0-9_-]{40,}/],
-  ['npm token', /\bnpm_[A-Za-z0-9]{36}\b/],
-  ['private key', /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----/],
-];
-
-function secret(input) {
-  const t = input?.tool_input ?? {};
-  const texts = [t.content, t.new_string, t.command, ...(Array.isArray(t.edits) ? t.edits.map((e) => e?.new_string) : [])];
-  const text = texts.filter((x) => typeof x === 'string').join('\n');
-  return SECRETS.find(([, re]) => re.test(text))?.[0] ?? '';
 }
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -123,8 +100,13 @@ function prs(since, sep) {
 const [command, ...args] = process.argv.slice(2);
 switch (command) {
   case 'fields': {
+    // @secret moved into .claude/hooks/protect-docs.sh; fail rather than print an empty match.
+    if (args.some((p) => p.startsWith('@'))) {
+      console.error(`json.mjs: unknown field ${args.find((p) => p.startsWith('@'))}`);
+      process.exit(2);
+    }
     const data = parse(stdin());
-    process.stdout.write(args.map((p) => `${p === '@secret' ? secret(data) : text(at(data, p))}\0`).join(''));
+    process.stdout.write(args.map((p) => `${text(at(data, p))}\0`).join(''));
     break;
   }
   case 'get': {

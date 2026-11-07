@@ -42,11 +42,14 @@ jobs:
       # track_progress forces the action's tag mode: the prompt is appended to the action's own
       # review prompt as custom instructions instead of being passed verbatim, so Claude Code does
       # not expand the leading "/docs-review" itself. Claude invokes the skill through the Skill
-      # tool, which a headless run denies unless it is allowed here.
+      # tool, which a headless run denies unless it is allowed here. The action restores the
+      # Claude configuration from the base branch, but the files a hook runs stay at the head:
+      # --settings, above the project settings, disables the hooks; all but the protect hook, which
+      # runs no file of the head, also skip themselves.
       - name: Review
         uses: anthropics/claude-code-action@v1.0.268
         with:
           claude_code_oauth_token: {{ '${{' }} secrets.CLAUDE_CODE_OAUTH_TOKEN {{ '}}' }}
           track_progress: "true"
           prompt: "/docs-review {{ '${{' }} github.event.pull_request.number {{ '}}' }} {{ '${{' }} runner.temp {{ '}}' }}/pr.diff"
-          claude_args: '--allowedTools "Skill(docs-review *),mcp__github_inline_comment__create_inline_comment" --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash" --max-turns 40'
+          claude_args: '--allowedTools "Skill(docs-review *),mcp__github_inline_comment__create_inline_comment" --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash" --max-turns 40 --settings ''{"disableAllHooks": true}'''

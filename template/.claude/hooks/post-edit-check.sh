@@ -6,6 +6,10 @@
 # spaces, * also matches /) limits it to matching files; empty: every file. A relative path is
 # resolved against the input's cwd. An empty CHECK_EDIT, a file outside the project, or a deleted
 # file runs nothing. Keep the command to seconds: it runs after every edit.
+# Not in GitHub Actions: claude-code-action restores .claude/ from the base branch there, but the
+# scripts this hook runs or sources stay at the pull request's head, next to the review job's
+# credentials (docs/documentation-rules.md, section 7).
+[ -z "${GITHUB_ACTIONS:-}" ] || exit 0
 set -uo pipefail
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
 [ -n "$root" ] || exit 0

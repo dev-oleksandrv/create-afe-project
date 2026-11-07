@@ -106,7 +106,10 @@ most ten lines of local state (the branch, its base and the commits ahead, uncom
 untracked files, merge conflicts, plans and their `review-by`, past ones first and counted when
 not shown), only the plans outside a repository, and nothing in an empty directory; that the fast Stop hook runs
 `CHECK_FAST` only for a change to a file other than Markdown, never as the default, blocks on a
-failure, and lets the agent stop during a merge conflict; that a hook command whose script is
+failure, and lets the agent stop during a merge conflict; that in GitHub Actions every hook but
+the protect hook exits 0 before it runs a script of the working tree or a project Stop hook, the
+protect hook still asks and runs no such script, and the review jobs disable all hooks; that a
+hook command whose script is
 missing fails the template check; that the link check finds a missing file or anchor; that
 `scripts/protect-branch.sh --dry-run` prints the repository settings (merge commits only, head
 branches deleted, secret scanning) and the ruleset, that `--require-base` adds the `base` job only
