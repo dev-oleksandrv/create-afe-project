@@ -7,8 +7,9 @@
 # 1. Merge commits only, without squash and rebase merging, and "Automatically delete head
 #    branches": these work on every plan.
 # 2. Secret scanning with push protection: public repositories have them; a private one may need
-#    GitHub Advanced Security, so a refusal by the plan is reported and the script goes on; any
-#    other error stops it before the ruleset.
+#    GitHub Advanced Security, so a refusal by the plan is reported and the script goes on. Any
+#    other error is reported with the gh output; the script still applies the ruleset, then fails
+#    and names the secret-scanning error again in its last line.
 # 3. The repository ruleset "protect default branch": changes reach the default branch only through
 #    pull requests merged with a merge commit whose `check` (`docs` workflow) and `integrity`
 #    (`decisions` workflow) jobs pass, with --require-base also `base`, and only these: `readiness`
@@ -76,10 +77,16 @@ command -v gh > /dev/null || { echo "protect-branch: the GitHub CLI gh is requir
 # stderr, and exits with 1; status prints that status, or nothing when no response came.
 status() { printf '%s\n' "$1" | sed -n 's/.*(HTTP \([0-9][0-9]*\))$/\1/p' | tail -n 1; }
 
+err=$(mktemp) secret=
+# On every exit, a secret scanning that failed for a reason other than the plan is named again in
+# the last line.
+trap 'rm -f "$err"; [ -z "$secret" ] || echo "protect-branch: secret scanning and push protection are not enabled on $repo; see the error above" >&2' EXIT
+
 part repository | gh api --method PATCH "repos/$repo" --input - > /dev/null
 echo "== $repo: merge commits only, head branches deleted after the merge"
 # A refusal by the plan (HTTP 403 or 422 that names Advanced Security, an upgrade, a purchase, or
-# the feature as not available) goes on; any other error stops the run before the ruleset.
+# the feature as not available) goes on; any other error goes on to the ruleset too, and the run
+# fails at the end.
 if out=$(part security | gh api --method PATCH "repos/$repo" --input - 2>&1); then
   echo "== $repo: secret scanning and push protection on"
 else
@@ -87,16 +94,15 @@ else
     403|422) printf '%s\n' "$out" | grep -qiE 'advanced security|not available|purchase|upgrade' && refused=1 || refused= ;;
     *) refused= ;;
   esac
-  if [ -z "$refused" ]; then
-    printf 'protect-branch: cannot enable secret scanning on %s; the ruleset is left unchanged:\n%s\n' "$repo" "$out" >&2
-    exit 1
+  if [ -n "$refused" ]; then
+    printf '== %s: secret scanning and push protection not set; a private repository may need GitHub Advanced Security:\n%s\n' "$repo" "$out" >&2
+  else
+    secret=1
+    printf 'protect-branch: cannot enable secret scanning on %s; the ruleset is applied all the same:\n%s\n' "$repo" "$out" >&2
   fi
-  printf '== %s: secret scanning and push protection not set; a private repository may need GitHub Advanced Security:\n%s\n' "$repo" "$out" >&2
 fi
 # All pages, and only the repository's own rulesets, not those inherited from an organisation.
 # With --paginate, gh applies --jq to each page and prints the results one after the other.
-err=$(mktemp)
-trap 'rm -f "$err"' EXIT
 if ! ids=$(gh api --paginate "repos/$repo/rulesets?includes_parents=false" --jq ".[] | select(.name == \"$name\") | .id" 2> "$err"); then
   out=$(cat "$err")
   case "$(status "$out")" in
@@ -129,3 +135,4 @@ else
   part ruleset | gh api --method POST "repos/$repo/rulesets" --input - > /dev/null
   echo "== created the ruleset \"$name\" of $repo"
 fi
+[ -z "$secret" ] || exit 1
