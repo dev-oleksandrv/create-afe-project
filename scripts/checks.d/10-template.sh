@@ -499,7 +499,8 @@ done
 # A change of repository settings: scripts/protect-branch.sh without --dry-run in any path form,
 # and a gh api write, explicit or implied by -f, -F, or --input, on the repository, its rulesets,
 # or a branch protection; gh repo edit, rename, and archive; a GraphQL mutation, and a gh api
-# graphql query the hook cannot read (a file, --input, a command substitution). Reads, a dry run,
+# graphql query the hook cannot read (a file, --input, a command substitution, several lines);
+# a full URL as the endpoint. Reads, a dry run,
 # GraphQL queries, and the replies and reads of the create-pr skill pass.
 for c in "scripts/protect-branch.sh" "./scripts/protect-branch.sh --repo o/r" "bash scripts/protect-branch.sh --require-base" \
   "$a/scripts/protect-branch.sh" "cd scripts && ./protect-branch.sh" "gh api --method PATCH repos/o/r" "gh api -X PUT repos/o/r/rulesets/1" \
@@ -511,7 +512,9 @@ for c in "scripts/protect-branch.sh" "./scripts/protect-branch.sh --repo o/r" "b
   "gh repo edit --visibility public" "gh repo edit o/r --enable-squash-merge" "gh repo rename sample2" "gh repo archive o/r --yes" \
   "gh api graphql -f query='mutation { addStar(input: {}) { clientMutationId } }'" "gh api graphql -F query=@m.graphql" \
   "gh api graphql --raw-field 'query=mutation{deleteRef}'" "gh api /graphql --field=query='mutation X { y }'" "gh api graphql --input q.json" \
-  "gh api graphql -f query=\$(cat m.graphql)"; do
+  "gh api graphql -f query=\$(cat m.graphql)" "gh api graphql -f query='\n  mutation {\n    x\n  }'" "gh api graphql -f 'query=\nmutation { x }'" \
+  "gh api graphql -f query='query { a }\nmutation M { x }'" "gh api https://api.github.com/graphql -f query='mutation { x }'" \
+  "gh api https://ghe.example.com/api/v3/repos/o/r -X PATCH -f private=true"; do
   hook ask '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 for c in "scripts/protect-branch.sh --dry-run" "./scripts/protect-branch.sh --repo o/r --dry-run" \

@@ -237,27 +237,32 @@ write_targets() {
 # PUT, or POST (-X, --method, or POST implied by -f, -F, --field, --raw-field, or --input) on
 # `repos/OWNER/REPO` itself, its `rulesets`, or a `branches/BRANCH/protection`, while other
 # endpoints such as comments and replies pass; `gh api graphql` with a `query=` field that holds
-# the keyword mutation, or whose text the hook cannot read: `-F query=@file`, `--input`, or a
-# value that starts with `$` or holds `$(` or a backquote, while a query without mutation passes; and
+# the keyword mutation, or whose text the hook cannot read: `-F query=@file`, `--input`, a value
+# that starts with `$` or holds `$(` or a backquote, or a quoted value that spans lines, while a
+# query without mutation on one line passes; and
 # publishing a package or an image: `npm`, `pnpm`, `yarn`, `bun`, `cargo`, `poetry`, or
 # `uv publish`, `twine upload`, `gem push`, `dotnet nuget push`, `docker` or `podman push`.
+# A `gh api` endpoint may also be a full URL (https://HOST/, HOST/api/, or HOST/api/v3/).
 # With "push" as $2 it prints instead the words of the first `git push` that are not options:
 # the remote and the refspecs, one per line, or "-" alone when there are none.
 irreversible() {
   printf '%s\n' "$1" | awk -v mode="${2:-}" '
   # The last word of an option value that starts in word j as v: past the closing quote when v
-  # opens one, so that a quoted value with spaces ("Accept: x") is not read as an argument.
+  # opens one, so that a quoted value with spaces ("Accept: x") is not read as an argument. Sets
+  # unclosed when the quote does not close in the segment, as in a value that spans lines.
   function vend(j, v,   q, c) {
+    unclosed = 0
     if (match(v, /["\047]/)) {
       q = substr(v, RSTART, 1); c = gsub(q, q, v)
-      if (c % 2) while (j < m) { j++; if (index(w[j], q)) break }
+      if (c % 2) { unclosed = 1; while (j < m) { j++; if (index(w[j], q)) { unclosed = 0; break } } }
     }
     return j
   }
   # Words j to e of the segment, joined by a space.
   function words(j, e,   r) { r = w[j]; while (j < e) r = r " " w[++j]; return r }
   # Notes the field option o with the value v of gh api: an --input body, or a query= value that
-  # is a file (-F or --field with @), a shell expansion, or text with the keyword mutation.
+  # is a file (-F or --field with @), a shell expansion, text with the keyword mutation, or a
+  # quoted text that does not close on its line, of which the hook reads only the first line.
   function field(o, v) {
     if (o == "--input") { ghid = 1; return }
     gsub(/["\047]/, "", v)
@@ -265,6 +270,7 @@ irreversible() {
     v = substr(v, 7)
     if ((o ~ /^(-F|--field)$/ && v ~ /^@/) || v ~ /^\$/ || index(v, "$(") || index(v, "`")) ghid = 1
     else if (v ~ /(^|[^A-Za-z0-9_])mutation([^A-Za-z0-9_]|$)/) gmut = 1
+    else if (unclosed) ghid = 1
   }
   {
     n = split($0, segs, /[|;&]+/)
@@ -320,9 +326,9 @@ irreversible() {
         gsub(/["\047]/, "", meth); meth = toupper(meth)
         if (meth == "" && body) meth = "POST"
         if (meth == "DELETE") { print "gh api DELETE"; exit }
-        sub(/^\//, "", ep); sub(/\?.*/, "", ep)
+        sub(/^https?:\/\/[^\/]+\/(api\/(v3\/)?)?/, "", ep); sub(/^\//, "", ep); sub(/\?.*/, "", ep)
         if (ep == "graphql" && gmut) { print "gh api graphql with a mutation"; exit }
-        if (ep == "graphql" && ghid) { print "gh api graphql with a query from a file, standard input, --input, or a shell expansion, which the hook cannot read; it may be a mutation"; exit }
+        if (ep == "graphql" && ghid) { print "gh api graphql with a query from a file, standard input, --input, a shell expansion, or more than one line, which the hook cannot read; it may be a mutation"; exit }
         if (meth ~ /^(PATCH|PUT|POST)$/ && (ep ~ /^repos\/[^\/]+(\/[^\/]+)?\/?$/ || ep ~ /^repos\/[^\/]+(\/[^\/]+)?\/(rulesets|branches\/.+\/protection)(\/|$)/)) {
           print "gh api " meth " " ep; exit
         }
