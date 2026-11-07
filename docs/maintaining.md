@@ -88,8 +88,10 @@ names, behind `cd DIR`, `git -C DIR`, or in an interpreter's heredoc) and which 
 at the Ralph cap and counts again afterwards; that a large change only warns; that
 `scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
 settings deny reading secrets. It also checks that the protect hook asks before publishing a
-package or an image, `gh workflow run`, a `gh api` DELETE, and an edit or command with a known
-token format, and denies a push to `main` once the remote has it; that the check after every edit
+package or an image, `gh workflow run`, a `gh api` DELETE, a change of repository settings
+(`scripts/protect-branch.sh` without `--dry-run`, a `gh api` write on the repository, its
+rulesets, or a branch protection, but not the replies and reads of the `create-pr` skill), and
+an edit or command with a known token format, and denies a push to `main` once the remote has it; that the check after every edit
 runs `CHECK_EDIT` on matching files inside the project only, a relative path resolved against the
 input's `cwd`; that conventions, recipes, and operations
 carry `verified-against`, that the map's conventions row links section 2, and that docs-review
