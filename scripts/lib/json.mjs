@@ -100,6 +100,11 @@ function prs(since, sep) {
 const [command, ...args] = process.argv.slice(2);
 switch (command) {
   case 'fields': {
+    // @secret moved into .claude/hooks/protect-docs.sh; fail rather than print an empty match.
+    if (args.some((p) => p.startsWith('@'))) {
+      console.error(`json.mjs: unknown field ${args.find((p) => p.startsWith('@'))}`);
+      process.exit(2);
+    }
     const data = parse(stdin());
     process.stdout.write(args.map((p) => `${text(at(data, p))}\0`).join(''));
     break;

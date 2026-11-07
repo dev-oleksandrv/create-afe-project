@@ -643,6 +643,9 @@ done < <(find template/.claude/hooks -type f -name '*.sh' ! -name protect-docs.s
 grep -v -E '^[[:space:]]*#' template/.claude/hooks/protect-docs.sh |
   grep -n -E 'GITHUB_ACTIONS|scripts/lib|(^|[;&|(]|then|do|else)[[:space:]]*(\.|source)[[:space:]]|"?\$\{?(root|project|cwd)\}?/[^"[:space:]]*\.(sh|mjs|cjs|js|py)|(^|[;&|(]|then|do|else)[[:space:]]*(bash|sh|node|python3?)[[:space:]]+[^-[:space:]]' &&
   fail "protect-docs.sh skips GitHub Actions, or runs or sources a file of the working tree, which a pull request supplies there"
+# @secret moved into the protect hook: a caller that still asks json.mjs for it fails, not gets "".
+printf '{}' | node "$a/scripts/lib/json.mjs" fields tool_name @secret > /dev/null 2>&1 &&
+  fail "json.mjs fields: an unknown @ field prints an empty value instead of failing"
 # Each script a hook runs or sources, and a project Stop hook, records that it ran.
 mark="$work/head-code-ran"
 for s in scripts/lib/json.mjs scripts/lib/git-base.sh scripts/lib/harness-conf.sh scripts/check-decisions.sh \
