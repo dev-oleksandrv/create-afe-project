@@ -185,7 +185,7 @@ Every file belongs to exactly one class:
 | Class | Files | Changed by |
 | --- | --- | --- |
 | Template-owned | the files listed with their hashes in `.template/owned.sha256` (rules, ADR template, checks, hooks, skills, workflows, linter configuration), and `AGENTS.md` outside its project block | a release of the template, applied with `npx create-afe-project@latest update` (`contributing.md`, section 5); never edited in this repository |
-| Seeded | `README.md`, `CLAUDE.md`, `.gitignore`, `docs/README.md`, `.claude/path-classes`, `.claude/harness.conf`, `.claude/settings.project.json`, and the project block of `AGENTS.md`: created once by the template | the project |
+| Seeded | `README.md`, `CLAUDE.md`, `.gitignore`, `docs/README.md`, `.claude/path-classes`, `.claude/harness.conf`, `.claude/settings.project.json`, and the project block of `AGENTS.md`: created once by the template | the project; an update only through a migration (`contributing.md`, section 5) |
 | Generated | `docs/decisions/README.md`, `.template/owned.sha256`, `.afe-answers.json`, `.claude/settings.json` (by `scripts/gen-settings.sh` from `.claude/settings.template.json` and `.claude/settings.project.json`) | their generator only |
 | Project | everything else, including the documentation sections of section 2 and the extension points below | the project |
 

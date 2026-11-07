@@ -86,6 +86,16 @@ grep -qF '`CHECK_EDIT` on each file in the project that an Edit, Write, or Multi
   fail "variant A: documentation-rules.md, sections 7 and 9, or the post-edit hook do not name CHECK_EDIT"
 grep -qF '| Product name and purpose; the repository settings the owner sets once | [`README.md`](../README.md) |' "$a/docs/README.md" ||
   fail "variant A: the map does not name the repository settings that README.md owns"
+# Each document is joined into one line, so that a statement wrapped across lines is caught too.
+: > "$work/a-grep.log"
+for f in "$a/AGENTS.md" "$a/README.md" $(find "$a/docs" "$a/.claude/skills" -name '*.md'); do
+  tr '\n' ' ' < "$f" | grep -q -i -E 'never (chang|alter|touch|modif|replac)[a-z]* [^.]*seeded' && echo "$f" >> "$work/a-grep.log"
+done
+[ ! -s "$work/a-grep.log" ] &&
+  grep -qF 'an existing seeded or project file only by a migration its report and changelog name.' "$a/docs/contributing.md" &&
+  grep -qF 'created once by the template | the project; an update only through a migration (`contributing.md`, section 5) |' "$a/docs/documentation-rules.md" &&
+  grep -qF 'runs the migrations the changelog names, the only way it changes an existing seeded file' "$a/.claude/skills/update-template/SKILL.md" ||
+  { cat "$work/a-grep.log"; fail "variant A: a rule document says an update never changes a seeded file, without the migration exception"; }
 
 echo "== initial commit: --no-git, an empty clone, a forced non-empty directory"
 ng="$work/ng"

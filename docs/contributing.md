@@ -148,10 +148,10 @@ template version, which `.afe-answers.json` records; the `update-template` skill
 
 1. From an up-to-date `main`, on the branch `chore/template-update`: `npx create-afe-project@latest
    update --defaults`, or `@<version>`. It replaces the template-owned files, keeps the project
-   block of `AGENTS.md`, never changes an existing seeded file, and regenerates generated files.
+   block of `AGENTS.md`, creates missing seeded files, and regenerates generated files. It changes
+   an existing seeded or project file only by a migration its report and changelog name.
 2. Review its report: a replaced local edit of a template-owned file is lost unless it moves to
-   the template; project files are untouched. An update changes seeded files only by a migration
-   the changelog names.
+   the template.
 3. `scripts/check.sh`, then a pull request `Template: update to <version>` with the changelog
    entries since the previous version under "Summary". A change the project needs in a
    template-owned file is made in the template first.

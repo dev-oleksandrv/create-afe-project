@@ -25,8 +25,8 @@ The rules are in `docs/contributing.md`, section 5, and file ownership in
    `v<target>`, or the `CHANGELOG.md` the package ships.
 4. Update: `npx --yes create-afe-project@<target> update --defaults`. It replaces the
    template-owned files, keeps the project block of `AGENTS.md`, creates missing seeded files,
-   runs the migrations the changelog names, and regenerates `.template/owned.sha256`, the
-   decision index, and `.claude/settings.json`.
+   runs the migrations the changelog names, the only way it changes an existing seeded file, and
+   regenerates `.template/owned.sha256`, the decision index, and `.claude/settings.json`.
 5. Review its report by the rules of `docs/contributing.md`, section 5: a replaced local edit of
    a template-owned file is listed; it is lost unless the change goes to the template. When you
    cannot tell whether an edit was intended, stop and list it as a `blocking:` question. Each
