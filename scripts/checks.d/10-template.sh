@@ -289,6 +289,21 @@ expect_pass "dependency updates, pre-commit hooks, task runners, and tool versio
   . scripts/lib/classes.sh && for f in $fs; do [ "$(class_of "$f" HEAD)" = gate ] || { echo "not gate: $f"; exit 1; }; done &&
   mkdir -p svc && echo x > Makefile && echo x > svc/justfile && out=$(classes) && printf "%s\n" "$out" | grep -qx "gate	Makefile" &&
   printf "%s\n" "$out" | grep -qx "gate	svc/justfile"'
+expect_pass "the manifests, lock files, toolchain, and tool configuration of every ecosystem are class gate" bash -c 'fs="package.json svc/package.json
+  npm-shrinkwrap.json pnpm-workspace.yaml .yarnrc.yml bun.lock bun.lockb deno.json deno.jsonc deno.lock .npmrc .nvmrc .node-version
+  pyproject.toml svc/pyproject.toml setup.py setup.cfg requirements-dev.in svc/requirements.txt Pipfile Pipfile.lock .python-version
+  go.mod svc/go.mod svc/go.sum go.work go.work.sum .golangci.yml .golangci.yaml crates/x/Cargo.toml .cargo/config.toml rust-toolchain
+  rust-toolchain.toml clippy.toml pom.xml svc/pom.xml build.gradle sub/build.gradle.kts settings.gradle.kts gradle.properties
+  gradle.lockfile svc/gradle.lockfile gradle/libs.versions.toml gradle/wrapper/gradle-wrapper.properties gradlew gradlew.bat
+  .mvn/wrapper/maven-wrapper.properties mvnw Gemfile Gemfile.lock svc/Gemfile.lock app.gemspec .ruby-version .rubocop.yml
+  composer.json composer.lock svc/composer.json phpunit.xml.dist phpstan.neon src/App/App.csproj src/F/F.fsproj Directory.Packages.props
+  src/Directory.Build.props packages.lock.json src/App/packages.lock.json nuget.config NuGet.Config .config/dotnet-tools.json
+  global.json Package.swift svc/Package.swift Package.resolved Podfile Podfile.lock .swiftlint.yml pubspec.yaml pubspec.lock
+  app/pubspec.lock melos.yaml analysis_options.yaml src/App/App.vbproj svc/Gemfile svc/composer.lock app/pubspec.yaml
+  svc/Package.resolved svc/build.gradle .golangci.toml"; . scripts/lib/classes.sh &&
+  for f in $fs; do [ "$(class_of "$f" HEAD)" = gate ] || { echo "not gate: $f"; exit 1; }; done &&
+  for f in src/main.go src/App/Program.cs lib/app.rb src/main.rs app/models/user.py; do
+    [ "$(class_of "$f" HEAD)" = normal ] || { echo "not normal: $f"; exit 1; }; done'
 expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/plans src/auth && echo x > docs/plans/x.md && echo x >> docs/README.md &&
   echo x > src/app.py && echo x > src/auth/login.py && echo "{}" > .mcp.json && echo x >> docs/contributing.md && record 0001 accepted &&
   out=$(classes) && for l in "gate	scripts/checks.d/20-x.sh" "low	docs/plans/x.md" "approval	docs/README.md" "normal	src/app.py" \

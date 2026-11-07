@@ -72,31 +72,131 @@ gate .mise/config.toml
 gate .config/mise.toml
 gate .config/mise/*
 
-# Dependency manifests and lock files, and the configuration of linters, test runners, coverage,
-# and mutation testing.
+# Gates of each ecosystem: dependency manifests and lock files, toolchain and package-source
+# files, and the configuration of linters, test runners, coverage, and mutation testing. Every
+# block is seeded; a glob that matches nothing costs nothing. The `*/` lines cover the modules of
+# a monorepo, and a glob that starts with `*` matches at any depth.
+
+# Node.js: npm, pnpm, Yarn, Bun, and Deno; ESLint, Prettier, TypeScript, Jest, Vitest, Stryker.
 gate package.json
 gate */package.json
 gate package-lock.json
+gate npm-shrinkwrap.json
 gate pnpm-lock.yaml
+gate pnpm-workspace.yaml
 gate yarn.lock
-gate pyproject.toml
-gate uv.lock
-gate poetry.lock
-gate requirements*.txt
-gate go.mod
-gate go.sum
-gate Cargo.toml
-gate Cargo.lock
+gate .yarnrc.yml
+gate bun.lock
+gate bun.lockb
+gate deno.json
+gate deno.jsonc
+gate deno.lock
+gate .npmrc
+gate .nvmrc
+gate .node-version
 gate .eslintrc*
 gate eslint.config.*
 gate .prettierrc*
+gate jest.config.*
+gate vitest.config.*
+gate tsconfig*.json
+gate stryker.conf.*
+
+# Python: pip, uv, Poetry, and Pipenv; Ruff, pytest, tox, coverage.py.
+gate pyproject.toml
+gate */pyproject.toml
+gate setup.py
+gate setup.cfg
+gate uv.lock
+gate poetry.lock
+gate requirements*.txt
+gate requirements*.in
+gate */requirements*.txt
+gate Pipfile
+gate Pipfile.lock
+gate .python-version
 gate ruff.toml
 gate .ruff.toml
 gate pytest.ini
 gate tox.ini
 gate .coveragerc
-gate jest.config.*
-gate vitest.config.*
-gate tsconfig*.json
-gate stryker.conf.*
-gate .golangci.yml
+
+# Go: modules and workspaces; golangci-lint.
+gate go.mod
+gate */go.mod
+gate go.sum
+gate */go.sum
+gate go.work
+gate go.work.sum
+gate .golangci.*
+
+# Rust: Cargo, its configuration, and the toolchain; Clippy.
+gate Cargo.toml
+gate */Cargo.toml
+gate Cargo.lock
+gate .cargo/config.toml
+gate rust-toolchain
+gate rust-toolchain.toml
+gate clippy.toml
+
+# JVM: Maven and Gradle, their wrappers and properties.
+gate pom.xml
+gate */pom.xml
+gate build.gradle*
+gate */build.gradle*
+gate settings.gradle*
+gate gradle.properties
+gate gradle.lockfile
+gate */gradle.lockfile
+gate gradle/libs.versions.toml
+gate gradle/wrapper/*
+gate gradlew*
+gate .mvn/*
+gate mvnw*
+
+# Ruby: Bundler and gems; RuboCop.
+gate Gemfile
+gate */Gemfile
+gate Gemfile.lock
+gate */Gemfile.lock
+gate *.gemspec
+gate .ruby-version
+gate .rubocop.yml
+
+# PHP: Composer; PHPUnit, PHPStan.
+gate composer.json
+gate */composer.json
+gate composer.lock
+gate */composer.lock
+gate phpunit.xml*
+gate phpstan.neon*
+
+# .NET: projects, central package management, NuGet lock files and sources, tools, and the SDK.
+gate *.csproj
+gate *.fsproj
+gate *.vbproj
+gate *Directory.Packages.props
+gate *Directory.Build.props
+gate packages.lock.json
+gate */packages.lock.json
+gate nuget.config
+gate NuGet.Config
+gate .config/dotnet-tools.json
+gate global.json
+
+# Swift: Swift Package Manager and CocoaPods; SwiftLint.
+gate Package.swift
+gate */Package.swift
+gate Package.resolved
+gate */Package.resolved
+gate Podfile
+gate Podfile.lock
+gate .swiftlint.yml
+
+# Dart and Flutter: pub and melos; the analyzer.
+gate pubspec.yaml
+gate */pubspec.yaml
+gate pubspec.lock
+gate */pubspec.lock
+gate melos.yaml
+gate analysis_options.yaml
