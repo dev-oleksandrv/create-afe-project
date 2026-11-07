@@ -44,7 +44,8 @@ jobs:
       # not expand the leading "/docs-review" itself. Claude invokes the skill through the Skill
       # tool, which a headless run denies unless it is allowed here. The action restores the
       # Claude configuration from the base branch, but the files a hook runs stay at the head:
-      # --settings, above the project settings, disables the hooks, which also skip themselves.
+      # --settings, above the project settings, disables the hooks; all but the protect hook, which
+      # runs no file of the head, also skip themselves.
       - name: Review
         uses: anthropics/claude-code-action@v1.0.268
         with:

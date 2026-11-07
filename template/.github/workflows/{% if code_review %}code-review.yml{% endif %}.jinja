@@ -46,7 +46,8 @@ jobs:
       # the Skill tool is allowed explicitly because a headless run denies it otherwise. No plugin
       # is installed: the review rests on the repository's own rules. The action restores the
       # Claude configuration from the base branch, but the files a hook runs stay at the head:
-      # --settings, above the project settings, disables the hooks, which also skip themselves.
+      # --settings, above the project settings, disables the hooks; all but the protect hook, which
+      # runs no file of the head, also skip themselves.
       - name: Review
         uses: anthropics/claude-code-action@v1.0.268
         with:
