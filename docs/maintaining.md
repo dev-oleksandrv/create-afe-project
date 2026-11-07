@@ -27,6 +27,10 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   `dual_review`, `secret_scan`, `acceptance_check`, and `fail_without_change`). A module's
   files use a conditional file name, and the documents mention the module only inside the same
   condition.
+- The seeded `.claude/path-classes` carries the gate lines of every ecosystem; the template asks
+  no `ecosystems` question (from agent-docs-template 0.7.0). Decided by the owner, 2026-11-06.
+- Documents are English-only (`AGENTS.md`, section 5); the template has no `docs_language`
+  question (from agent-docs-template 0.7.0). Decided by the owner, 2026-11-06.
 
 ## 2. Changing the template
 

@@ -18,8 +18,8 @@ port the move, and no document said why (the 2.0.0 review of 2026-11-06). Upstre
 0.9.0 build on `.harness/`, for example `TEST_PLAN` in `.harness/harness.conf`. Where do the
 harness files of a generated project live? The owner chose the option below in the review
 session of 2026-11-06; accepting this record is the owner's step. The two other choices of that
-port are [ADR 0004](0004-seed-the-gate-lines-of-every-ecosystem.md) and
-[ADR 0005](0005-keep-documents-english-only.md).
+port, the ecosystem gate lines and English-only documents, are owner decisions in
+[`docs/maintaining.md`](../maintaining.md), section 1.
 
 ## Considered Options
 
