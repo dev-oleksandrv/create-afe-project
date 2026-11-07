@@ -123,7 +123,7 @@ These rules apply once code exists; they are fixed now so the first code follows
 | A new ADR meets the criteria of section 5 | none | {% if docs_review %}`docs-review` reports it; {% endif %}the owner decides |
 | Template-owned files unchanged; one project block in `AGENTS.md`; the line budgets of the rule documents; `.claude/settings.json` generated, and every hook command it names exists (sections 2 and 9) | `scripts/check-template.sh`: Stop hook and `docs` workflow | none |
 | Each invariant names its check (section 2) | none | the review checks `docs/invariants.md` against the checks it names |
-| Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; in Claude Code, `CHECK_FAST` of `.claude/harness.conf` at a Stop when a file other than Markdown differs from the base, skipped when empty or the default `scripts/check-docs.sh` | as the project defines; what `CHECK_FAST` leaves out waits for `scripts/check.sh` |
+| Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; in Claude Code, the commands of `.claude/harness.conf`: `CHECK_EDIT` on each file in the project that an Edit, Write, or MultiEdit call changes and `CHECK_EDIT_GLOBS` matches, and `CHECK_FAST` at a Stop when a file other than Markdown differs from the base; each skips when empty, `CHECK_FAST` also when it is the default `scripts/check-docs.sh` | as the project defines; a file changed by a shell command, and what neither command covers, wait for `scripts/check.sh` |
 | Code and tests meet the review rubric and the testing rules (`contributing.md`, section 6; `testing-rules.md`) | the project's test checks in `scripts/checks.d/`{% if fail_without_change %}; `scripts/fail-without-change.sh`{% endif %}{% if code_review %}; `code-review` workflow, a sensor{% endif %} | reviewer applies the rubric, by the class of the paths |
 | Merge readiness (`contributing.md`, section 3) | `scripts/check-decisions.sh --ready`, in the forms that section names{% if acceptance_check %}, with `scripts/check-acceptance.sh`{% endif %}; `decisions` workflow; signals, does not block | whether the tests prove their identifiers; no `blocker` open; the owner's merge confirms the listed markers |
 | Measurement of the sensors (`contributing.md`, section 3) | `scripts/pr-metrics.sh` aggregates the Metrics of merged pull requests | the owner removes a rule or check that never fires |
@@ -158,13 +158,12 @@ that applies, from the template's built-in rules and the project's `.claude/path
 | high | security, secrets, access and authentication, data migrations, money and billing, public contracts (`contracts/`) | nothing | {% if dual_review %}Santa loop{% else %}one reviewer; the Santa loop comes with the review module{% endif %} |
 | approval | `AGENTS.md`, the template-owned files, the generated manifest, answers file, and `.claude/settings.json`, the map, `.claude/path-classes`, `.claude/settings.project.json`, `.mcp.json`, credentials, ADRs on `main` or not `proposed` | the protect hook asks the owner; a headless run is denied | by the class of the content |
 
-The protect hook (`.claude/hooks/protect-docs.sh`) asks on an Edit, Write, or MultiEdit call and
-on a shell command of a form its comments name (a redirect, `cp`, `mv`, `tee`, `rm`, `sed -i`,
-and the like), and on the irreversible commands it names: `git push` that forces, deletes,
-mirrors, prunes, or pushes tags (a release); `gh pr merge`; `gh release create` and `delete`;
-`gh repo delete`. A side effect of a tool, a path or command named only inside a script or
-behind a variable, an alias, or a directory a script changes is not caught and is left to the
-review of the diff.
+The protect hook (`.claude/hooks/protect-docs.sh`) asks on an Edit, Write, or MultiEdit call and on
+a shell command of a form its comments name (a redirect, `cp`, `mv`, `tee`, `rm`, `sed -i`, and the
+like), and on the irreversible commands it names: `git push` that forces, deletes, mirrors, prunes,
+or pushes tags (a release); `gh pr merge`; `gh release create` and `delete`; `gh repo delete`. A
+side effect of a tool, a path or command named only inside a script or behind a variable, an alias,
+or a directory a script changes is not caught and is left to the review of the diff.
 
 Access control comes before prompts: an agent gets no credentials or tools for irreversible or
 production actions outside its task. `.claude/settings.json` denies force pushes and deletions
@@ -195,6 +194,7 @@ run in name order by `scripts/check.sh` and the `docs` workflow, which provision
 need beyond Git, bash, and Node.js; Stop hooks in `.claude/hooks/project/stop/*.sh`, which
 receive the Stop hook input and block the agent by exiting with 2; its own workflows in
 `.github/workflows/`; its path classes in `.claude/path-classes`; its harness settings in
-`.claude/harness.conf` (the Ralph cap, the identifier pattern, test globs, test commands); and
-its Claude Code settings in `.claude/settings.project.json`. Checks and Stop hooks keep their
-executable bit. Personal settings go into `.claude/settings.local.json`, never committed.
+`.claude/harness.conf` (the Ralph cap, the identifier pattern, test globs, the environment and
+test commands, `CHECK_EDIT` and `CHECK_EDIT_GLOBS`); and its Claude Code settings in
+`.claude/settings.project.json`. Checks and Stop hooks keep their executable bit. Personal
+settings go into `.claude/settings.local.json`, never committed.
