@@ -15,7 +15,8 @@
 # it. DOCS_GUARD=off in the Claude Code environment disables the guard for scripted owner-driven
 # runs, such as a template update. This is a guard against unreviewed changes, not a security
 # boundary: a command that hides the target path (for example inside a script file, behind a
-# variable, or in a directory changed by a script) is not detected.
+# variable, or in a directory changed by a script) is not detected; nor is a command split across
+# lines with a backslash, or one behind a prefix such as env, time, or nohup.
 # It stays on in GitHub Actions, unlike the other hooks: claude-code-action restores .claude/
 # from the base branch there, and this hook runs no file of the working tree, which a pull request
 # supplies. It reads its input and writes its answer with `node -e` code of its own, not
@@ -230,11 +231,14 @@ write_targets() {
 # --force-if-includes, --delete, --mirror, --prune, or --tags, a short option that contains f or
 # d (-f, -uf, -d), a refspec that starts with + or :, or a tag (refs/tags/..., or v followed by a
 # digit, the form of a release); `gh pr merge`; `gh release create` or `gh release delete`;
-# `gh repo delete`; `gh workflow run`; `gh api` with the method DELETE; a change of repository
-# settings: `scripts/protect-branch.sh` (by any path, or through bash, sh, zsh, or source) without
-# --dry-run, and `gh api` with the method PATCH, PUT, or POST (-X, --method, or POST implied by
-# -f, -F, --field, --raw-field, or --input) on `repos/OWNER/REPO` itself, its `rulesets`, or a
-# `branches/BRANCH/protection`, while other endpoints such as comments and replies pass; and
+# `gh repo delete`, `rename`, and `archive`; `gh workflow run`; `gh api` with the method DELETE; a
+# change of repository settings: `gh repo edit` with any flags, `scripts/protect-branch.sh` (by any
+# path, or through bash, sh, zsh, or source) without --dry-run, and `gh api` with the method PATCH,
+# PUT, or POST (-X, --method, or POST implied by -f, -F, --field, --raw-field, or --input) on
+# `repos/OWNER/REPO` itself, its `rulesets`, or a `branches/BRANCH/protection`, while other
+# endpoints such as comments and replies pass; `gh api graphql` with a `query=` field that holds
+# the keyword mutation, or whose text the hook cannot read: `-F query=@file`, `--input`, or a
+# value that starts with `$` or holds `$(` or a backquote, while a query without mutation passes; and
 # publishing a package or an image: `npm`, `pnpm`, `yarn`, `bun`, `cargo`, `poetry`, or
 # `uv publish`, `twine upload`, `gem push`, `dotnet nuget push`, `docker` or `podman push`.
 # With "push" as $2 it prints instead the words of the first `git push` that are not options:
@@ -249,6 +253,18 @@ irreversible() {
       if (c % 2) while (j < m) { j++; if (index(w[j], q)) break }
     }
     return j
+  }
+  # Words j to e of the segment, joined by a space.
+  function words(j, e,   r) { r = w[j]; while (j < e) r = r " " w[++j]; return r }
+  # Notes the field option o with the value v of gh api: an --input body, or a query= value that
+  # is a file (-F or --field with @), a shell expansion, or text with the keyword mutation.
+  function field(o, v) {
+    if (o == "--input") { ghid = 1; return }
+    gsub(/["\047]/, "", v)
+    if (v !~ /^query=/) return
+    v = substr(v, 7)
+    if ((o ~ /^(-F|--field)$/ && v ~ /^@/) || v ~ /^\$/ || index(v, "$(") || index(v, "`")) ghid = 1
+    else if (v ~ /(^|[^A-Za-z0-9_])mutation([^A-Za-z0-9_]|$)/) gmut = 1
   }
   {
     n = split($0, segs, /[|;&]+/)
@@ -273,7 +289,7 @@ irreversible() {
         }
       }
       if (mode == "push") continue
-      if (cmd == "gh" && ((sub1 == "pr" && sub2 == "merge") || (sub1 == "release" && sub2 ~ /^(create|delete)$/) || (sub1 == "repo" && sub2 == "delete") || (sub1 == "workflow" && sub2 == "run"))) {
+      if (cmd == "gh" && ((sub1 == "pr" && sub2 == "merge") || (sub1 == "release" && sub2 ~ /^(create|delete)$/) || (sub1 == "repo" && sub2 ~ /^(delete|edit|rename|archive)$/) || (sub1 == "workflow" && sub2 == "run"))) {
         print "gh " sub1 " " sub2; exit
       }
       scr = cmd; x = k
@@ -285,14 +301,18 @@ irreversible() {
         if (!dry) { print "scripts/protect-branch.sh without --dry-run"; exit }
       }
       if (cmd == "gh" && sub1 == "api") {
-        meth = ""; body = 0; ep = ""
+        meth = ""; body = 0; ep = ""; gmut = 0; ghid = 0
         for (j = s + 1; j <= m; j++) {
           a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a)
           if (a ~ /^(-X|--method)$/) { meth = w[j + 1]; j++ }
           else if (a ~ /^--method=/) meth = substr(a, 10)
           else if (a ~ /^-X./) meth = substr(a, 3)
-          else if (a ~ /^(-f|-F|--field|--raw-field|--input)$/) { body = 1; j = vend(j + 1, w[j + 1]) }
-          else if (a ~ /^(-f|-F)./ || a ~ /^--(field|raw-field|input)=/) { body = 1; j = vend(j, w[j]) }
+          else if (a ~ /^(-f|-F|--field|--raw-field|--input)$/) { body = 1; e = vend(j + 1, w[j + 1]); field(a, words(j + 1, e)); j = e }
+          else if (a ~ /^(-f|-F)./ || a ~ /^--(field|raw-field|input)=/) {
+            body = 1; e = vend(j, w[j]); o = a; v = words(j, e)
+            if (o ~ /^-[fF]/) { o = substr(o, 1, 2); v = substr(v, 3) } else { sub(/=.*/, "", o); sub(/^[^=]*=/, "", v) }
+            field(o, v); j = e
+          }
           else if (a ~ /^(-H|--header|-q|--jq|-t|--template|--hostname|-p|--preview|--cache)$/) j = vend(j + 1, w[j + 1])
           else if (a ~ /^--(header|jq|template|hostname|preview|cache)=/) j = vend(j, w[j])
           else if (a !~ /^-/ && ep == "") ep = a
@@ -301,6 +321,8 @@ irreversible() {
         if (meth == "" && body) meth = "POST"
         if (meth == "DELETE") { print "gh api DELETE"; exit }
         sub(/^\//, "", ep); sub(/\?.*/, "", ep)
+        if (ep == "graphql" && gmut) { print "gh api graphql with a mutation"; exit }
+        if (ep == "graphql" && ghid) { print "gh api graphql with a query from a file, standard input, --input, or a shell expansion, which the hook cannot read; it may be a mutation"; exit }
         if (meth ~ /^(PATCH|PUT|POST)$/ && (ep ~ /^repos\/[^\/]+(\/[^\/]+)?\/?$/ || ep ~ /^repos\/[^\/]+(\/[^\/]+)?\/(rulesets|branches\/.+\/protection)(\/|$)/)) {
           print "gh api " meth " " ep; exit
         }

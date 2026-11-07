@@ -96,8 +96,10 @@ at the Ralph cap and counts again afterwards; that a large change only warns; th
 `scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
 settings deny reading secrets. It also checks that the protect hook asks before publishing a
 package or an image, `gh workflow run`, a `gh api` DELETE, a change of repository settings
-(`scripts/protect-branch.sh` without `--dry-run`, a `gh api` write on the repository, its
-rulesets, or a branch protection, but not the replies and reads of the `create-pr` skill), and
+(`gh repo edit`, `scripts/protect-branch.sh` without `--dry-run`, a `gh api` write on the
+repository, its rulesets, or a branch protection, but not the replies and reads of the
+`create-pr` skill), `gh repo rename` and `archive` (but not `gh repo view`), a `gh api graphql`
+mutation or a query it cannot read (but not a query without a mutation), and
 an edit or command with a known token format, and denies a push to `main` once the remote has it; that the check after every edit
 runs `CHECK_EDIT` on matching files inside the project only, with stdin from `/dev/null`, a
 relative path resolved against the input's `cwd`; that the documentation rules state that conventions, recipes, and operations
