@@ -48,7 +48,8 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
 
 `scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/`: the questions,
 their validators and defaults, the Jinja rendering and conditional names, that every rendered
-file is template-owned or seeded, and the reading of a Copier answers file.
+file is template-owned or seeded, the reading of a Copier answers file, and the warning for a
+Copier `docs_language` other than English, none for English.
 `scripts/checks.d/15-release.sh` runs `scripts/tag-release.sh` against a local origin: it tags
 without a changeset and with only an empty one, and not while a changeset with a release is
 pending; and that such a changeset, which has no heading, passes markdownlint through
@@ -80,7 +81,7 @@ outside its forms, unanswered findings, a blocker as a limit, a missing or repea
 the description does not name); the class of each kind of path and the review level of
 `--classes` (`contracts/` is high; dependency updates, pre-commit hooks, task runners, and tool
 versions are gate, each line of their block with a file it matches; sample manifests, lock
-files, toolchain files, and tool configuration of every ecosystem block are gate, and sample
+files, and toolchain or tool-configuration files from every ecosystem block are gate, and sample
 source files of those stacks stay normal); the totals, distributions, regression rate, and hours to
 merge of `scripts/pr-metrics.sh` against a stand-in for `gh`, and its warning when `--limit`
 cuts the period; and which edits and commands the protect hook asks for (class
@@ -100,8 +101,9 @@ carry `verified-against`, that the map's conventions row links section 2, and th
 skill states that it reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
 rule file and a convention without its check or `none`, and the review-code skill states that it applies the conventions; that the docs-review skill
 states that it reports a new or changed document that lacks the front matter of sections 2 and 4
-or keeps a stale `verified-against`; that the documentation rules, sections 7 and 9, state
-`CHECK_EDIT` and the comment of the post-edit hook cites section 7; that the map's `README.md` row names the
+or keeps a stale `verified-against`; that the documentation rules name `CHECK_EDIT`
+(section 7 with its limit for a file changed by a shell command, section 9 with
+`CHECK_EDIT_GLOBS`) and the comment of the post-edit hook cites section 7; that the map's `README.md` row names the
 repository settings; that the testing rules carry the
 rule that a flaky test is fixed, never retried or rerun until green, and that skipping one is a
 blocker; that the rubric of variant A has the
@@ -154,9 +156,9 @@ highest.
 
 A release that needs a mechanical change in projects ships a `MIGRATIONS` entry in
 `src/config.js` that performs it, and its changeset says what the project must check by hand.
-That is usually a MAJOR release, but an entry that repairs a defect may ship in a MINOR or PATCH
-release, such as the `2.0.1` entry, which restores the harness settings that the 2.0.0
-conversion of a Copier project left orphaned in `.harness/`. An update changes an existing seeded file (`SEEDED`) only through a `MIGRATIONS`
+The version part follows the table, not the migration: a migration may ship in any release, such
+as the `2.0.1` entry, which restores the harness settings and path classes that the 2.0.0
+conversion of a Copier project left in `.harness/`. An update changes an existing seeded file (`SEEDED`) only through a `MIGRATIONS`
 entry, and that entry's changeset says so; any other change to a seeded file reaches new projects
 only, so its changeset says what an existing project should copy by hand.
 Before 1.0.0, MINOR takes the role of MAJOR.
