@@ -299,7 +299,8 @@ expect_pass "the manifests, lock files, toolchain, and tool configuration of eve
   composer.json composer.lock svc/composer.json phpunit.xml.dist phpstan.neon src/App/App.csproj src/F/F.fsproj Directory.Packages.props
   src/Directory.Build.props packages.lock.json src/App/packages.lock.json nuget.config NuGet.Config .config/dotnet-tools.json
   global.json Package.swift svc/Package.swift Package.resolved Podfile Podfile.lock .swiftlint.yml pubspec.yaml pubspec.lock
-  app/pubspec.lock melos.yaml analysis_options.yaml"; . scripts/lib/classes.sh &&
+  app/pubspec.lock melos.yaml analysis_options.yaml src/App/App.vbproj svc/Gemfile svc/composer.lock app/pubspec.yaml
+  svc/Package.resolved svc/build.gradle .golangci.toml"; . scripts/lib/classes.sh &&
   for f in $fs; do [ "$(class_of "$f" HEAD)" = gate ] || { echo "not gate: $f"; exit 1; }; done &&
   for f in src/main.go src/App/Program.cs lib/app.rb src/main.rs app/models/user.py; do
     [ "$(class_of "$f" HEAD)" = normal ] || { echo "not normal: $f"; exit 1; }; done'
