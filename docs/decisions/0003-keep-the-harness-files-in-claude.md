@@ -47,6 +47,7 @@ later decision (the choice stays unrecorded while ports continue).
 
 ### Confirmation
 
-Not checked yet: the migration is proposed on the branch `fix/copier-harness-conversion`, with a
-test in `scripts/checks.d/10-template.sh` that confirms it once it merges. The owner's review
+The harness migration test of [`scripts/checks.d/10-template.sh`](../../scripts/checks.d/10-template.sh)
+(the 2.0.1 migration, pull request #20) converts a Copier 0.7.0 project and updates a 2.0.0
+project, and fails unless their `.harness/` files end up in `.claude/`. The owner's review
 before the port of 0.8.0 confirms the location.
