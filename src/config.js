@@ -162,9 +162,18 @@ export const MIGRATIONS = [
   // them since its 0.7.0, back to .claude/, with the reverse of that release's rename in their
   // lines; 2.0.0 ignored them and seeded the defaults. A .claude/ file is replaced only when it is
   // a default (of 2.0.0 or of this package); otherwise both stay, and the update reports the merge
-  // by hand. .harness/ is removed when nothing else is left in it.
+  // by hand. .harness/ is removed when nothing else is left in it. After a move, the files that are
+  // not template-owned and still name the .harness/ paths, such as the seeded map docs/README.md, are
+  // reported for a change by hand.
   {
     version: '2.0.1',
+    after: [
+      `[ -f "$AFE_NOTES.moved" ] || exit 0`,
+      `grep -rlE '[.]harness/(harness[.]conf|path-classes)' --exclude-dir=.git --exclude-dir=.harness --exclude-dir=node_modules . 2> /dev/null |`,
+      `  sed 's#^[.]/##' | { [ -f .template/owned.txt ] && grep -v -x -F -f .template/owned.txt || cat; } |`,
+      `  sed 's#.*#replace .harness/ with .claude/ in & by hand: it names a .harness/ file that moved to .claude/#' >> "$AFE_NOTES"`,
+      `exit 0`,
+    ].join('\n'),
     before: [
       `for f in harness.conf path-classes; do`,
       `  [ -f .harness/$f ] || continue`,
@@ -174,7 +183,7 @@ export const MIGRATIONS = [
       `    continue`,
       `  fi`,
       `  mkdir -p .claude && sed 's#[.]harness/harness[.]conf#.claude/harness.conf#g; s#[.]harness/path-classes#.claude/path-classes#g' .harness/$f > .claude/$f.tmp &&`,
-      `    mv .claude/$f.tmp .claude/$f && rm .harness/$f || exit 1`,
+      `    mv .claude/$f.tmp .claude/$f && rm .harness/$f && : > "$AFE_NOTES.moved" || exit 1`,
       `done`,
       `[ ! -d .harness ] || rmdir .harness 2> /dev/null || true`,
     ].join('\n'),
@@ -187,7 +196,7 @@ export const MIGRATIONS = [
 export function legacyNotes(answers) {
   const notes = [];
   const language = answers.docs_language;
-  if (language !== undefined && !/^\s*english\s*$/i.test(String(language))) {
+  if (language != null && String(language).trim() !== '' && !/^\s*(english|en)\s*$/i.test(String(language))) {
     notes.push(`docs_language was ${language}; it is not carried over: documents stay in English (AGENTS.md, section 5)`);
   }
   return notes;

@@ -10,7 +10,9 @@ renamed to `.claude/`, and removes `.harness/` when it is empty. Before, 2.0.0 s
 longer applied. The migration also runs for a project that already converted with 2.0.0: a
 `.claude/` file that is still the default is replaced. When the project has changed both copies,
 both stay, and the update prints `Warning: merge .harness/<file> into .claude/<file> by hand`;
-do that merge, then delete `.harness/`.
+do that merge, then delete `.harness/`. A file that is not template-owned and still names a
+moved `.harness/` file, such as the seeded `docs/README.md`, is reported as
+`Warning: replace .harness/ with .claude/ in <file> by hand`.
 
 The conversion of `.copier-answers.yml` now names the answers it drops. `ecosystems` is dropped:
 the seeded `.claude/path-classes` gates the files of all ecosystems without a question. A

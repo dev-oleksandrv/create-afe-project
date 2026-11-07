@@ -164,7 +164,7 @@ export function initialCommit(dir) {
 /**
  * Updates the project in `dir` to this package's template. Template-owned files are replaced, the
  * project block of AGENTS.md is kept, files the template no longer owns are removed, missing
- * seeded files are created and existing ones never changed, the migrations between the two
+ * seeded files are created and existing ones changed only by a migration, the migrations between the two
  * versions run, and the generated files are rebuilt. The result names, besides the files, the
  * answers of a Copier answers file that are dropped, and notes: what is left to do by hand.
  * @param {string} dir

@@ -102,7 +102,7 @@ test('a Copier answers file is read with its version, without private keys', () 
 
 test('a Copier docs_language other than English gets a warning that documents stay in English', () => {
   assert.match(legacyNotes({ docs_language: 'German', ecosystems: ['node'] }).join('\n'), /^docs_language was German; .*English \(AGENTS\.md, section 5\)$/);
-  assert.deepEqual(legacyNotes({ docs_language: 'English' }), []);
+  for (const docs_language of ['English', 'en', '', null]) assert.deepEqual(legacyNotes({ docs_language }), []);
   assert.deepEqual(legacyNotes({ ecosystems: ['node'] }), []);
 });
 
