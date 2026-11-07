@@ -35,6 +35,8 @@ placeholder files.
 | Contracts: APIs, schemas, events | `contracts/` at the repository root, machine-readable and authoritative | the first interface is designed |
 | Active plans | `docs/plans/` | work spans more than one session |
 | Operations: run, deploy, observe (logs, traces, metrics, scenario replay), recover | `docs/operations/` | there is something to operate |
+| Conventions: the rules of one area that the code does not make obvious ([`documentation-rules.md`](documentation-rules.md), section 2) | `docs/conventions/`, one file per area | the first convention is agreed |
+| Recipes: step-by-step procedures for repeated work, such as adding a module or an endpoint | `docs/recipes/`, one file per task; a skill or tool-specific rule file points to its recipe instead of copying it | a task is done the same way a second time |
 | Implemented behaviour | source code and its tests | the first code is merged |
 
 ## Reading order for a new agent

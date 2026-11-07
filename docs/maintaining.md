@@ -48,7 +48,8 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
 
 `scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/`: the questions,
 their validators and defaults, the Jinja rendering and conditional names, that every rendered
-file is template-owned or seeded, and the reading of a Copier answers file.
+file is template-owned or seeded, the reading of a Copier answers file, and the warning for a
+Copier `docs_language` other than English, none for English.
 `scripts/checks.d/15-release.sh` runs `scripts/tag-release.sh` against a local origin: it tags
 without a changeset and with only an empty one, and not while a changeset with a release is
 pending; and that such a changeset, which has no heading, passes markdownlint through
@@ -79,7 +80,9 @@ existing path (a root-level test file counts, a version does not), no Metrics, a
 outside its forms, unanswered findings, a blocker as a limit, a missing or repeated measure (`Regression of` included), an added owner marker in a Markdown file or a touched gate file that
 the description does not name); the class of each kind of path and the review level of
 `--classes` (`contracts/` is high; dependency updates, pre-commit hooks, task runners, and tool
-versions are gate, each line of their block with a file it matches); the totals, distributions, regression rate, and hours to
+versions are gate, each line of their block with a file it matches; sample manifests, lock
+files, and toolchain or tool-configuration files from every ecosystem block are gate, and sample
+source files of those stacks stay normal); the totals, distributions, regression rate, and hours to
 merge of `scripts/pr-metrics.sh` against a stand-in for `gh`, and its warning when `--limit`
 cuts the period; and which edits and commands the protect hook asks for (class
 approval, an `approval` line over a built-in allowance, secrets, the irreversible commands it
@@ -93,14 +96,19 @@ package or an image, `gh workflow run`, a `gh api` DELETE, a change of repositor
 rulesets, or a branch protection, but not the replies and reads of the `create-pr` skill), and
 an edit or command with a known token format, and denies a push to `main` once the remote has it; that the check after every edit
 runs `CHECK_EDIT` on matching files inside the project only, with stdin from `/dev/null`, a
-relative path resolved against the input's `cwd`; that conventions, recipes, and operations
-carry `verified-against`, that the map's conventions row links section 2, and that docs-review
-reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
-rule file and a convention without its check or `none`, and review-code applies the conventions; that the testing rules carry the
+relative path resolved against the input's `cwd`; that the documentation rules state that conventions, recipes, and operations
+carry `verified-against`, that the map's conventions row links section 2, and that the docs-review
+skill states that it reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
+rule file and a convention without its check or `none`, and the review-code skill states that it applies the conventions; that the docs-review skill
+states that it reports a new or changed document that lacks the front matter of sections 2 and 4
+or keeps a stale `verified-against`; that the documentation rules name `CHECK_EDIT`
+(section 7 with its limit for a file changed by a shell command, section 9 with
+`CHECK_EDIT_GLOBS`) and the comment of the post-edit hook cites section 7; that the map's `README.md` row names the
+repository settings; that the testing rules carry the
 rule that a flaky test is fixed, never retried or rerun until green, and that skipping one is a
 blocker; that the rubric of variant A has the
 "Dependencies" row and the `review-code` skill lists dependencies among its criteria and says
-what to check for an added one; that the `create-pr` skill takes
+what to check for an added one; that the `create-pr` skill states that it takes
 findings only from the review bot and the repository's owner, members, and collaborators; that the readiness step of the `decisions` workflow, run as
 written with the shell it declares, checks only the decision records of a pull request that
 `github-actions[bot]` opened, fails there when its `--classes` call fails, and still fails a person's empty description, and that the AI reviews skip such a pull request; that the SessionStart hook prints at
@@ -124,7 +132,11 @@ appears only with its module; and that every action of the workflows of variant 
 pinned to an exact version or a commit. It also checks that `update` keeps project content (the project
 block, seeded files, project checks), creates a missing seeded file, removes a file the template
 no longer owns, refuses a dirty working tree and a downgrade, reports and replaces a local edit
-of a template-owned file, converts a Copier answers file, and runs the 0.5.0 migration; and that
+of a template-owned file, converts a Copier answers file, and runs the 0.5.0 migration and the
+2.0.1 migration, which moves the `.harness/` files of a Copier 0.7.0 project into `.claude/`,
+reports a file that still names `.harness/`, replaces a default `.claude/` file that a 2.0.0
+conversion left next to them and keeps a changed one with a note to merge by hand, and warns
+that a `docs_language` other than English is not carried over; and that
 this repository's template-owned files match `template/`. CI runs both through the `docs`
 workflow, which sets up Node.js; the checks run `npm ci` when `node_modules` is missing, and the
 Python test installs uv into `~/.local/bin` when `uvx` is missing, so the runner needs only Git
@@ -142,9 +154,12 @@ highest.
 | New capability that existing projects can adopt without action | MINOR | a new module, a new check that existing content passes, a new skill |
 | Correction without new capability | PATCH | wording, a broken link, a script bug |
 
-A MAJOR release that needs a mechanical change in projects ships a `MIGRATIONS` entry in
+A release that needs a mechanical change in projects ships a `MIGRATIONS` entry in
 `src/config.js` that performs it, and its changeset says what the project must check by hand.
-An update never changes an existing seeded file (`SEEDED`): a change to them reaches new projects
+The version part follows the table, not the migration: a migration may ship in any release, such
+as the `2.0.1` entry, which restores the harness settings and path classes that the 2.0.0
+conversion of a Copier project left in `.harness/`. An update changes an existing seeded file (`SEEDED`) only through a `MIGRATIONS`
+entry, and that entry's changeset says so; any other change to a seeded file reaches new projects
 only, so its changeset says what an existing project should copy by hand.
 Before 1.0.0, MINOR takes the role of MAJOR.
 
