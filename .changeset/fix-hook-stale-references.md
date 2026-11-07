@@ -9,8 +9,9 @@ Hooks and the `decisions` workflow: stale references and two masked failures.
   template update or point to `docs/contributing.md`, section 5, which since 1.0.0 is the npm
   update and produces no conflict markers; their message now says that `git status` lists the
   conflicts.
-- `.claude/hooks/post-edit-check.sh` runs `CHECK_EDIT` with stdin from `/dev/null`, so a command
-  that reads stdin ends at once instead of reading the hook's input or waiting.
+- `.claude/hooks/post-edit-check.sh` runs `CHECK_EDIT` with stdin from `/dev/null`, as upstream
+  does, instead of the hook's input pipe, which the hook has already read to its end; a command
+  that behaves differently when stdin is a pipe no longer sees one.
 - `.github/workflows/decisions.yml`: the header says that the ruleset of
   `scripts/protect-branch.sh` requires `integrity` once it is set, and that `readiness` is never
   required. The readiness step runs with `shell: bash`, so pipefail applies and a failing

@@ -538,8 +538,8 @@ pe "$a/pe.txt" || fail "post-edit: runs although CHECK_EDIT is empty"
 printf 'CHECK_EDIT=grep -q ok\n' >> "$a/.claude/harness.conf"
 pe "$a/pe.txt"; [ $? -eq 2 ] && grep -q "CHECK_EDIT failed on pe.txt" "$work/pe.log" || { cat "$work/pe.log"; fail "post-edit: a failing CHECK_EDIT is not reported"; }
 pe "$a/pe-ok.txt" || { cat "$work/pe.log"; fail "post-edit: a passing CHECK_EDIT is reported"; }
-# CHECK_EDIT reads /dev/null, not the hook's input pipe: a command that reads stdin ends at once.
-printf 'CHECK_EDIT=test ! -p /dev/stdin && test -z "$(cat)" && true\n' >> "$a/.claude/harness.conf"
+# CHECK_EDIT reads /dev/null, not the hook's spent input pipe: a command never sees a pipe on stdin.
+printf 'CHECK_EDIT=test ! -p /dev/stdin && true\n' >> "$a/.claude/harness.conf"
 pe "$a/pe.txt" || { cat "$work/pe.log"; fail "post-edit: CHECK_EDIT gets the hook's stdin, not /dev/null"; }
 printf 'CHECK_EDIT=grep -q ok\n' >> "$a/.claude/harness.conf"
 mkdir -p "$a/sub" && printf 'bad\n' > "$a/sub/pe.txt" && printf 'bad\n' > "$a/pe-rel.txt"
