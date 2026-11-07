@@ -76,9 +76,10 @@ gate .config/mise/*
 # files, and the configuration of linters, test runners, coverage, and mutation testing. Every
 # block is seeded; a glob that matches nothing costs nothing. The `*/` lines cover the modules of
 # a monorepo: every manifest, lock file, toolchain file, and package-source file that a module can
-# have of its own. Workspace files, wrappers, tool configuration, and `global.json`, a name that
-# other files use too, are gated at the root only. A glob that starts with `*` matches at any
-# depth.
+# have of its own; `settings.gradle*` counts as one, since it names the repositories of its build.
+# Workspace files such as `go.work`, `pnpm-workspace.yaml`, and `melos.yaml`, wrappers, tool
+# configuration, and `global.json`, a name that other files use too, are gated at the root only.
+# A glob that starts with `*` matches at any depth.
 
 # Node.js: npm, pnpm, Yarn, Bun, and Deno; ESLint, Prettier, TypeScript, Jest, Vitest, Stryker.
 gate package.json
