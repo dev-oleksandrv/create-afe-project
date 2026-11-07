@@ -10,7 +10,8 @@ export const TEMPLATE_URL = 'https://github.com/dev-oleksandrv/create-afe-projec
 export const RENAMES = { _gitignore: '.gitignore' };
 
 // Seeded files: created once, owned by the project afterwards (docs/documentation-rules.md,
-// section 9, in a generated project). An update creates a missing one and never changes one.
+// section 9, in a generated project). An update creates a missing one; it changes an existing one
+// only through an entry of MIGRATIONS, such as 2.0.1, which can replace a default one.
 export const SEEDED = [
   'README.md',
   'CLAUDE.md',

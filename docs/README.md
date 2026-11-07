@@ -31,6 +31,7 @@ placeholder files.
 | Kind of fact | Planned owner | Created when |
 | --- | --- | --- |
 | Requirements: what the system must do | `docs/requirements/`, one `REQ-NNN` per statement | the owner states the first requirement |
+| Invariants: what must hold everywhere, each with the check that enforces it | `docs/invariants.md`, one `INV-NN` per invariant | the owner names the first invariant |
 | Architecture: the system map, components, domain ownership, boundaries and dependency rules, runtime | `docs/architecture/` | the first design is proposed |
 | Contracts: APIs, schemas, events | `contracts/` at the repository root, machine-readable and authoritative | the first interface is designed |
 | Active plans | `docs/plans/` | work spans more than one session |
@@ -38,6 +39,7 @@ placeholder files.
 | Conventions: the rules of one area that the code does not make obvious ([`documentation-rules.md`](documentation-rules.md), section 2) | `docs/conventions/`, one file per area | the first convention is agreed |
 | Recipes: step-by-step procedures for repeated work, such as adding a module or an endpoint | `docs/recipes/`, one file per task; a skill or tool-specific rule file points to its recipe instead of copying it | a task is done the same way a second time |
 | Implemented behaviour | source code and its tests | the first code is merged |
+| Review criteria: what the project adds to the rubric of [`contributing.md`](contributing.md), section 6 | not decided: the owner document the project chooses | the project adds its first criterion |
 
 ## Reading order for a new agent
 
