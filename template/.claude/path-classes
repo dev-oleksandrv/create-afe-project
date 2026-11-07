@@ -75,25 +75,42 @@ gate .config/mise/*
 # Gates of each ecosystem: dependency manifests and lock files, toolchain and package-source
 # files, and the configuration of linters, test runners, coverage, and mutation testing. Every
 # block is seeded; a glob that matches nothing costs nothing. The `*/` lines cover the modules of
-# a monorepo, and a glob that starts with `*` matches at any depth.
+# a monorepo: every manifest, lock file, toolchain file, and package-source file that a module can
+# have of its own; `settings.gradle*` counts as one, since it names the repositories of its build.
+# Workspace files such as `go.work`, `pnpm-workspace.yaml`, and `melos.yaml`, wrappers, tool
+# configuration, and `global.json`, a name that other files use too, are gated at the root only.
+# A glob that starts with `*` matches at any depth.
 
 # Node.js: npm, pnpm, Yarn, Bun, and Deno; ESLint, Prettier, TypeScript, Jest, Vitest, Stryker.
 gate package.json
 gate */package.json
 gate package-lock.json
+gate */package-lock.json
 gate npm-shrinkwrap.json
+gate */npm-shrinkwrap.json
 gate pnpm-lock.yaml
+gate */pnpm-lock.yaml
 gate pnpm-workspace.yaml
 gate yarn.lock
+gate */yarn.lock
 gate .yarnrc.yml
+gate */.yarnrc.yml
 gate bun.lock
+gate */bun.lock
 gate bun.lockb
+gate */bun.lockb
 gate deno.json
+gate */deno.json
 gate deno.jsonc
+gate */deno.jsonc
 gate deno.lock
+gate */deno.lock
 gate .npmrc
+gate */.npmrc
 gate .nvmrc
+gate */.nvmrc
 gate .node-version
+gate */.node-version
 gate .eslintrc*
 gate eslint.config.*
 gate .prettierrc*
@@ -106,15 +123,23 @@ gate stryker.conf.*
 gate pyproject.toml
 gate */pyproject.toml
 gate setup.py
+gate */setup.py
 gate setup.cfg
+gate */setup.cfg
 gate uv.lock
+gate */uv.lock
 gate poetry.lock
+gate */poetry.lock
 gate requirements*.txt
-gate requirements*.in
 gate */requirements*.txt
+gate requirements*.in
+gate */requirements*.in
 gate Pipfile
+gate */Pipfile
 gate Pipfile.lock
+gate */Pipfile.lock
 gate .python-version
+gate */.python-version
 gate ruff.toml
 gate .ruff.toml
 gate pytest.ini
@@ -134,9 +159,13 @@ gate .golangci.*
 gate Cargo.toml
 gate */Cargo.toml
 gate Cargo.lock
+gate */Cargo.lock
 gate .cargo/config.toml
+gate */.cargo/config.toml
 gate rust-toolchain
+gate */rust-toolchain
 gate rust-toolchain.toml
+gate */rust-toolchain.toml
 gate clippy.toml
 
 # JVM: Maven and Gradle, their wrappers and properties.
@@ -145,10 +174,13 @@ gate */pom.xml
 gate build.gradle*
 gate */build.gradle*
 gate settings.gradle*
+gate */settings.gradle*
 gate gradle.properties
+gate */gradle.properties
 gate gradle.lockfile
 gate */gradle.lockfile
 gate gradle/libs.versions.toml
+gate */gradle/libs.versions.toml
 gate gradle/wrapper/*
 gate gradlew*
 gate .mvn/*
@@ -161,6 +193,7 @@ gate Gemfile.lock
 gate */Gemfile.lock
 gate *.gemspec
 gate .ruby-version
+gate */.ruby-version
 gate .rubocop.yml
 
 # PHP: Composer; PHPUnit, PHPStan.
@@ -180,8 +213,11 @@ gate *Directory.Build.props
 gate packages.lock.json
 gate */packages.lock.json
 gate nuget.config
+gate */nuget.config
 gate NuGet.Config
+gate */NuGet.Config
 gate .config/dotnet-tools.json
+gate */.config/dotnet-tools.json
 gate global.json
 
 # Swift: Swift Package Manager and CocoaPods; SwiftLint.
@@ -190,7 +226,9 @@ gate */Package.swift
 gate Package.resolved
 gate */Package.resolved
 gate Podfile
+gate */Podfile
 gate Podfile.lock
+gate */Podfile.lock
 gate .swiftlint.yml
 
 # Dart and Flutter: pub and melos; the analyzer.

@@ -15,6 +15,9 @@ export work
 trap 'rm -rf "$work"' EXIT
 # The harness hooks do nothing in GitHub Actions; the tests set GITHUB_ACTIONS where they test that.
 unset GITHUB_ACTIONS
+# DOCS_GUARD=off turns the protect hook and the decisions and template Stop hooks off; inherited,
+# it would make their tests fail or pass without testing them.
+unset DOCS_GUARD
 failures=0
 # sj <expression> [argument]: true when the JavaScript expression holds for s, the parsed
 # .claude/settings.json of the current directory.
@@ -367,9 +370,15 @@ expect_pass "the manifests, lock files, toolchain, and tool configuration of eve
   src/Directory.Build.props packages.lock.json src/App/packages.lock.json nuget.config NuGet.Config .config/dotnet-tools.json
   global.json Package.swift svc/Package.swift Package.resolved Podfile Podfile.lock .swiftlint.yml pubspec.yaml pubspec.lock
   app/pubspec.lock melos.yaml analysis_options.yaml src/App/App.vbproj svc/Gemfile svc/composer.lock app/pubspec.yaml
-  svc/Package.resolved svc/build.gradle .golangci.toml"; . scripts/lib/classes.sh &&
+  svc/Package.resolved svc/build.gradle .golangci.toml
+  web/package-lock.json web/npm-shrinkwrap.json web/pnpm-lock.yaml web/yarn.lock web/.yarnrc.yml web/bun.lock web/bun.lockb
+  web/deno.json web/deno.jsonc web/deno.lock web/.npmrc web/.nvmrc web/.node-version svc/setup.py svc/setup.cfg svc/uv.lock
+  svc/poetry.lock svc/requirements-dev.in svc/Pipfile svc/Pipfile.lock svc/.python-version crates/x/Cargo.lock
+  crates/x/.cargo/config.toml crates/x/rust-toolchain crates/x/rust-toolchain.toml svc/settings.gradle.kts svc/gradle.properties
+  svc/gradle/libs.versions.toml svc/.ruby-version src/nuget.config src/NuGet.Config src/.config/dotnet-tools.json ios/Podfile
+  ios/Podfile.lock"; . scripts/lib/classes.sh &&
   for f in $fs; do [ "$(class_of "$f" HEAD)" = gate ] || { echo "not gate: $f"; exit 1; }; done &&
-  for f in src/main.go src/App/Program.cs lib/app.rb src/main.rs app/models/user.py; do
+  for f in src/main.go src/App/Program.cs lib/app.rb src/main.rs app/models/user.py locales/en/global.json; do
     [ "$(class_of "$f" HEAD)" = normal ] || { echo "not normal: $f"; exit 1; }; done'
 expect_pass "classes of the changed paths" bash -c 'gatefile && mkdir -p docs/plans src/auth && echo x > docs/plans/x.md && echo x >> docs/README.md &&
   echo x > src/app.py && echo x > src/auth/login.py && echo "{}" > .mcp.json && echo x >> docs/contributing.md && record 0001 accepted &&
