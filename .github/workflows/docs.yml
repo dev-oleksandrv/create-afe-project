@@ -20,15 +20,15 @@ jobs:
     # without editing this template-owned file.
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Node.js for npx, which scripts/check-docs.sh and project checks use (README.md, Checks).
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: lts/*
 
       - name: markdownlint-cli2
-        uses: DavidAnson/markdownlint-cli2-action@v25.0.0
+        uses: DavidAnson/markdownlint-cli2-action@696eb3f2509270d7b882d2aa68347bc676e7af34 # v25.0.0
 
       - name: links
         run: node scripts/check-links.mjs
