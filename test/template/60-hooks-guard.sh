@@ -1,33 +1,40 @@
-# The protect hook: class approval, irreversible commands, repository settings. Needs $a from
-# 10-variant-a.sh; defines hook, which the later hook files use.
+# The guard hook: AGENTS.md, irreversible commands, repository settings, DOCS_GUARD=off. Needs $a
+# from 10-variant-a.sh; defines hook, which the later hook files use.
 echo "== hooks on variant A"
 hook() { # expected decision (ask|deny|allow), JSON input, directory the hook runs in, CLAUDE_PROJECT_DIR (both default: variant A)
   local out
-  out=$(cd "${3:-$a}" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="${4:-$a}" "$a/.claude/hooks/protect-docs.sh" 2>&1)
+  out=$(cd "${3:-$a}" && printf '%s' "$2" | CLAUDE_PROJECT_DIR="${4:-$a}" "$a/.claude/hooks/guard.sh" 2>&1)
   case "$1:$out" in
     ask:*'"permissionDecision":"ask"'*|deny:*'"permissionDecision":"deny"'*|allow:) ;;
-    *) fail "protect hook: expected $1 for $2, got '${out:0:120}'" ;;
+    *) fail "guard hook: expected $1 for $2, got '${out:0:120}'" ;;
   esac
 }
-hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/docs/contributing.md"}}'
-hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/docs/../AGENTS.md"}}'
-hook ask '{"tool_name":"Bash","tool_input":{"command":"scripts/check-template.sh --write"}}'
-hook ask '{"tool_name":"Bash","tool_input":{"command":"echo x > \"docs/documentation-rules.md\""}}'
-hook ask '{"tool_name":"Bash","tool_input":{"command":"rm .template/owned.txt"}}'
-hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/docs/plans/x.md"}}'
-hook allow '{"tool_name":"Bash","tool_input":{"command":"cp docs/decisions/adr-template.md docs/decisions/0001-x.md"}}'
-hook allow '{"tool_name":"Bash","tool_input":{"command":"scripts/check.sh 2>&1 | tee /tmp/check.log"}}'
-hook ask '{"tool_name":"Bash","tool_input":{"command":"cp /tmp/x docs/contributing.md"}}'
-# Class approval asks; gate, high, normal, and low paths need no prompt; so do the irreversible
-# commands the hook names, and not an ordinary push.
-for p in .claude/path-classes .claude/settings.project.json .claude/settings.json .mcp.json .env .claude/settings.template.json; do
-  hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$a/$p"'"}}'
+# An Edit, Write, or MultiEdit of AGENTS.md at the root asks; no other path does: not the
+# documentation map, a template-owned file, a generated file, the path classes, an AGENTS.md
+# below the root, or a decision record that exists on main.
+for t in Edit Write MultiEdit; do
+  hook ask '{"tool_name":"'"$t"'","tool_input":{"file_path":"'"$a"'/AGENTS.md"}}'
 done
-for p in scripts/checks.d/20-x.sh .github/workflows/ci.yml package.json src/auth/login.py .claude/harness.conf; do
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/docs/../AGENTS.md"}}'
+hook ask '{"tool_name":"Edit","tool_input":{"file_path":"AGENTS.md"},"cwd":"'"$a"'"}'
+for p in docs/README.md docs/contributing.md scripts/check.sh scripts/lib/stamp.sh .claude/hooks/guard.sh .template/owned.txt \
+  .template/owned.sha256 .afe-answers.json .claude/settings.json .claude/settings.template.json .claude/settings.project.json \
+  .claude/path-classes .mcp.json .env docs/decisions/README.md docs/AGENTS.md src/AGENTS.md scripts/checks.d/20-x.sh \
+  .github/workflows/ci.yml package.json src/auth/login.py .claude/harness.conf; do
   hook allow '{"tool_name":"Write","tool_input":{"file_path":"'"$a/$p"'"}}'
 done
-hook ask '{"tool_name":"Bash","tool_input":{"command":"echo KEY=x >> .env.local"}}'
-hook ask '{"tool_name":"Bash","tool_input":{"command":"echo approval x >> .claude/path-classes"}}'
+start=$(git -C "$a" rev-parse HEAD)
+printf -- '---\nstatus: accepted\n---\n\n# Accepted\n' > "$a/docs/decisions/0001-on-main.md"
+gitc "$a" add -A && gitc "$a" commit -q -m adr
+hook allow '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/docs/decisions/0001-on-main.md"}}'
+git -C "$a" reset -q --hard "$start"
+# A shell command is not checked for the paths it writes (the known limit of the hook header), so
+# these pass; scripts/check-template.sh catches a changed template part.
+for c in "echo x > AGENTS.md" "scripts/check-template.sh --write" "rm .template/owned.txt" "cp /tmp/x docs/contributing.md" \
+  "scripts/check.sh 2>&1 | tee /tmp/check.log" "echo approval x >> .claude/path-classes"; do
+  hook allow '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
+done
+# The irreversible commands the hook names ask, and not an ordinary push.
 for c in "git push --force origin main" "git push -uf origin feature" "git push origin +feature" "git push origin --delete feature" \
   "git push origin v1.2.0" "git push origin refs/tags/x" "gh pr merge 3 --merge" "scripts/check.sh && gh release create v1.0.0" "gh repo delete example/sample --yes" \
   "git -C . push --force origin feature" "gh workflow run release.yml" "gh api -X DELETE repos/o/r/git/refs/heads/x" \
@@ -64,7 +71,10 @@ for c in "scripts/protect-branch.sh --dry-run" "./scripts/protect-branch.sh --re
   "gh repo clone o/r" "gh api graphql -f query='query { viewer { login } }'" "gh api graphql -F query='{ viewer { mutationsCount: login } }'"; do
   hook allow '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
-# An approval line of .claude/path-classes asks even where a built-in rule would allow the edit.
-printf 'approval docs/decisions/*\n' >> "$a/.claude/path-classes"
-hook ask '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/docs/decisions/0001-new.md"}}'
-gitc "$a" checkout -q -- .claude/path-classes
+# DOCS_GUARD=off passes everything: AGENTS.md, an irreversible command, a secret format.
+aws="AKIA""IOSFODNN7EXAMPLE"
+for in_json in '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/AGENTS.md"}}' '{"tool_name":"Bash","tool_input":{"command":"gh pr merge 3"}}' \
+  '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/src/x.py","content":"'"$aws"'"}}'; do
+  out=$(cd "$a" && printf '%s' "$in_json" | DOCS_GUARD=off CLAUDE_PROJECT_DIR="$a" .claude/hooks/guard.sh 2>&1) && [ -z "$out" ] ||
+    fail "guard hook: DOCS_GUARD=off does not pass $in_json: '${out:0:120}'"
+done

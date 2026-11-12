@@ -41,8 +41,7 @@ grep -qF 'Currency (`docs/documentation-rules.md`, section 4): report a new or c
 grep -qF '`CHECK_EDIT` on each file in the project that an Edit, Write, or MultiEdit call changes and `CHECK_EDIT_GLOBS` matches' "$a/docs/documentation-rules.md" &&
   grep -qF 'test commands, `CHECK_EDIT` and `CHECK_EDIT_GLOBS`); and its Claude Code settings in' "$a/docs/documentation-rules.md" &&
   grep -qF 'a file changed by a shell command, and what neither command covers, wait for `scripts/check.sh` |' "$a/docs/documentation-rules.md" &&
-  grep -qF 'the check after every edit (docs/documentation-rules.md,' "$a/.claude/hooks/post-edit-check.sh" &&
-  grep -qF '# section 7). It runs the project' "$a/.claude/hooks/post-edit-check.sh" ||
+  grep -qF 'per-file check, CHECK_EDIT of .claude/harness.conf' "$a/.claude/hooks/post-edit-check.sh" ||
   fail "variant A: documentation-rules.md, sections 7 and 9, or the post-edit hook do not name CHECK_EDIT"
 grep -qF '| Product name and purpose; the repository settings the owner sets once | [`README.md`](../README.md) |' "$a/docs/README.md" ||
   fail "variant A: the map does not name the repository settings that README.md owns"

@@ -1,4 +1,4 @@
-# The protect hook denies a push to the default branch once the remote has it. Needs $a, hook, and
+# The guard hook denies a push to the default branch once the remote has it. Needs $a, hook, and
 # $ghp from 10-, 60-, and 65-*.sh, and $work/r-none.md from 40-readiness.sh.
 # A pushed feature branch must still be compared with main, not with its own upstream.
 git init -q --bare "$work/origin.git"
@@ -8,6 +8,9 @@ for c in "git push origin main" "git push" "git push origin HEAD:main" "git -C .
   hook deny '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
+# DOCS_GUARD=off passes the push too.
+out=$(cd "$a" && printf '%s' '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}' | DOCS_GUARD=off CLAUDE_PROJECT_DIR="$a" .claude/hooks/guard.sh 2>&1) &&
+  [ -z "$out" ] || fail "guard hook: DOCS_GUARD=off does not pass a push to main: '${out:0:120}'"
 # A token in the command must not turn the deny into an approvable prompt.
 hook deny '{"tool_name":"Bash","tool_input":{"command":"GH_TOKEN='"$ghp"' git push origin main"}}'
 gitc "$a" switch -q -c pushed && printf -- '---\nstatus: proposed\ndate: 2026-01-01\ndecision-makers: test\nscope: stack\nsummary: "Test."\nsupersedes: []\n---\n\n# Test\n' > "$a/docs/decisions/0001-test.md"
