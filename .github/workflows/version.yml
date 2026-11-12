@@ -5,7 +5,7 @@
 # that merge finds nothing pending, and scripts/tag-release.sh tags the version and starts the
 # release workflow.
 #
-# Everything runs with GITHUB_TOKEN, which starts no workflow by itself: the docs checks of the
+# Everything runs with GITHUB_TOKEN, which starts no workflow by itself: the checks of the
 # Version PR and the release are started with workflow_dispatch, the one event it may trigger.
 # The repository setting "Allow GitHub Actions to create and approve pull requests" must be on.
 name: version
@@ -46,11 +46,11 @@ jobs:
           pr-title: "Release: next version"
           github-token: ${{ github.token }}
 
-      - name: run the docs checks on the Version PR
+      - name: run the checks on the Version PR
         if: steps.changesets.outputs.pr-number != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run docs.yml --ref changeset-release/main
+        run: gh workflow run check.yml --ref changeset-release/main
 
       # Runs every time: the action sets no output when nothing is pending.
       - name: tag a merged version and start the release

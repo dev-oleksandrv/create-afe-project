@@ -1,9 +1,9 @@
-# Code review of pull requests (docs/contributing.md, section 6). Claude reads the diff of a pull
-# request that changes code, contracts, checks, or workflows, reviews it against the rubric of
-# that section and the project's own criteria, and posts findings as PR comments. It proposes
-# only; it changes nothing. It is a sensor with one pass: it runs when the pull request opens or
-# leaves draft, and a push does not run it again. Needs the Claude GitHub App installed on the
-# repository and the CLAUDE_CODE_OAUTH_TOKEN secret.
+# Code review of pull requests. Claude reads the diff of a pull request that changes code,
+# contracts, checks, or workflows, reviews it against the review rubric and the project's own
+# criteria, and posts findings as PR comments. It proposes only; it changes nothing. It is a
+# sensor with one pass: it runs when the pull request opens or leaves draft, and a push does not
+# run it again. Needs the Claude GitHub App installed on the repository and the
+# CLAUDE_CODE_OAUTH_TOKEN secret.
 name: code-review
 
 on:
@@ -42,12 +42,12 @@ jobs:
           git diff "origin/$BASE_REF...HEAD" > "$RUNNER_TEMP/pr.diff"
           printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
 
-      # As in the docs-review workflow: track_progress keeps the prompt as custom instructions, and
-      # the Skill tool is allowed explicitly because a headless run denies it otherwise. No plugin
-      # is installed: the review rests on the repository's own rules. The action restores the
-      # Claude configuration from the base branch, but the files a hook runs stay at the head:
-      # --settings, above the project settings, disables the hooks; all but the protect hook, which
-      # runs no file of the head, also skip themselves.
+      # track_progress keeps the prompt as custom instructions, and the Skill tool is allowed
+      # explicitly because a headless run denies it otherwise. No plugin is installed: the review
+      # rests on the repository's own rules. The action restores the Claude configuration from the
+      # base branch, but the files a hook runs stay at the head: --settings, above the project
+      # settings, disables the hooks; all but the guard hook, which runs no file of the head, also
+      # skip themselves.
       - name: Review
         uses: anthropics/claude-code-action@c0949c50a78c1ec8ce2647db36629b870e715d0c # v1.0.268
         with:

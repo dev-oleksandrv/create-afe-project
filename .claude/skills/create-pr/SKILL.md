@@ -68,11 +68,11 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
      the branch can still answer is resolved now. A finding is `blocking:` only from a Santa loop.
    - Run `scripts/check-decisions.sh --ready --base origin/main --pr-body <file>` and fix the
      description until it passes, or state each failure; a failure here alone is not a draft.
-9. Review in the pull request: the `docs-review` and `code-review` workflows run once, when it opens or leaves
+9. Review in the pull request: the `code-review` workflow runs once, when it opens or leaves
    draft; on a draft, skip this step and say so. `code-review` posts nothing on a branch that changes
    no code, contracts, checks, or workflows.
    - Wait once: poll `gh pr view --json statusCheckRollup` about every 30 seconds until each
-     entry of `docs-review` or `code-review` is `COMPLETED`, for at most 30 minutes; never one long sleep.
+     entry of `code-review` is `COMPLETED`, for at most 30 minutes; never one long sleep.
      A run that does not appear within a few minutes, does not finish, or does not end in
      `SUCCESS` is reported with its URL. So is a `SUCCESS` run whose log
      (`gh run view <id> --log`) says the action was skipped: the action skips a pull request
