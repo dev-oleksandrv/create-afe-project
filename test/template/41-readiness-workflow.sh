@@ -24,9 +24,6 @@ ready 'github-actions[bot]'; [ $? -ne 0 ] && grep -q classes-failed "$work/ready
 cp "$work/check-decisions.keep" "$a/scripts/check-decisions.sh"
 ready someone; [ $? -eq 1 ] && grep -q "no '## Summary' section" "$work/ready.log" ||
   { cat "$work/ready.log"; fail "readiness: does not fail the empty description of a pull request a person opened on its sections"; }
-grep -qF 'only for a pull request that `github-actions[bot]` opened, and does not block' "$a/docs/contributing.md" &&
-  grep -qF 'opens or leaves draft, except one that `github-actions[bot]` opened;' "$b/docs/contributing.md" ||
-  fail "contributing.md does not state the exemption of a pull request a workflow opened"
 (cd "$a" && mkdir -p src && echo x > src/app.py && mkdir -p scripts/checks.d && echo x > scripts/checks.d/20-x.sh && record 0001 proposed && scripts/gen-decisions-index.sh > docs/decisions/README.md)
 ready 'github-actions[bot]'; [ $? -ne 0 ] && grep -q "still 'proposed'" "$work/ready.log" && grep -q "class gate, for the owner's review: scripts/checks.d/20-x.sh" "$work/ready.log" ||
   { cat "$work/ready.log"; fail "readiness: a pull request a workflow opened skips its decision records or hides its gate files"; }

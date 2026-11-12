@@ -54,7 +54,7 @@ review_level() {
     case "$p" in
       .afe-answers.json|.copier-answers.yml) answers=1 ;;
       AGENTS.md|.template/owned.sha256|.claude/settings.json|docs/decisions/README.md) ;;
-      README.md|CLAUDE.md|.gitignore|docs/README.md|.claude/path-classes|.claude/harness.conf|\
+      README.md|CLAUDE.md|.gitignore|.claude/path-classes|.claude/harness.conf|\
       .claude/settings.project.json) ;;
       *) glob_listed "$p" .template/owned.txt || update=0 ;;
     esac

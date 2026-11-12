@@ -137,7 +137,7 @@ export async function create(dir, { given, useDefaults, interactive, force = fal
 
 /**
  * Commits the generated files as the first commit on `main`: the one direct commit to `main` that
- * docs/contributing.md, section 1, allows. Runs only in a new repository, or in one without
+ * the rules allow. Runs only in a new repository, or in one without
  * commits (an empty clone); never throws.
  * @param {string} dir
  * @returns {{ done: boolean, reason?: string }}

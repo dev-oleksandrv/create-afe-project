@@ -1,19 +1,30 @@
+---
+paths:
+  - "**/*.test.*"
+  - "**/*.spec.*"
+  - "**/*_test.*"
+  - "**/test_*.py"
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/__tests__/**"
+---
+
 # Testing rules
 
 Rules that every test in this repository follows, whatever its language or tools. `AGENTS.md`
 holds the short rules and takes precedence if the two ever disagree. This file comes from the
 project template: report such a disagreement to the template instead of editing it. The project
 adds the levels of its verification ladder (static checks, unit, integration, user journeys),
-tools, commands, thresholds, and the edge cases of its domain in documents the map names, and
-its test checks in scripts/checks.d/ (`documentation-rules.md`, section 9).
+tools, commands, thresholds, and the edge cases of its domain in its own documents, and its test
+checks in scripts/checks.d/.
 
 ## 1. What a test is for
 
 - A test protects a behaviour that a requirement, an acceptance criterion, a contract, or a fixed
   defect names. It carries that identifier (`REQ-NNN`, `AC-NN`) in its name or a tag when one
-  applies, so that an `implemented` status and the "Acceptance and test plan" of a pull request can
-  point at it (`documentation-rules.md`, section 3; `contributing.md`, section 3). The project's
-  checks in scripts/checks.d/ map each identifier to the tests that carry it.
+  applies, so that the "Acceptance and test plan" of a pull request can point at it
+  (`.claude/skills/create-pr/SKILL.md`). The project's checks in scripts/checks.d/ map each
+  identifier to the tests that carry it.
 - Test count and coverage are not goals. Coverage shows which lines ran, not what a test checked:
   it is a floor the project sets, never evidence of quality. Where the project runs mutation
   testing, the mutation score is the measure.
@@ -49,7 +60,8 @@ its test checks in scripts/checks.d/ (`documentation-rules.md`, section 9).
   owner's agreement.
 - The agent derives the test plan from the identifiers the change serves: their cases, failure
   paths, and edge cases (section 2). It is a report under "Acceptance and test plan"
-  (`contributing.md`, section 3), never approved per pull request and not maintained afterwards.
+  (`.claude/skills/create-pr/SKILL.md`), never approved per pull request and not maintained
+  afterwards.
   Each new or changed test fails on the base and passes with the change.
 - A defect is fixed only after a regression test that reproduces it fails.
 - A refactoring keeps the tests as they are. A change of behaviour first changes the requirement
@@ -64,16 +76,15 @@ its test checks in scripts/checks.d/ (`documentation-rules.md`, section 9).
 - The quality measures the project records (coverage, mutation score) never fall below those of
   the base branch.
 - The configuration of the test runner, coverage, mutation testing, and linters is class gate in
-  `.claude/path-classes` (`documentation-rules.md`, section 8): it changes without a prompt, the
-  pull request lists it under "Gate files", which the readiness check enforces, and the owner
-  reviews it after the merge.
+  `.claude/path-classes`: it changes without a prompt, the pull request lists it under "Gate
+  files", which the readiness check enforces, and the owner reviews it after the merge.
 - An invariant that must hold everywhere (for example, a secret never appears in output) is an
-  executable check, a test or a project check, and the register docs/invariants.md names it
-  with that check (`documentation-rules.md`, section 2); its invariants are criteria of the
-  review of class high (`contributing.md`, section 6).
+  executable check, a test or a project check, and the register docs/invariants.md, when the
+  project keeps one, names it with that check; its invariants are criteria of the review of
+  class high (`.claude/skills/review/SKILL.md`).
 - Threat model of development gates: a gate (a lint rule, a test check, a coverage or mutation
   setting, an agent hook) catches honest mistakes and shortcuts; it is not a security boundary.
-  It decides which bypass is a `blocker` (`contributing.md`, section 6): a diff that itself
+  It decides which bypass is a `blocker` (`.claude/skills/review/rubric.md`): a diff that itself
   loosens or evades a gate (a test skipped, an assertion weakened, a threshold lowered, a test
   behind an aliased import), and any bypass of a product invariant (security, secrets, policy
   enforcement, limits), whatever it takes. A gap that only deliberate evasion exploits, such as

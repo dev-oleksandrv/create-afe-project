@@ -126,7 +126,7 @@ function strip(data) {
  */
 export function writeAnswers(dir, version, answers) {
   const data = {
-    _note: 'Written by create-afe-project; never edit by hand (docs/documentation-rules.md, section 9).',
+    _note: 'Written by create-afe-project; never edit by hand.',
     _version: version,
     ...answers,
   };

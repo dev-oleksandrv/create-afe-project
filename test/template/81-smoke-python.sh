@@ -1,10 +1,13 @@
 # Smoke test: a Python project with pytest and every module on, rendered into $d. Needs $a, $b, $c
-# from 10-, 13-, and 80-*.sh, and body from 40-readiness.sh.
+# from 10-, 13-, and 80-*.sh, body from 40-readiness.sh, and no_stale_refs from 15-no-stale-refs.sh.
 echo "== smoke: a Python project with pytest, every module on"
 d="$work/d"
 render "$d" --data code_review=true --data secret_scan=true \
   --data acceptance_check=true --data fail_without_change=true || fail "the Python project does not render"
 (cd "$d" && scripts/check.sh > "$work/d.log" 2>&1) || { cat "$work/d.log"; fail "Python, all modules: scripts/check.sh fails (line budgets included)"; }
+# No generated file of $c or $d names a removed document (no_stale_refs of 15-no-stale-refs.sh).
+no_stale_refs "$c" C
+no_stale_refs "$d" D
 grep -q 'scripts/fail-without-change.sh --base "origin/$BASE_REF" --allow-pass-on-base' "$d/.github/workflows/fail-without-change.yml" ||
   fail "Python: the fail-without-change workflow does not run the driver"
 # Every action of every workflow, in each variant and in this repository, is pinned to a full
