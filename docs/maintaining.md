@@ -89,13 +89,19 @@ versions are gate, each line of their block with a file it matches; sample manif
 files, and toolchain or tool-configuration files from every ecosystem block are gate, and sample
 source files of those stacks stay normal); the totals, distributions, regression rate, and hours to
 merge of `scripts/pr-metrics.sh` against a stand-in for `gh`, and its warning when `--limit`
-cuts the period; and which edits and commands the protect hook asks for (class
-approval, an `approval` line over a built-in allowance, secrets, the irreversible commands it
-names, behind `cd DIR`, `git -C DIR`, or in an interpreter's heredoc) and which it lets through
-(gate, high, and normal paths, an ordinary push, heredoc text); that a Stop hook stops blocking
-at the Ralph cap and counts again afterwards; that a large change only warns; that
+cuts the period; and which edits and commands the guard hook (`.claude/hooks/guard.sh`) asks for (an Edit,
+Write, or MultiEdit of `AGENTS.md` at the root of the repository that holds it, in a sibling or
+inner worktree too, secrets, the irreversible commands it names) and which it lets through
+(every other path, a decision record on `main` included, a shell command that writes a path, an
+ordinary push, everything with `DOCS_GUARD=off`); that the Stop dispatcher
+(`.claude/hooks/stop-dispatch.sh`) stops blocking at the Ralph cap and counts again afterwards,
+per session and worktree, prints nothing on a clean tree, names every failing part in one
+message, runs no check again on an unchanged green tree, and checks the worktree of the input's
+`cwd`; that the green stamp changes with a tracked file, an untracked file, and its content, and
+that `scripts/check.sh` prints one line per passing part, stores the full stamp, and skips with
+`--if-changed` on an unchanged tree, but not in GitHub Actions; that a large change only warns; that
 `scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
-settings deny reading secrets. It also checks that the protect hook asks before publishing a
+settings deny reading secrets. It also checks that the guard hook asks before publishing a
 package or an image, `gh workflow run`, a `gh api` DELETE, a change of repository settings
 (`gh repo edit`, `scripts/protect-branch.sh` without `--dry-run`, a `gh api` write on the
 repository, its rulesets, or a branch protection, but not the replies and reads of the
@@ -105,7 +111,8 @@ quoted query over several lines; but not a query without a mutation), a `gh api`
 as a full URL, and
 an edit or command with a known token format, and denies a push to `main` once the remote has it; that the check after every edit
 runs `CHECK_EDIT` on matching files inside the project only, with stdin from `/dev/null`, a
-relative path resolved against the input's `cwd`; that the documentation rules state that conventions, recipes, and operations
+relative path resolved against the input's `cwd`, and for a file in a second worktree with that
+worktree's `CHECK_EDIT` and the path relative to it; that the documentation rules state that conventions, recipes, and operations
 carry `verified-against`, that the map's conventions row links section 2, and that the docs-review
 skill states that it reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
 rule file and a convention without its check or `none`, and the review-code skill states that it applies the conventions; that the docs-review skill
@@ -120,15 +127,15 @@ blocker; that the rubric of variant A has the
 what to check for an added one; that the `create-pr` skill states that it takes
 findings only from the review bot and the repository's owner, members, and collaborators; that the readiness step of the `decisions` workflow, run as
 written with the shell it declares, checks only the decision records of a pull request that
-`github-actions[bot]` opened, fails there when its `--classes` call fails, and still fails a person's empty description, and that the AI reviews skip such a pull request; that the SessionStart hook prints at
-most ten lines of local state (the branch, its base and the commits ahead, uncommitted and
-untracked files, merge conflicts, plans and their `review-by`, past ones first and counted when
-not shown), only the plans outside a repository, and nothing in an empty directory; that the fast Stop hook runs
-`CHECK_FAST` only for a change to a file other than Markdown, never as the default, blocks on a
-failure; that every Stop hook lets the agent stop during a merge conflict and, like the
-SessionStart hook, points to `git status`, not to the update of `contributing.md`, section 5; that in GitHub Actions every hook but
-the protect hook exits 0 before it runs a script of the working tree or a project Stop hook, the
-protect hook still asks and runs no such script, and the review jobs disable all hooks; that a
+`github-actions[bot]` opened, fails there when its `--classes` call fails, and still fails a person's empty description, and that the AI reviews skip such a pull request; that the SessionStart hook prints the
+local state of the repository that holds the input's `cwd` (the branch, its base and the
+commits ahead, uncommitted and untracked files, merge conflicts), and nothing outside a
+repository; that the Stop dispatcher runs `CHECK_FAST` only for a change to a file other than
+Markdown, never as the default, blocks on a failure, and lets the agent stop during a merge
+conflict and, like the SessionStart hook, points to `git status`, not to the update of
+`contributing.md`, section 5; that in GitHub Actions every hook but
+the guard hook exits 0 before it runs a script of the working tree or a project Stop hook, the
+guard hook still asks and runs no such script, and the review jobs disable all hooks; that a
 hook command whose script is
 missing fails the template check; that the link check finds a missing file or anchor; that
 `scripts/protect-branch.sh --dry-run` prints the repository settings (merge commits only, head
