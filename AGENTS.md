@@ -21,7 +21,7 @@ higher item below wins; the lower one is wrong and must be fixed or flagged:
 2. `AGENTS.md` (this file), `docs/documentation-rules.md`, `docs/contributing.md`: process rules.
 3. Owner decisions: `accepted` ADRs, and statements marked `Decided by the owner` in owner documents.
 4. Contracts (machine-readable schemas) for interfaces.
-5. Requirements in `docs/requirements/`.
+5. Requirements in docs/requirements/.
 6. Source code and its tests: the only proof of *implemented* behaviour.
 7. Everything else is non-authoritative: plans, research notes, chat history, agent reports.
 
@@ -34,7 +34,7 @@ Read on demand. Do not load the whole `docs/` tree.
   runs (setup, check, fast, e2e, reset); use those.
 - `docs/documentation-rules.md`: statuses, lifecycle, path classes, ownership of files, review
   checklist. Read it before creating or changing any document.
-- `docs/decisions/README.md`: generated index of ADRs. `docs/plans/`: active plans only.
+- `docs/decisions/README.md`: generated index of ADRs. docs/plans/: active plans only.
 - `docs/contributing.md`: branches, commits, pull requests, review. Read it before you commit.
   `docs/testing-rules.md`: what a test must prove. Read it before you write a test.
 

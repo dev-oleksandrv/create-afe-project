@@ -5,7 +5,7 @@ holds the short rules and takes precedence if the two ever disagree. This file c
 project template: report such a disagreement to the template instead of editing it. The project
 adds the levels of its verification ladder (static checks, unit, integration, user journeys),
 tools, commands, thresholds, and the edge cases of its domain in documents the map names, and
-its test checks in `scripts/checks.d/` (`documentation-rules.md`, section 9).
+its test checks in scripts/checks.d/ (`documentation-rules.md`, section 9).
 
 ## 1. What a test is for
 
@@ -13,7 +13,7 @@ its test checks in `scripts/checks.d/` (`documentation-rules.md`, section 9).
   defect names. It carries that identifier (`REQ-NNN`, `AC-NN`) in its name or a tag when one
   applies, so that an `implemented` status and the "Acceptance and test plan" of a pull request can
   point at it (`documentation-rules.md`, section 3; `contributing.md`, section 3). The project's
-  checks in `scripts/checks.d/` map each identifier to the tests that carry it.
+  checks in scripts/checks.d/ map each identifier to the tests that carry it.
 - Test count and coverage are not goals. Coverage shows which lines ran, not what a test checked:
   it is a floor the project sets, never evidence of quality. Where the project runs mutation
   testing, the mutation score is the measure.
@@ -68,7 +68,7 @@ its test checks in `scripts/checks.d/` (`documentation-rules.md`, section 9).
   pull request lists it under "Gate files", which the readiness check enforces, and the owner
   reviews it after the merge.
 - An invariant that must hold everywhere (for example, a secret never appears in output) is an
-  executable check, a test or a project check, and the register `docs/invariants.md` names it
+  executable check, a test or a project check, and the register docs/invariants.md names it
   with that check (`documentation-rules.md`, section 2); its invariants are criteria of the
   review of class high (`contributing.md`, section 6).
 - Threat model of development gates: a gate (a lint rule, a test check, a coverage or mutation

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# The environment contract (docs/README.md, "Environment commands"; docs/contributing.md,
-# section 1): one entry point for the commands an agent needs to set up, check, test end to end,
-# and reset the project. `check` is scripts/check.sh; the others are the project's commands in
-# .claude/harness.conf (SETUP, CHECK_FAST, E2E, RESET), run from the repository root with no
-# stdin. A command that is not set prints SKIP and exits 0; otherwise the exit code is the
+# The environment contract: one entry point for the commands an agent needs to set up, check, test
+# end to end, and reset the project. `check` is scripts/check.sh; the others are the project's
+# commands in .claude/harness.conf (SETUP, CHECK_FAST, E2E, RESET), run from the repository root
+# with no stdin. A command that is not set prints SKIP and exits 0; otherwise the exit code is the
 # command's, so a failure is machine-readable.
 #
 # Usage: scripts/env.sh setup|check|fast|e2e|reset

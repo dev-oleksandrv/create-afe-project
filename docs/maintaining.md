@@ -19,7 +19,7 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   template-owned files come from the working tree of `template/` through `scripts/sync-self.sh`,
   which runs the `update` command of this working tree, not from a release.
 - A project extends the template only at the extension points of that section:
-  `scripts/checks.d/`, `.claude/hooks/project/stop/`, `.claude/path-classes`,
+  `scripts/checks.d/`, .claude/hooks/project/stop/, `.claude/path-classes`,
   `.claude/harness.conf`, `.claude/settings.project.json`, the project block of `AGENTS.md`, and
   its own documents. A need that the extension points do not cover is a
   change of the template, not a local edit.
@@ -87,9 +87,7 @@ the description does not name); the class of each kind of path and the review le
 `--classes` (`contracts/` is high; dependency updates, pre-commit hooks, task runners, and tool
 versions are gate, each line of their block with a file it matches; sample manifests, lock
 files, and toolchain or tool-configuration files from every ecosystem block are gate, and sample
-source files of those stacks stay normal); the totals, distributions, regression rate, and hours to
-merge of `scripts/pr-metrics.sh` against a stand-in for `gh`, and its warning when `--limit`
-cuts the period; and which edits and commands the protect hook asks for (class
+source files of those stacks stay normal); and which edits and commands the protect hook asks for (class
 approval, an `approval` line over a built-in allowance, secrets, the irreversible commands it
 names, behind `cd DIR`, `git -C DIR`, or in an interpreter's heredoc) and which it lets through
 (gate, high, and normal paths, an ordinary push, heredoc text); that a Stop hook stops blocking

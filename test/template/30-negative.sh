@@ -115,15 +115,17 @@ expect_pass "protect-branch stops, changing no ruleset, when it cannot read the 
   ! GHPB_RULESET=fail PATH="$work/ghpb:$PATH" scripts/protect-branch.sh > out.log 2>&1 && grep -q "cannot read the ruleset" out.log &&
   ! grep -q "rulesets/7 --input" "$work/ghpb.log" || { cat out.log; cat "$work/ghpb.log"; exit 1; }'
 expect_fail "a link to a missing file" bash -c 'printf "# Note\n\nSee [x](docs/nope.md).\n" > note.md && node scripts/check-links.mjs'
-expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](docs/testing-rules.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
+expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](AGENTS.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of the same document" bash -c 'printf "# Note\n\n## Part\n\nSee [x](#parts).\n" > note.md && node scripts/check-links.mjs'
-expect_pass "links to files, headings, duplicate headings, HTML anchors, and code are fine" bash -c 'printf "# Note\n\n## Part \x60one\x60\n\n## Part \x60one\x60\n\n<a id=\"here\"></a>\n\n[a](docs/README.md) [b](#part-one-1) [c](#here) [d](docs/) [e](https://example.com/x#y) \x60[f](nope.md)\x60\n\n\x60\x60\x60\n[g](nope.md)\n\x60\x60\x60\n" > note.md && node scripts/check-links.mjs'
-expect_fail "edited template-owned rules" bash -c 'echo x >> docs/documentation-rules.md && scripts/check-template.sh'
+expect_pass "links to files, headings, duplicate headings, HTML anchors, and code are fine" bash -c 'printf "# Note\n\n## Part \x60one\x60\n\n## Part \x60one\x60\n\n<a id=\"here\"></a>\n\n[a](AGENTS.md) [b](#part-one-1) [c](#here) [d](docs/) [e](https://example.com/x#y) \x60[f](nope.md)\x60\n\n\x60\x60\x60\n[g](nope.md)\n\x60\x60\x60\n" > note.md && node scripts/check-links.mjs'
+expect_fail "edited template-owned document" bash -c 'echo x >> docs/decisions/adr-template.md && scripts/check-template.sh'
 expect_fail "edited template-owned script" bash -c 'echo "# x" >> scripts/check.sh && scripts/check-template.sh'
 expect_pass "edited project block" bash -c 'sed -i.bak "s/The project is/This project is/" AGENTS.md && rm AGENTS.md.bak && scripts/check-template.sh'
 expect_fail "edited AGENTS.md outside the block" bash -c 'echo x >> AGENTS.md && scripts/check-template.sh'
 expect_fail "removed project block end" bash -c 'grep -v "project:end" AGENTS.md > t && mv t AGENTS.md && scripts/check-template.sh'
-expect_pass "a rule document over its line budget is named" bash -c 'for i in $(seq 1 200); do echo x; done >> docs/contributing.md; scripts/check-template.sh | grep -q "docs/contributing.md: [0-9]* lines; at most 200"'
+expect_pass "a project block over its line budget is named" bash -c 'awk "{print} /<!-- project:start -->/ {for (i = 0; i < 11; i++) print \"x\"}" AGENTS.md > t && mv t AGENTS.md;
+  scripts/check-template.sh | grep -q "AGENTS.md: the project block has 1[0-9] lines; at most 10"'
+expect_pass "no line budget for any other document" bash -c 'for f in $(git ls-files "docs/*.md"); do seq 1 300 >> "$f"; done; ! scripts/check-template.sh | grep -q " lines; at most [0-9]* (a template defect)"'
 expect_fail "settings.project.json changed, settings.json not regenerated" bash -c 'printf "{\"permissions\":{\"deny\":[\"Bash(rm -rf:*)\"]}}\n" > .claude/settings.project.json && scripts/check-template.sh'
 expect_pass "settings.json regenerated with the project's deny rule" bash -c 'printf "{\"permissions\":{\"deny\":[\"Bash(rm -rf:*)\"]}}\n" > .claude/settings.project.json && scripts/gen-settings.sh && scripts/check-template.sh &&
   "$work/sj" "s.permissions.deny.includes(\"Bash(rm -rf:*)\") && s.permissions.deny.includes(\"Bash(git push --force*)\") && s.hooks.PreToolUse.length === 1"'

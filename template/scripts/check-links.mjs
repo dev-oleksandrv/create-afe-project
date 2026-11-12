@@ -1,15 +1,22 @@
 #!/usr/bin/env node
-// Internal link check of the Markdown files (docs/documentation-rules.md, section 7), with Node.js
-// only: every relative link and image points at an existing file or directory, and every #anchor
-// at a heading or an HTML id/name of the target Markdown file (the anchors GitHub generates).
-// External links (with a scheme, such as https: or mailto:) are not checked: the author verifies
-// them when adding them. Files ignored by Git are skipped; a file is read whole, so a link inside
-// a fenced code block or a code span is not a link.
+// Internal link check of the Markdown files, with Node.js only: every relative link and image
+// points at an existing file or directory, and every #anchor at a heading or an HTML id/name of
+// the target Markdown file (the anchors GitHub generates). External links (with a scheme, such as
+// https: or mailto:) are not checked: the author verifies them when adding them. Files ignored by
+// Git are skipped; a file is read whole, so a link inside a fenced code block or a code span is
+// not a link.
+//
+// Code paths, in the Markdown files under docs/ and in AGENTS.md: every backticked token outside
+// fenced code blocks that is a path candidate exists. A candidate contains "/", has no
+// whitespace, none of * ? < > { } $ |, and no scheme, and its first segment is the name of an
+// entry in the repository root; a trailing ":line", "#anchor", or "::name" is stripped first.
+// Any other token, such as origin/main or owner/name, is not a path and is not checked.
 //
 // Usage: node scripts/check-links.mjs [file.md ...]   default: every Markdown file of the repository
+//   Run from the repository root; a file argument is relative to it or absolute.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 const root = process.cwd();
 
@@ -100,8 +107,40 @@ function* links(text) {
   }
 }
 
+// The fenced code blocks of a text blanked, keeping line numbers and offsets.
+function unfenced(text) {
+  return text.replace(/^( {0,3})(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^\1?\2[^\n]*$|(?![\s\S]))/gm, (m) => m.replace(/[^\n]/g, ' '));
+}
+
+let rootEntries;
+// The path that a backticked token names, or null when the token is no path candidate.
+function candidate(token) {
+  if (!token.includes('/') || /[\s*?<>{}$|]/.test(token) || /^[a-z][a-z0-9+.-]*:/i.test(token)) return null;
+  const path = token.replace(/::[^/]*$/, '').replace(/#[^/]*$/, '').replace(/(:\d+)+$/, '');
+  rootEntries ??= new Set(readdirSync(root));
+  return path && rootEntries.has(path.split('/')[0]) ? path : null;
+}
+
+// Does the file take the code-path check: Markdown under docs/, or AGENTS.md at the root.
+function codePathFile(file) {
+  const rel = relative(root, resolve(root, file)).split('\\').join('/');
+  return rel === 'AGENTS.md' || (rel.startsWith('docs/') && rel.endsWith('.md'));
+}
+
+function codePaths(file, text) {
+  const problems = [];
+  const src = unfenced(text);
+  const lineOf = (i) => src.slice(0, i).split('\n').length;
+  for (const m of src.matchAll(/(`+)(?!`)([\s\S]*?[^`])\1(?!`)/g)) {
+    const path = candidate(m[2].trim());
+    if (path && !existsSync(join(root, path))) problems.push(`${file}:${lineOf(m.index)}: \`${path}\`: no such file or directory`);
+  }
+  return problems;
+}
+
 function check(file) {
   const problems = [];
+  if (codePathFile(file)) problems.push(...codePaths(file, readFileSync(file, 'utf8')));
   for (const { target, line } of links(readFileSync(file, 'utf8'))) {
     if (!target || /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('//')) continue;
     const hash = target.indexOf('#');
@@ -135,7 +174,9 @@ function check(file) {
   return problems;
 }
 
-const files = process.argv.length > 2 ? process.argv.slice(2) : markdownFiles();
+// An absolute argument is made relative to the root, through its real path (macOS: /var is /private/var).
+const arg = (f) => (isAbsolute(f) && existsSync(f) ? relative(root, realpathSync(f)) || f : f);
+const files = process.argv.length > 2 ? process.argv.slice(2).map(arg) : markdownFiles();
 const problems = files.flatMap(check);
 for (const p of problems) console.log(`FAIL: ${p}`);
 console.log(`== links: ${files.length} Markdown files, ${problems.length} broken`);

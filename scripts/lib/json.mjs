@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// JSON for the hooks and scripts (docs/documentation-rules.md, section 9), with Node.js only.
+// JSON for the hooks and scripts, with Node.js only.
 //
 // Usage: node scripts/lib/json.mjs <command> [arguments]
 //   fields <path>...         read JSON from stdin; print the value at each dotted path, each
@@ -11,10 +11,6 @@
 //                            into .claude/settings.json (scripts/gen-settings.sh); with --check,
 //                            write nothing and exit 1 when the file is missing or stale
 //   hooks                    print the command of every hook in .claude/settings.json, one per line
-//   prs <since> <separator>  read `gh pr list --json number,createdAt,mergedAt,body` from stdin;
-//                            print the count listed and the count merged before <since> on the
-//                            first line, then for each pull request merged on or after <since> a
-//                            line "<separator>PR <number> <hours to merge>" and its body
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const stdin = () => readFileSync(0, 'utf8');
@@ -86,17 +82,6 @@ function settings(check) {
   writeFileSync(file, `${JSON.stringify(merged, null, 2)}\n`);
 }
 
-function prs(since, sep) {
-  const list = parse(stdin()) ?? [];
-  const out = [`${list.length} ${list.filter((p) => p.mergedAt < since).length}`];
-  for (const p of list) {
-    if (!(p.mergedAt >= since)) continue;
-    const hours = (Date.parse(p.mergedAt) - Date.parse(p.createdAt ?? p.mergedAt)) / 3600000;
-    out.push(`${sep}PR ${p.number} ${hours}`, (p.body ?? '').replace(/\r/g, ''));
-  }
-  process.stdout.write(`${out.join('\n')}\n`);
-}
-
 const [command, ...args] = process.argv.slice(2);
 switch (command) {
   case 'fields': {
@@ -133,9 +118,6 @@ switch (command) {
     process.stdout.write(commands.map((c) => `${c.replace(/\n/g, ' ')}\n`).join(''));
     break;
   }
-  case 'prs':
-    prs(args[0] ?? '', args[1] ?? '\x1f');
-    break;
   default:
     console.error(`json.mjs: unknown command ${command ?? '(none)'}`);
     process.exit(2);

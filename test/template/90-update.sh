@@ -18,7 +18,7 @@ mkdir -p "$u/scripts/checks.d" && printf '#!/usr/bin/env bash\necho project chec
 rm "$u/.claude/harness.conf"
 gitc "$u" add -A && gitc "$u" commit -q -m init
 printf '\nA line added by the next template version.\n' >> "$tpl/template/docs/contributing.md.jinja"
-sed -i.bak '/^scripts\/pr-metrics.sh$/d' "$tpl/template/.template/owned.txt.jinja" && rm "$tpl/template/scripts/pr-metrics.sh" "$tpl/template/.template/owned.txt.jinja.bak"
+sed -i.bak '/^scripts\/protect-branch.sh$/d' "$tpl/template/.template/owned.txt.jinja" && rm "$tpl/template/scripts/protect-branch.sh" "$tpl/template/.template/owned.txt.jinja.bak"
 node -e 'const f=process.argv[1],fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version="0.0.2";fs.writeFileSync(f,JSON.stringify(p))' "$tpl/package.json"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up.log" 2>&1) || { cat "$work/up.log"; fail "update test: update fails"; }
 grep -q 'Project line two.' "$u/AGENTS.md" || fail "update test: the project block was lost"
@@ -26,7 +26,7 @@ grep -q 'Project note.' "$u/README.md" || fail "update test: the seeded README w
 [ -f "$u/.claude/harness.conf" ] || fail "update test: a missing seeded file was not created"
 [ -x "$u/scripts/checks.d/10-sample.sh" ] || fail "update test: the project check was lost"
 grep -q 'added by the next template version' "$u/docs/contributing.md" || fail "update test: the template change did not arrive"
-[ ! -e "$u/scripts/pr-metrics.sh" ] || fail "update test: a file the template no longer owns was kept"
+[ ! -e "$u/scripts/protect-branch.sh" ] || fail "update test: a file the template no longer owns was kept"
 grep -q '"_version": "0.0.2"' "$u/.afe-answers.json" || fail "update test: the answers file does not record 0.0.2"
 (cd "$u" && scripts/check-template.sh > "$work/ut.log" 2>&1) || { cat "$work/ut.log"; fail "update test: template check fails after the update"; }
 gitc "$u" add -A && gitc "$u" commit -q -m update

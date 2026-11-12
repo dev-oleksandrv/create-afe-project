@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Project checks (docs/documentation-rules.md, section 9): runs every scripts/checks.d/*.sh in name
-# order. A project adds its own checks there; the template never writes to that directory.
+# Project checks: runs every scripts/checks.d/*.sh in name order. A project adds its own checks
+# there; the template never writes to that directory.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 shopt -s nullglob

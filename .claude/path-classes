@@ -2,7 +2,8 @@
 # repository root, in which * also matches /. Two classes:
 #   high  two reviewers and up to REVIEW_MAX_ROUNDS review rounds in /create-pr
 #   gate  listed under "Gate files" in the pull request; the owner reviews it after the merge
-# A path that nothing matches is normal when it is not Markdown (one reviewer, one round).
+# A path that nothing matches is normal when it is not Markdown (one reviewer, one round), and
+# low when it is Markdown or a generated file (no reviewer).
 
 # Security, access, data migrations, money, public contracts.
 high *auth/*
