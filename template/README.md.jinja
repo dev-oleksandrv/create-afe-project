@@ -40,7 +40,8 @@ The answers in `.afe-answers.json` turn these on or off:
 
 - `code_review` (default off): Claude also reviews each pull request that changes code in CI; it
   needs the Claude GitHub App and the `CLAUDE_CODE_OAUTH_TOKEN` secret.
-- `secret_scan` (default on): gitleaks scans pull requests and pushes to `main` in CI.
+- `secret_scan` (default on): the `secret-scan` workflow scans pull requests and pushes to `main`
+  for leaked secrets.
 - `acceptance_check` (default on): readiness requires a test for every identifier a pull request
   lists under "Acceptance and test plan" (`TEST_GLOBS` in `.claude/harness.conf`).
 - `fail_without_change` (default off): in CI only, every new or changed test must fail on the
