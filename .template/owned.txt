@@ -28,6 +28,8 @@ scripts/lib/stamp.sh
 .claude/hooks/session-start.sh
 .claude/hooks/stop-dispatch.sh
 .claude/skills/create-pr/SKILL.md
+.claude/skills/review/SKILL.md
+.claude/skills/review/rubric.md
 .claude/skills/afe-init/SKILL.md
 .claude/skills/update-template/SKILL.md
 .claude/skills/review-code/SKILL.md
