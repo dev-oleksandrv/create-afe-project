@@ -73,7 +73,7 @@ async function main() {
       lines.push(`Replaced local edits of template-owned files; review them in git diff: ${r.edited.join(', ')}.`);
     }
     for (const note of r.notes) lines.push(`Warning: ${note}.`);
-    lines.push('Next: scripts/check.sh, then a pull request.');
+    lines.push('Next: scripts/check.sh, then a pull request with /create-pr.');
     return void (interactive ? p.outro(lines.join('\n')) : console.log(lines.join('\n')));
   }
 

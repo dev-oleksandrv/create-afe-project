@@ -16,7 +16,6 @@ export const SEEDED = [
   'README.md',
   'CLAUDE.md',
   '.gitignore',
-  'docs/README.md',
   '.claude/path-classes',
   '.claude/harness.conf',
   '.claude/settings.project.json',
