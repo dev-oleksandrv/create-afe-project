@@ -2,7 +2,7 @@
 # SessionStart hook: prints the local state of the work in progress, so that a new, resumed, or
 # compacted session starts from facts: the branch, the base of the change (scripts/lib/git-base.sh)
 # and the commits ahead of it, the count of uncommitted and untracked files, and unresolved merge
-# conflicts, for the repository that holds the input's cwd (scripts/lib/root.sh). Local facts only:
+# conflicts, for the generated project that holds the input's cwd (scripts/lib/root.sh). Local facts only:
 # no network. Outside a git repository it prints nothing. What it cannot determine it leaves out;
 # it always exits 0.
 # Not in GitHub Actions: claude-code-action restores .claude/ from the base branch there, but the
