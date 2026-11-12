@@ -14,7 +14,7 @@ manifest=.template/owned.sha256
 start='<!-- project:start -->'
 end='<!-- project:end -->'
 # The line budgets of AGENTS.md: the template part and the project block.
-agents_max=90
+agents_max=70
 block_max=10
 
 if command -v sha256sum >/dev/null; then sha() { sha256sum | cut -d' ' -f1; }

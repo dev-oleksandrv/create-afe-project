@@ -9,14 +9,13 @@ export const TEMPLATE_URL = 'https://github.com/dev-oleksandrv/create-afe-projec
 // generated name.
 export const RENAMES = { _gitignore: '.gitignore' };
 
-// Seeded files: created once, owned by the project afterwards (docs/documentation-rules.md,
-// section 9, in a generated project). An update creates a missing one; it changes an existing one
-// only through an entry of MIGRATIONS, such as 2.0.1, which can replace a default one.
+// Seeded files: created once, owned by the project afterwards. An update creates a missing one;
+// it changes an existing one only through an entry of MIGRATIONS, such as 2.0.1, which can
+// replace a default one.
 export const SEEDED = [
   'README.md',
   'CLAUDE.md',
   '.gitignore',
-  'docs/README.md',
   '.claude/path-classes',
   '.claude/harness.conf',
   '.claude/settings.project.json',
