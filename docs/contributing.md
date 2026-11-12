@@ -121,8 +121,7 @@ Everything written into git history and pull requests is in English, without exc
   stops and reports the failing command and its output. Metrics count the runs.
 - An agent writes a `Decided by the owner` marker only on the owner's instruction and lists each
   one it adds under "Owner decisions"; the owner's merge confirms them.
-- Metrics measure the sensors, so that a rule or check that never fires is removed;
-  `scripts/pr-metrics.sh` aggregates merged pull requests, with the time to merge. A sensor is a
+- Metrics measure the sensors, so that a rule or check that never fires is removed. A sensor is a
   check or a reviewer; an owner intervention is anything the owner answered, approved, or
   corrected besides the merge; "Regression of" names the pull request whose behaviour this repairs.
 - Ready to merge: `scripts/check-decisions.sh --ready` and every other check pass, no `blocker`
@@ -170,7 +169,7 @@ template version, which `.afe-answers.json` records; the `update-template` skill
   opens or leaves draft, except one that `github-actions[bot]` opened; a push does not run them again.
 - A finding names a file, a line, a class, and the rule it rests on; zero findings is valid, and
   style belongs to the linters. A `blocker`: merged as it is, the change breaks behaviour, a
-  contract, security, or a product invariant (`docs/invariants.md`), loses data, fails an item of
+  contract, security, or a product invariant (docs/invariants.md), loses data, fails an item of
   its Acceptance section, or contradicts a higher source (`AGENTS.md`, section 1). Which bypass of
   a gate is a blocker follows `testing-rules.md`, section 4. Any other finding is a `suggestion`.
 - Each finding is answered once. A blocker is fixed, and the fix checked once more by a fresh
