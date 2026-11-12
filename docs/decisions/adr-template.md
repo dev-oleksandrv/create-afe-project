@@ -13,7 +13,9 @@ supersedes: []
 
 {Two to five sentences, or a question: the problem, the forces, and the scope of the decision.
 Link the requirements and documents involved instead of copying them. Only for a decision that
-meets `docs/documentation-rules.md`, section 5; keep the whole record to about one page.}
+is costly to reverse and had a real alternative: language, runtime, framework; storage and
+persistent formats; public protocols and contracts; security, isolation, authentication model;
+external service or infrastructure. Keep the whole record to about one page.}
 
 ## Considered Options
 
