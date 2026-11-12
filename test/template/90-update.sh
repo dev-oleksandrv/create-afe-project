@@ -17,7 +17,7 @@ echo "Project note." >> "$u/README.md"
 mkdir -p "$u/scripts/checks.d" && printf '#!/usr/bin/env bash\necho project check\n' > "$u/scripts/checks.d/10-sample.sh" && chmod +x "$u/scripts/checks.d/10-sample.sh"
 rm "$u/.claude/harness.conf"
 gitc "$u" add -A && gitc "$u" commit -q -m init
-printf '\nA line added by the next template version.\n' >> "$tpl/template/docs/contributing.md.jinja"
+printf '\nA line added by the next template version.\n' >> "$tpl/template/.claude/skills/review/rubric.md"
 sed -i.bak '/^scripts\/protect-branch.sh$/d' "$tpl/template/.template/owned.txt.jinja" && rm "$tpl/template/scripts/protect-branch.sh" "$tpl/template/.template/owned.txt.jinja.bak"
 node -e 'const f=process.argv[1],fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version="0.0.2";fs.writeFileSync(f,JSON.stringify(p))' "$tpl/package.json"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up.log" 2>&1) || { cat "$work/up.log"; fail "update test: update fails"; }
@@ -25,17 +25,18 @@ grep -q 'Project line two.' "$u/AGENTS.md" || fail "update test: the project blo
 grep -q 'Project note.' "$u/README.md" || fail "update test: the seeded README was overwritten"
 [ -f "$u/.claude/harness.conf" ] || fail "update test: a missing seeded file was not created"
 [ -x "$u/scripts/checks.d/10-sample.sh" ] || fail "update test: the project check was lost"
-grep -q 'added by the next template version' "$u/docs/contributing.md" || fail "update test: the template change did not arrive"
+grep -q 'added by the next template version' "$u/.claude/skills/review/rubric.md" || fail "update test: the template change did not arrive"
 [ ! -e "$u/scripts/protect-branch.sh" ] || fail "update test: a file the template no longer owns was kept"
 grep -q '"_version": "0.0.2"' "$u/.afe-answers.json" || fail "update test: the answers file does not record 0.0.2"
 (cd "$u" && scripts/check-template.sh > "$work/ut.log" 2>&1) || { cat "$work/ut.log"; fail "update test: template check fails after the update"; }
 gitc "$u" add -A && gitc "$u" commit -q -m update
-echo "local edit" >> "$u/docs/testing-rules.md" && echo "dirty" > "$u/scratch.txt"
+echo "A line of a local edit." >> "$u/.claude/skills/update-template/SKILL.md" && echo "dirty" > "$u/scratch.txt"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > /dev/null 2>&1) &&
   fail "update test: update runs on a working tree with uncommitted changes"
 rm "$u/scratch.txt" && gitc "$u" commit -q -am "edit a template-owned file"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up2.log" 2>&1) || { cat "$work/up2.log"; fail "update test: second update fails"; }
-grep -q 'Replaced local edits of template-owned files.*docs/testing-rules.md' "$work/up2.log" && ! grep -q 'local edit' "$u/docs/testing-rules.md" ||
+grep -q 'Replaced local edits of template-owned files.*\.claude/skills/update-template/SKILL.md' "$work/up2.log" &&
+  ! grep -q 'A line of a local edit.' "$u/.claude/skills/update-template/SKILL.md" ||
   { cat "$work/up2.log"; fail "update test: a local edit of a template-owned file is not replaced and reported"; }
 pkg "$work/new" 0.0.3
 (cd "$u" && node "$work/new/bin/create-afe-project.js" update --defaults --allow-dirty > /dev/null 2>&1) || fail "update test: update to a newer version fails"
