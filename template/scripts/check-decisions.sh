@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Decision-record and merge-readiness checks, run by scripts/check.sh and by the Stop hook; the
+# Decision-record and merge-readiness checks, run by scripts/check.sh and by the Stop dispatcher; the
 # `decisions` workflow (.github/workflows/decisions.yml) runs both kinds on every pull request.
 # Integrity: a record the change adds starts as proposed, accepted, or rejected, has `scope` and
 # `summary`, and takes the next free number; the index docs/decisions/README.md is fresh.

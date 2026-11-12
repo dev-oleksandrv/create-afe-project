@@ -158,7 +158,7 @@ that applies, from the template's built-in rules and the project's `.claude/path
 | high | security, secrets, access and authentication, data migrations, money and billing, public contracts (`contracts/`) | nothing | one reviewer |
 | approval | `AGENTS.md`, the template-owned files, the generated manifest, answers file, and `.claude/settings.json`, the map, `.claude/path-classes`, `.claude/settings.project.json`, `.mcp.json`, credentials, ADRs on `main` or not `proposed` | the protect hook asks the owner; a headless run is denied | by the class of the content |
 
-The protect hook (`.claude/hooks/protect-docs.sh`) asks on Edit, Write, and MultiEdit calls, on
+The guard hook (`.claude/hooks/guard.sh`) asks on Edit, Write, and MultiEdit calls, on
 shell writes of the forms its comments name, and on irreversible commands: a forced, deleting,
 mirroring, pruning, or tag `git push`; `gh pr merge`; `gh workflow run`; `gh release create` and
 `delete`; `gh repo delete`, `rename`, `archive`, and `edit`; `gh api` DELETE, settings writes,

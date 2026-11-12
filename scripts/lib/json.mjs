@@ -85,7 +85,7 @@ function settings(check) {
 const [command, ...args] = process.argv.slice(2);
 switch (command) {
   case 'fields': {
-    // @secret moved into .claude/hooks/protect-docs.sh; fail rather than print an empty match.
+    // @secret moved into .claude/hooks/guard.sh; fail rather than print an empty match.
     if (args.some((p) => p.startsWith('@'))) {
       console.error(`json.mjs: unknown field ${args.find((p) => p.startsWith('@'))}`);
       process.exit(2);

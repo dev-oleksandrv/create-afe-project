@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Documentation checks, run by scripts/check.sh and by the Stop hook: markdownlint-cli2 with the
+# Documentation checks, run by scripts/check.sh and by the Stop dispatcher: markdownlint-cli2 with the
 # configuration file .markdownlint-cli2.jsonc, then scripts/check-links.mjs (links, and the
 # backticked code paths of docs/ and AGENTS.md). Requires Node.js (node and npx).
 #
@@ -11,7 +11,7 @@ caller=$PWD
 cd "$(dirname "$0")/.."
 root=$PWD
 
-# A missing tool is not a failed check: exit 3, which the Stop hook reports without blocking.
+# A missing tool is not a failed check: exit 3, which the Stop dispatcher reports without blocking.
 for tool in node npx; do
   command -v "$tool" >/dev/null || { echo "MISSING TOOL: $tool (see README.md, Checks)"; exit 3; }
 done
