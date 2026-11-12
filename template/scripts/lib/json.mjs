@@ -7,6 +7,7 @@
 //   get <path> [default]     read JSON from stdin; print the value at the path, or the default
 //   ask <reason>             print the PreToolUse decision that asks the owner, with the reason
 //   deny <reason>            print the PreToolUse decision that denies the action, with the reason
+//   message <text>           print {"systemMessage": text}, a message that the user sees
 //   settings [--check]       merge .claude/settings.template.json and .claude/settings.project.json
 //                            into .claude/settings.json (scripts/gen-settings.sh); with --check,
 //                            write nothing and exit 1 when the file is missing or stale
@@ -104,6 +105,9 @@ switch (command) {
     process.stdout.write(
       `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: command, permissionDecisionReason: args[0] } })}\n`,
     );
+    break;
+  case 'message':
+    process.stdout.write(`${JSON.stringify({ systemMessage: args[0] ?? '' })}\n`);
     break;
   case 'settings':
     settings(args[0] === '--check');
