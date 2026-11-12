@@ -11,8 +11,8 @@ export work
 trap 'rm -rf "$work"' EXIT
 # The harness hooks do nothing in GitHub Actions; the tests set GITHUB_ACTIONS where they test that.
 unset GITHUB_ACTIONS
-# DOCS_GUARD=off turns the protect hook and the decisions and template Stop hooks off; inherited,
-# it would make their tests fail or pass without testing them.
+# DOCS_GUARD=off turns the guard hook off; inherited, it would make its tests fail or pass
+# without testing them.
 unset DOCS_GUARD
 failures=0
 # sj <expression> [argument]: true when the JavaScript expression holds for s, the parsed
