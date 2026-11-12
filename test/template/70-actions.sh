@@ -1,5 +1,5 @@
 # Harness hooks in GitHub Actions run no code of the working tree; the review jobs disable them.
-# Needs $a from 10-variant-a.sh and $ghp from 65-hooks-guard-paths.sh.
+# Needs $a from 10-variant-a.sh, $b from 13-variant-b.sh, and $ghp from 65-hooks-guard-paths.sh.
 # The review jobs check out the pull request's head; claude-code-action restores .claude/ from the
 # base, but the scripts a base hook runs or sources stay at the head, next to the job's credentials.
 # Every hook but the protect hook exits at once in GitHub Actions; the protect hook stays on there
@@ -64,8 +64,8 @@ for s in scripts/lib/json.mjs scripts/lib/git-base.sh project-stop; do
   grep -qx "$s" "$mark" 2> /dev/null || fail "hooks: the planted $s does not run outside GitHub Actions, so the test above proves nothing"
 done
 gitc "$a" checkout -q -- . && rm -rf "$mark" "$a/.claude/hooks/project" "$(git -C "$a" rev-parse --absolute-git-dir)"/ralph-stops-*
-for w in code-review docs-review; do
-  awk '/^  review:$/ {f=1; next} /^  [a-z-]+:$/ {f=0} f' "$a/.github/workflows/$w.yml" | grep -v '^ *#' > "$work/$w-review.yml"
+for w in code-review; do
+  awk '/^  review:$/ {f=1; next} /^  [a-z-]+:$/ {f=0} f' "$b/.github/workflows/$w.yml" | grep -v '^ *#' > "$work/$w-review.yml"
   grep -qF -- "--settings ''{\"disableAllHooks\": true}''" "$work/$w-review.yml" &&
     grep -qF -- '--disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash"' "$work/$w-review.yml" &&
     ! grep -q -E 'scripts/|\.claude/|git (checkout|restore)' "$work/$w-review.yml" ||

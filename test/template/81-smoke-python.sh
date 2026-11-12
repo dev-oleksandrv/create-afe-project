@@ -2,7 +2,7 @@
 # from 10-, 13-, and 80-*.sh, and body from 40-readiness.sh.
 echo "== smoke: a Python project with pytest, every module on"
 d="$work/d"
-render "$d" --data docs_review=true --data code_review=true --data dual_review=true \
+render "$d" --data code_review=true --data secret_scan=true \
   --data acceptance_check=true --data fail_without_change=true || fail "the Python project does not render"
 (cd "$d" && scripts/check.sh > "$work/d.log" 2>&1) || { cat "$work/d.log"; fail "Python, all modules: scripts/check.sh fails (line budgets included)"; }
 grep -q 'scripts/fail-without-change.sh --base "origin/$BASE_REF" --allow-pass-on-base' "$d/.github/workflows/fail-without-change.yml" ||
