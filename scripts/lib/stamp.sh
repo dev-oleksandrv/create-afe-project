@@ -14,21 +14,21 @@ stamp_sha256() {
 }
 
 tree_stamp() {
-  local head base list f
+  local head base f
   head=$(git rev-parse -q --verify HEAD 2>/dev/null) && base=HEAD || base=$(git hash-object -t tree /dev/null)
-  list=$(git -c core.quotePath=false ls-files --others --exclude-standard 2>/dev/null)
   {
     printf '%s\n' "$head"
     git -c core.quotePath=false diff --binary --no-ext-diff --no-textconv "$base" -- 2>/dev/null
-    # The untracked paths, then a symbolic link's target, then the content hash of each regular
-    # file in one git call, as one process per file would make the stamp slow.
-    printf '%s\n' "$list"
-    [ -z "$list" ] || printf '%s\n' "$list" | while IFS= read -r f; do
-      if [ -L "$f" ]; then printf 'link %s -> %s\n' "$f" "$(readlink "$f")"; fi
+    # The untracked paths, NUL-separated, so that no name is quoted; then a symbolic link's target;
+    # then the content hash of each regular file, in as few git calls as xargs makes, as one
+    # process per file would make the stamp slow. An empty list hashes nothing.
+    git ls-files -z --others --exclude-standard 2>/dev/null
+    git ls-files -z --others --exclude-standard 2>/dev/null | while IFS= read -r -d '' f; do
+      if [ -L "$f" ]; then printf 'link %s -> %s\0' "$f" "$(readlink "$f")"; fi
     done
-    [ -z "$list" ] || printf '%s\n' "$list" | while IFS= read -r f; do
-      if [ -f "$f" ] && [ ! -L "$f" ]; then printf '%s\n' "$f"; fi
-    done | git hash-object --stdin-paths 2>/dev/null
+    git ls-files -z --others --exclude-standard 2>/dev/null | while IFS= read -r -d '' f; do
+      if [ -f "$f" ] && [ ! -L "$f" ]; then printf '%s\0' "$f"; fi
+    done | xargs -0 git hash-object -- 2>/dev/null
   } | stamp_sha256
 }
 
