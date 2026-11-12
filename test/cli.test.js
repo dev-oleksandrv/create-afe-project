@@ -1,5 +1,5 @@
 // Unit tests of the CLI's parts; the end-to-end tests of create and update are in
-// scripts/checks.d/10-template.sh (docs/maintaining.md, section 3).
+// test/template/, run by scripts/checks.d/10-template.sh (docs/maintaining.md, section 3).
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
