@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as p from '@clack/prompts';
 import { parse as parseYaml } from 'yaml';
-import { ANSWERS_FILE, LEGACY_ANSWERS_FILE, QUESTIONS, computed } from './config.js';
+import { ANSWERS_FILE, LEGACY_ANSWERS_FILE, QUESTIONS, REMOVED_QUESTIONS, computed } from './config.js';
 
 export class UsageError extends Error {}
 
@@ -62,14 +62,15 @@ async function ask(q, initial) {
 /**
  * Answers every question in order. A value from `given` is taken without asking; then, with
  * `useDefaults`, the previous answer or the question's default; a question with neither is asked,
- * or fails when `interactive` is false. A question whose `when` is false is not answered.
+ * or fails when `interactive` is false. A question whose `when` is false is not answered. A value
+ * in `given` for a question of REMOVED_QUESTIONS is ignored.
  * @param {{ given?: Record<string, unknown>, previous?: Record<string, unknown>,
  *   useDefaults?: boolean, interactive?: boolean }} options
  * @returns {Promise<{ answers: Record<string, unknown>, context: Record<string, unknown> }>}
  *   the answers to record, and the rendering context with every question and computed value
  */
 export async function collectAnswers({ given = {}, previous = {}, useDefaults = false, interactive = true }) {
-  for (const name of Object.keys(given)) coerce(name, given[name]);
+  for (const name of Object.keys(given)) if (!REMOVED_QUESTIONS.includes(name)) coerce(name, given[name]);
   const answers = {};
   const context = {};
   for (const q of QUESTIONS) {
@@ -126,7 +127,7 @@ function strip(data) {
  */
 export function writeAnswers(dir, version, answers) {
   const data = {
-    _note: 'Written by create-afe-project; never edit by hand (docs/documentation-rules.md, section 9).',
+    _note: 'Written by create-afe-project; never edit by hand.',
     _version: version,
     ...answers,
   };

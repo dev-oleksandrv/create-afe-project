@@ -1,5 +1,5 @@
 {
-  "_note": "Written by create-afe-project; never edit by hand (docs/documentation-rules.md, section 9).",
+  "_note": "Written by create-afe-project; never edit by hand.",
   "_version": "2.1.0",
   "project_name": "create-afe-project",
   "project_description": "An npm package that creates and updates agent-friendly repositories: documentation rules, decision records, checks, and Claude Code hooks and skills.",
