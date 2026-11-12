@@ -72,6 +72,13 @@ test('recorded answers win over defaults on an update, and answers without a que
   assert.ok(!('docs_review' in answers) && !('dual_review' in answers));
 });
 
+test('a given answer to a removed question, such as from a 2.x answers file as --data-file, is ignored', async () => {
+  const { answers } = await answer({ docs_review: true, dual_review: 'false', code_review: true });
+  assert.equal(answers.code_review, true);
+  assert.ok(!('docs_review' in answers) && !('dual_review' in answers));
+  await assert.rejects(answer({ docs_reviews: true }), /unknown question: docs_reviews/);
+});
+
 test('versions compare numerically, a missing one lowest', () => {
   assert.equal(compareVersions('0.10.0', '0.9.9'), 1);
   assert.equal(compareVersions('1.0.0', '1.0.0'), 0);
@@ -121,7 +128,7 @@ test('a Copier answers file is read with its version, without private keys', () 
 });
 
 test('a Copier docs_language other than English gets a warning that documents stay in English', () => {
-  assert.match(legacyNotes({ docs_language: 'German', ecosystems: ['node'] }).join('\n'), /^docs_language was German; .*English \(AGENTS\.md, section 5\)$/);
+  assert.match(legacyNotes({ docs_language: 'German', ecosystems: ['node'] }).join('\n'), /^docs_language was German; .*English \(\.claude\/rules\/docs\.md\)$/);
   for (const docs_language of ['English', 'en', '', null]) assert.deepEqual(legacyNotes({ docs_language }), []);
   assert.deepEqual(legacyNotes({ ecosystems: ['node'] }), []);
 });

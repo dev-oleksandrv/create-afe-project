@@ -21,16 +21,17 @@ moved() {
 cv="$work/cv"
 node "$p201/bin/create-afe-project.js" "$cv" "${sample[@]}" > /dev/null 2>&1 || fail "harness migration test: create fails"
 rm "$cv/.afe-answers.json" "$cv/.claude/harness.conf" "$cv/.claude/path-classes" && harness "$cv"
-# The seeded map of a 0.7.0 project names the .harness/ paths; an update never rewrites it.
-sed 's#[.]claude/harness[.]conf#.harness/harness.conf#g; s#[.]claude/path-classes#.harness/path-classes#g' "$cv/docs/README.md" > "$work/map" && mv "$work/map" "$cv/docs/README.md"
+# A project document of a 0.7.0 project, such as its map, names the .harness/ paths; an update
+# never rewrites it.
+mkdir -p "$cv/docs" && printf '# Notes\n\nHarness settings: `.harness/harness.conf`.\n' > "$cv/docs/notes.md"
 printf '_commit: v0.7.0\n_src_path: https://github.com/xandronak/agent-docs-template\ndocs_language: German\necosystems:\n- node\n- python\ngithub_repo: example/sample\nproject_description: A sample project.\nproject_name: sample\n' > "$cv/.copier-answers.yml"
 gitc "$cv" add -A && gitc "$cv" commit -q -m copier
 (cd "$cv" && node "$p201/bin/create-afe-project.js" update --defaults > "$work/cv.log" 2>&1) || { cat "$work/cv.log"; fail "harness migration test: the Copier update fails"; }
 moved "$cv" "$work/cv.log" ||
   { cat "$work/cv.log"; fail "harness migration test: a Copier 0.7.0 project's .harness/ files are not moved to .claude/"; }
-grep -q 'Warning: replace .harness/ with .claude/ in docs/README.md by hand' "$work/cv.log" ||
+grep -q 'Warning: replace .harness/ with .claude/ in docs/notes.md by hand' "$work/cv.log" ||
   { cat "$work/cv.log"; fail "harness migration test: a file that still names .harness/ is not reported"; }
-grep -q 'docs_language was German.*English.*AGENTS.md, section 5' "$work/cv.log" && grep -q 'not carried over.*docs_language.*ecosystems' "$work/cv.log" &&
+grep -q 'docs_language was German.*English.*[.]claude/rules/docs[.]md' "$work/cv.log" && grep -q 'not carried over.*docs_language.*ecosystems' "$work/cv.log" &&
   ! grep -q 'docs_language\|ecosystems' "$cv/.afe-answers.json" ||
   { cat "$work/cv.log" "$cv/.afe-answers.json"; fail "harness migration test: the dropped docs_language and ecosystems answers are not reported"; }
 # A project that converted with 2.0.0 got the default .claude/ files next to the orphaned
