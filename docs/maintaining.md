@@ -28,15 +28,19 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   `secret_scan`, `acceptance_check`, and `fail_without_change`). A module's files use a
   conditional file name, and the documents mention the module only inside the same condition.
 - What a generated project runs. The checks: `scripts/check.sh` runs `scripts/check-project.sh`
-  (the project's `scripts/checks.d/`), `scripts/check-docs.sh` (markdownlint, links, and the
-  code paths of `scripts/check-links.mjs`), `scripts/check-decisions.sh`, and
-  `scripts/check-template.sh`, with a green stamp (`scripts/lib/stamp.sh`) for `--if-changed`.
+  (the project's `scripts/checks.d/`), `scripts/check-docs.sh` (markdownlint, then the links and
+  the code paths of `scripts/check-links.mjs`, judged by the files git knows; both run when one
+  fails), `scripts/check-decisions.sh`, and `scripts/check-template.sh`, with a green stamp
+  (`scripts/lib/stamp.sh`) for `--if-changed`.
   The hooks of `.claude/hooks/`: `guard.sh` asks before an edit of `AGENTS.md`, a known token
   format, and the irreversible commands it names, and denies a push to the default branch;
-  `stop-dispatch.sh` checks what changed at each Stop and SubagentStop, up to the Ralph cap;
-  `post-edit-check.sh` runs `CHECK_EDIT`; `session-start.sh` prints the local state. The last
-  three resolve the repository from the input's `cwd` (`scripts/lib/root.sh`), so they work in
-  any git worktree and for sub-agents; the guard hook judges a path in any worktree too. The skills: `create-pr` (with the `review` skill and its rubric), `afe-init`,
+  `stop-dispatch.sh` checks what changed at each Stop and SubagentStop, up to the Ralph cap,
+  counted per session, agent, and worktree, and tells the user at the cap; `post-edit-check.sh`
+  runs `CHECK_EDIT`; `session-start.sh` prints the local state. The last three resolve the
+  generated project, the nearest git repository with `.template/owned.txt`, from the input's
+  `cwd` (`scripts/lib/root.sh`), so they work in any git worktree and for sub-agents and pass
+  over a nested repository without the harness; the guard hook judges a path in any worktree
+  too. The skills: `create-pr` (with the `review` skill and its rubric), `afe-init`,
   `update-template`, and, with its module, `review-code`. There is no documentation co-change
   engine, no document status or verification metadata, and no metrics of pull requests.
 - The path classes are `high` and `gate` in the seeded `.claude/path-classes`, which names no
@@ -94,7 +98,8 @@ header of each file names what it needs. The groups, by number:
 - `60`-`69`: the hooks and the green stamp: what the guard hook asks for, denies, and lets
   through, in sibling and inner worktrees too; the Stop dispatcher (the Ralph cap, the fast
   check, a committed broken document, one combined message, no second run on an unchanged green
-  tree, the worktree of the input's `cwd`); the check after every edit; the SessionStart hook;
+  tree, the worktree of the input's `cwd`, a nested repository without the harness); the check
+  after every edit; the SessionStart hook;
   the stamp and the quiet output and `--if-changed` of `scripts/check.sh`.
 - `70`: in GitHub Actions the hooks run no code of the working tree, the review jobs disable
   them, and every action is pinned to a full commit SHA with its `# v<version>` comment (the

@@ -1,5 +1,6 @@
 # stop-dispatch.sh: silent on a clean tree, one combined message for failing parts, the cap, no
-# second run on an unchanged green tree, and the worktree of the input's cwd. Needs $a from
+# second run on an unchanged green tree, the worktree of the input's cwd, and the project around a
+# nested repository without the harness. Needs $a from
 # 10-variant-a.sh and stop from 61-hooks-ralph.sh.
 echo "== the Stop dispatcher"
 gd=$(git -C "$a" rev-parse --absolute-git-dir)
@@ -40,4 +41,11 @@ stop '{"session_id":"wt","cwd":"'"$dwt"'"}' "$work"
 stop '{"session_id":"wt","cwd":"'"$a"'"}' "$work"
 [ $? -eq 0 ] && [ ! -s "$work/stop.log" ] || { cat "$work/stop.log"; fail "stop-dispatch: a cwd in the main checkout checks the second worktree"; }
 git -C "$a" worktree remove --force "$dwt" && gitc "$a" branch -q -D dispwt
+# A cwd in a nested repository without the harness (a vendored clone) checks the project around
+# it, not nothing.
+mkdir -p "$a/vendor/dep" && git -C "$a/vendor/dep" init -q && printf '#Bad heading\n' > "$a/docs/bad.md"
+stop '{"session_id":"nested","cwd":"'"$a"'/vendor/dep"}' "$a/vendor/dep"
+[ $? -eq 2 ] && grep -q '^== scripts/check-docs.sh failed' "$work/stop.log" ||
+  { cat "$work/stop.log"; fail "stop-dispatch: a cwd in a nested repository without the harness does not check the project"; }
+rm -rf "$a/vendor" "$a/docs/bad.md"
 git -C "$a" reset -q --hard "$start" && rm -f "$gd"/afe-green-* "$gd"/afe-ralph-*

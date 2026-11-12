@@ -14,6 +14,13 @@ s2=$(st tree_stamp); [ "$s2" != "$s0" ] || fail "stamp: unchanged when an untrac
 echo b > "$a/new.txt"
 s3=$(st tree_stamp); [ "$s3" != "$s2" ] && [ "$s3" != "$s0" ] || fail "stamp: unchanged when an untracked file's content changes"
 rm "$a/new.txt"
+# A name that git quotes (a double quote, a tab): its content still counts.
+odd=$(printf 'odd"na\tme.txt')
+echo a > "$a/$odd"
+s4=$(st tree_stamp); echo b > "$a/$odd"
+s5=$(st tree_stamp); [ "$s5" != "$s4" ] || fail "stamp: unchanged when an untracked file with a quoted name changes"
+rm "$a/$odd"
+[ "$(st tree_stamp)" = "$s0" ] || fail "stamp: differs after an untracked file with a quoted name is removed"
 git -C "$a" commit -q --allow-empty -m empty
 [ "$(st tree_stamp)" != "$s0" ] || fail "stamp: unchanged when HEAD changes"
 git -C "$a" reset -q --hard HEAD~1

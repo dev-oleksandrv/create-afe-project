@@ -24,13 +24,17 @@ matching_files() {
 }
 
 # The Ralph loop's cap of the Stop dispatcher (.claude/hooks/stop-dispatch.sh): one count of
-# failing stops per Claude Code session and git worktree, in a file of the worktree's own git
-# directory named after the session (the hook input's session_id), so an interrupted loop does not
-# shorten the next one and two worktrees of one session count apart.
-# ralph_block <session> <message>: prints the message; below RALPH_MAX_ITERATIONS failing stops,
-# exits 2, which sends the agent back to fix it; at the cap, adds that the cap is reached, resets
-# the count, and exits 0, so the agent stops and reports the failure.
-# ralph_pass <session>: resets the count.
+# failing stops per Claude Code session, agent, and git worktree, in a file of the worktree's own
+# git directory named after the key that the dispatcher passes (the hook input's session_id, and
+# its agent_id for a sub-agent, which carries the session_id of its parent), so an interrupted loop
+# does not shorten the next one, and parallel sub-agents and two worktrees of one session count
+# apart.
+# ralph_block <key> <message> [parts]: prints the message on stderr; below RALPH_MAX_ITERATIONS
+# failing stops, exits 2, which sends the agent back to fix it; at the cap, adds that the cap is
+# reached, prints {"systemMessage": "..."} on stdout, a one-line summary that names the failing
+# parts, so the user sees it too, resets the count, and exits 0, so the agent stops and reports
+# the failure.
+# ralph_pass <key>: resets the count.
 ralph_count_file() {
   printf '%s/afe-ralph-%s' "$(git rev-parse --absolute-git-dir 2>/dev/null || echo "${TMPDIR:-/tmp}")" \
     "$(printf '%s' "${1:-none}" | tr -c 'A-Za-z0-9_.-' '_')"
@@ -44,6 +48,7 @@ ralph_block() {
   if [ "$n" -ge "$cap" ]; then
     rm -f "$f"
     printf 'Ralph loop cap of %s reached: stop now and report the failing command and its output.\n' "$cap" >&2
+    node scripts/lib/json.mjs message "$(printf 'Stop checks still fail after %s attempts: %s; cap reached' "$n" "${3:-see the hook output}" | tr '\n' ' ')" 2>/dev/null
     exit 0
   fi
   echo "$n" > "$f"

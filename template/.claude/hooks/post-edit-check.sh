@@ -2,9 +2,9 @@
 # PostToolUse hook (Edit, Write, MultiEdit): the check after every edit. It runs the project's fast
 # per-file check, CHECK_EDIT of .claude/harness.conf, with the changed file as its last argument,
 # and sends a failure back to the agent in the same session (exit 2), before the Stop hook and CI.
-# The file is judged by the git repository that holds it (scripts/lib/root.sh), so a file in any
-# worktree of the repository runs that worktree's CHECK_EDIT from its root, with the path relative
-# to it. CHECK_EDIT_GLOBS (shell globs separated by spaces, * also matches /) limits it to matching
+# The file is judged by the generated project that holds it (scripts/lib/root.sh), so a file in
+# any worktree of the repository runs that worktree's CHECK_EDIT from its root, with the path
+# relative to it, and a file in a nested repository without the harness, that of the project. CHECK_EDIT_GLOBS (shell globs separated by spaces, * also matches /) limits it to matching
 # files; empty: every file. A relative path is resolved against the input's cwd. An empty
 # CHECK_EDIT, a file outside any generated project, or a deleted file runs nothing. Keep the
 # command to seconds: it runs after every edit.
