@@ -137,8 +137,8 @@ export async function create(dir, { given, useDefaults, interactive, force = fal
 
 /**
  * Commits the generated files as the first commit on `main`: the one direct commit to `main` that
- * the rules allow. Runs only in a new repository, or in one without
- * commits (an empty clone); never throws.
+ * the rules allow. Runs only in a new repository, or in one without commits (an empty clone);
+ * never throws.
  * @param {string} dir
  * @returns {{ done: boolean, reason?: string }}
  */
@@ -166,7 +166,8 @@ export function initialCommit(dir) {
  * project block of AGENTS.md is kept, files the template no longer owns are removed, missing
  * seeded files are created and existing ones changed only by a migration, the migrations between the two
  * versions run, and the generated files are rebuilt. The result names, besides the files, the
- * answers of a Copier answers file that are dropped, and notes: what is left to do by hand.
+ * recorded answers that are dropped, since no question takes them, and notes: what is left to do by
+ * hand.
  * @param {string} dir
  * @param {{ given?: Record<string, unknown>, useDefaults?: boolean, interactive?: boolean,
  *   allowDirty?: boolean, quiet?: boolean }} options
@@ -189,8 +190,9 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
   const oldOwnedFile = join(dir, OWNED_LIST);
   const oldOwned = existsSync(oldOwnedFile) ? listed(readFileSync(oldOwnedFile, 'utf8')) : [];
   const edited = editedOwnedFiles(dir);
-  // Answers of a Copier answers file without a question here are dropped, some with a warning.
-  const dropped = recorded.legacy ? Object.keys(recorded.answers).filter((k) => !QUESTIONS.some((q) => q.name === k)) : [];
+  // Recorded answers without a question here are dropped: those of a Copier answers file, some with
+  // a warning, and those of a question removed since, such as docs_review in 3.0.0.
+  const dropped = Object.keys(recorded.answers).filter((k) => !QUESTIONS.some((q) => q.name === k));
   const notes = recorded.legacy ? legacyNotes(recorded.answers) : [];
   const pending = MIGRATIONS.filter(
     (m) => compareVersions(m.version, recorded.version) > 0 && compareVersions(m.version, VERSION) <= 0,
@@ -205,7 +207,13 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
     for (const m of pending) if (m.before) run(dir, m.before, quiet, env);
 
     removed = oldOwned.filter((rel) => !newOwned.includes(rel) && existsSync(join(dir, rel)));
-    for (const rel of removed) rmSync(join(dir, rel));
+    for (const rel of removed) {
+      rmSync(join(dir, rel));
+      // A directory left empty, such as the one of a removed skill, goes with its last file.
+      for (let d = dirname(rel); d !== '.' && readdirSync(join(dir, d)).length === 0; d = dirname(d)) {
+        rmSync(join(dir, d), { recursive: true });
+      }
+    }
 
     for (const [rel, file] of rendered) {
       const exists = existsSync(join(dir, rel));

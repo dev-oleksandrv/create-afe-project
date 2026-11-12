@@ -7,30 +7,43 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
 
 ## 1. Model
 
-- `template/` is the product. Every file in it is template-owned (listed in
-  [`template/.template/owned.txt.jinja`](../template/.template/owned.txt.jinja)), seeded (listed
-  as `SEEDED` in `src/config.js`), or generated: the answers file by the command line, the
-  ownership manifest and the decision index by the `TASKS` of `src/config.js`. Files render
-  with Nunjucks, which reads the Jinja syntax: a `.jinja` file is rendered and loses the suffix,
-  a path segment that renders empty drops the file, and `_gitignore` becomes `.gitignore`,
-  because npm never publishes a `.gitignore`. The classes are
-  defined in the generated `docs/documentation-rules.md`, section 9.
+- `template/` is the product. Every file in it is one of four kinds. Template-owned files are
+  listed in [`template/.template/owned.txt.jinja`](../template/.template/owned.txt.jinja): an
+  update replaces them, and `scripts/check-template.sh` fails on a local edit. Seeded files are
+  listed as `SEEDED` in `src/config.js`: created once, then owned by the project; an update
+  changes one only through a `MIGRATIONS` entry. Generated files are rebuilt after every create
+  and update: the answers file by the command line, the settings, the ownership manifest, and
+  the decision index by the `TASKS` of `src/config.js`. Every other file belongs to the project.
+  Files render with Nunjucks, which reads the Jinja syntax: a `.jinja` file is rendered and loses
+  the suffix, a path segment that renders empty drops the file, and `_gitignore` becomes
+  `.gitignore`, because npm never publishes a `.gitignore`.
 - This repository's own `.afe-answers.json` records the version of `package.json`: its
   template-owned files come from the working tree of `template/` through `scripts/sync-self.sh`,
   which runs the `update` command of this working tree, not from a release.
-- A project extends the template only at the extension points of that section:
-  `scripts/checks.d/`, .claude/hooks/project/stop/, `.claude/path-classes`,
-  `.claude/harness.conf`, `.claude/settings.project.json`, the project block of `AGENTS.md`, and
-  its own documents. A need that the extension points do not cover is a
-  change of the template, not a local edit.
-- Optional parts are modules behind a question of `src/config.js` (today: `docs_review`, `code_review`,
-  `dual_review`, `secret_scan`, `acceptance_check`, and `fail_without_change`). A module's
-  files use a conditional file name, and the documents mention the module only inside the same
-  condition.
-- The seeded `.claude/path-classes` carries the gate lines of every ecosystem; the template asks
-  no `ecosystems` question (from agent-docs-template 0.7.0). Decided by the owner, 2026-11-06.
-- Documents are English-only (`AGENTS.md`, section 5); the template has no `docs_language`
-  question (from agent-docs-template 0.7.0). Decided by the owner, 2026-11-06.
+- A project extends the template only at its extension points: `scripts/checks.d/`,
+  `.claude/hooks/project/stop/*.sh`, `.claude/path-classes`, `.claude/harness.conf`,
+  `.claude/settings.project.json`, the project block of `AGENTS.md`, and its own documents. A
+  need that the extension points do not cover is a change of the template, not a local edit.
+- Optional parts are modules behind a question of `src/config.js` (today: `code_review`,
+  `secret_scan`, `acceptance_check`, and `fail_without_change`). A module's files use a
+  conditional file name, and the documents mention the module only inside the same condition.
+- What a generated project runs. The checks: `scripts/check.sh` runs `scripts/check-project.sh`
+  (the project's `scripts/checks.d/`), `scripts/check-docs.sh` (markdownlint, links, and the
+  code paths of `scripts/check-links.mjs`), `scripts/check-decisions.sh`, and
+  `scripts/check-template.sh`, with a green stamp (`scripts/lib/stamp.sh`) for `--if-changed`.
+  The hooks of `.claude/hooks/`: `guard.sh` asks before an edit of `AGENTS.md`, a known token
+  format, and the irreversible commands it names, and denies a push to the default branch;
+  `stop-dispatch.sh` checks what changed at each Stop and SubagentStop, up to the Ralph cap;
+  `post-edit-check.sh` runs `CHECK_EDIT`; `session-start.sh` prints the local state. The last
+  three resolve the repository from the input's `cwd` (`scripts/lib/root.sh`), so they work in
+  any git worktree and for sub-agents; the guard hook judges a path in any worktree too. The skills: `create-pr` (with the `review` skill and its rubric), `afe-init`,
+  `update-template`, and, with its module, `review-code`. There is no documentation co-change
+  engine, no document status or verification metadata, and no metrics of pull requests.
+- The path classes are `high` and `gate` in the seeded `.claude/path-classes`, which names no
+  ecosystem: the `afe-init` skill adds the gate lines of the chosen stack. A path nothing matches
+  is normal, or low when it is Markdown or generated (`scripts/lib/classes.sh`).
+- Documents are English-only (`.claude/rules/docs.md`); the template has no `docs_language`
+  question (from agent-docs-template 0.7.0), on the owner's decision of 2026-11-06.
 
 ## 2. Changing the template
 
@@ -50,114 +63,57 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
 
 ## 3. Tests
 
-`scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/*.test.js`: the questions,
-their validators and defaults, the Jinja rendering and conditional names, that every rendered
-file is template-owned or seeded, the reading of a Copier answers file, and the warning for a
-Copier `docs_language` other than English, none for English.
+`scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/*.test.js`: the
+questions, their validators and defaults, that a given answer to a removed question is ignored,
+the Jinja rendering and conditional names, that every rendered file is template-owned or seeded,
+the reading of a Copier answers file, and the warning for a Copier `docs_language` other than
+English, none for English.
+
 `scripts/checks.d/15-release.sh` runs `scripts/tag-release.sh` against a local origin: it tags
 without a changeset and with only an empty one, and not while a changeset with a release is
 pending; and that such a changeset, which has no heading, passes markdownlint through
 `.changeset/.markdownlint.jsonc` with the other rules still on, and that this file stays the root
 configuration plus `MD041: false`.
-`scripts/checks.d/10-template.sh` runs the template test suite, the files of `test/template/` in
-name order. It renders the template with the
-command line of the working tree in four projects and runs `scripts/check.sh` in each, the line budgets of the rule documents included:
 
-- variant A, a GitHub-hosted runner with the default modules (`docs_review` and `code_review`
-  on), and variant B, a self-hosted runner with the opposite and `dual_review` on; each module's
-  files and mentions appear only with it;
-- a smoke test of reuse: a documentation-only project with every module off, where readiness and
-  `--classes` work on a document change and no module script exists; and a Python project with
-  pytest and every module on, where the Acceptance check finds an identifier in a test and misses
-  one that no test carries, and the fail-without-change driver accepts a new test that fails on
-  the base, rejects a changed test that passes there unless `--allow-pass-on-base` is given,
-  checks a renamed test file, and leaves no worktree behind; the module's workflow runs the
-  driver. The Python part needs `uvx` to provision pytest and says SKIP
-  without it.
+`scripts/checks.d/10-template.sh` runs the template test suite: it sources
+[`test/template/lib.sh`](../test/template/lib.sh), then each `test/template/[0-9]*.sh` in name
+order into one shell, so a later file reuses the projects and helpers of earlier ones; the
+header of each file names what it needs. The groups, by number:
 
-Every project is created with the initial commit of the command line on `main`; it also proves
-that `--no-git` makes none, that an empty clone gets it on `main`, and that a non-empty
-directory written with `--force` is never committed. On variant A it proves that the checks reject an edited template-owned file, a damaged project
-block, a rule document over its budget, a stale `.claude/settings.json`, a decision record with
-the wrong number, and a stale index; that a description in the template's sections passes
-readiness, and the forms readiness rejects (no Acceptance, an Acceptance item without an
-existing path (a root-level test file counts, a version does not), no Metrics, a Metrics row
-outside its forms, unanswered findings, a blocker as a limit, a missing or repeated measure (`Regression of` included), an added owner marker in a Markdown file or a touched gate file that
-the description does not name); the class of each kind of path and the review level of
-`--classes` (`contracts/` is high; dependency updates, pre-commit hooks, task runners, and tool
-versions are gate, each line of their block with a file it matches; sample manifests, lock
-files, and toolchain or tool-configuration files from every ecosystem block are gate, and sample
-source files of those stacks stay normal); and which edits and commands the guard hook (`.claude/hooks/guard.sh`) asks for (an Edit,
-Write, or MultiEdit of `AGENTS.md` at the root of the repository that holds it, in a sibling or
-inner worktree too, secrets, the irreversible commands it names) and which it lets through
-(every other path, a decision record on `main` included, a shell command that writes a path, an
-ordinary push, everything with `DOCS_GUARD=off`); that the Stop dispatcher
-(`.claude/hooks/stop-dispatch.sh`) stops blocking at the Ralph cap and counts again afterwards,
-per session and worktree, prints nothing on a clean tree, names every failing part in one
-message, runs no check again on an unchanged green tree, and checks the worktree of the input's
-`cwd`; that the green stamp changes with a tracked file, an untracked file, and its content, and
-that `scripts/check.sh` prints one line per passing part, stores the full stamp, and skips with
-`--if-changed` on an unchanged tree, but not in GitHub Actions; that a large change only warns; that
-`scripts/env.sh` skips an unset command and passes on a set one's exit code; and that the
-settings deny reading secrets. It also checks that the guard hook asks before publishing a
-package or an image, `gh workflow run`, a `gh api` DELETE, a change of repository settings
-(`gh repo edit`, `scripts/protect-branch.sh` without `--dry-run`, a `gh api` write on the
-repository, its rulesets, or a branch protection, but not the replies and reads of the
-`create-pr` skill), `gh repo rename` and `archive` (but not `gh repo view`), a `gh api graphql`
-mutation or a query it cannot read (a file, standard input, `--input`, a shell expansion, or a
-quoted query over several lines; but not a query without a mutation), a `gh api` endpoint given
-as a full URL, and
-an edit or command with a known token format, and denies a push to `main` once the remote has it; that the check after every edit
-runs `CHECK_EDIT` on matching files inside the project only, with stdin from `/dev/null`, a
-relative path resolved against the input's `cwd`, and for a file in a second worktree with that
-worktree's `CHECK_EDIT` and the path relative to it; that the documentation rules state that conventions, recipes, and operations
-carry `verified-against`, that the map's conventions row links section 2, and that the docs-review
-skill states that it reads the document kinds and reports a convention or recipe copied into a skill or tool-specific
-rule file and a convention without its check or `none`, and the review-code skill states that it applies the conventions; that the docs-review skill
-states that it reports a new or changed document that lacks the front matter of sections 2 and 4
-or keeps a stale `verified-against`; that the documentation rules name `CHECK_EDIT`
-(section 7 with its limit for a file changed by a shell command, section 9 with
-`CHECK_EDIT_GLOBS`) and the comment of the post-edit hook cites section 7; that the map's `README.md` row names the
-repository settings; that the testing rules carry the
-rule that a flaky test is fixed, never retried or rerun until green, and that skipping one is a
-blocker; that the rubric of variant A has the
-"Dependencies" row and the `review-code` skill lists dependencies among its criteria and says
-what to check for an added one; that the `create-pr` skill states that it takes
-findings only from the review bot and the repository's owner, members, and collaborators; that the readiness step of the `decisions` workflow, run as
-written with the shell it declares, checks only the decision records of a pull request that
-`github-actions[bot]` opened, fails there when its `--classes` call fails, and still fails a person's empty description, and that the AI reviews skip such a pull request; that the SessionStart hook prints the
-local state of the repository that holds the input's `cwd` (the branch, its base and the
-commits ahead, uncommitted and untracked files, merge conflicts), and nothing outside a
-repository; that the Stop dispatcher runs `CHECK_FAST` only for a change to a file other than
-Markdown, never as the default, blocks on a failure, and lets the agent stop during a merge
-conflict and, like the SessionStart hook, points to `git status`, not to the update of
-`contributing.md`, section 5; that in GitHub Actions every hook but
-the guard hook exits 0 before it runs a script of the working tree or a project Stop hook, the
-guard hook still asks and runs no such script, and the review jobs disable all hooks; that a
-hook command whose script is
-missing fails the template check; that the link check finds a missing file or anchor; that
-`scripts/protect-branch.sh --dry-run` prints the repository settings (merge commits only, head
-branches deleted, secret scanning) and the ruleset, that `--require-base` adds the `base` job only
-with its module and an update keeps it, and that a live run against a stand-in for `gh` goes on past secret
-scanning the plan refuses, still applies the ruleset and then fails after any other secret-scanning
-error, ends without error when the plan offers no rulesets, and finds its ruleset on a later page
-and not one inherited from an organisation; that the `secret-scan` workflow
-appears only with its module; and that every action of the workflows of variant A, variant B,
-the documentation-only project, the Python project, and this repository is pinned to a full
-commit SHA with its `# v<version>` comment, never to a tag. The test checks that form only; the
-review checks that the SHA is the commit of the version in the comment and that one action
-carries the same SHA and comment in every workflow. It also checks that `update` keeps project content (the project
-block, seeded files, project checks), creates a missing seeded file, removes a file the template
-no longer owns, refuses a dirty working tree and a downgrade, reports and replaces a local edit
-of a template-owned file, converts a Copier answers file, and runs the 0.5.0 migration and the
-2.0.1 migration, which moves the `.harness/` files of a Copier 0.7.0 project into `.claude/`,
-reports a file that still names `.harness/`, replaces a default `.claude/` file that a 2.0.0
-conversion left next to them and keeps a changed one with a note to merge by hand, and warns
-that a `docs_language` other than English is not carried over; and that
-this repository's template-owned files match `template/`. CI runs both through the `docs`
-workflow, which sets up Node.js; the checks run `npm ci` when `node_modules` is missing, and the
-Python test installs uv into `~/.local/bin` when `uvx` is missing, so the runner needs only Git
-and curl besides.
+- `10`-`13`: variant A, a GitHub-hosted runner with the default modules, and variant B, a
+  self-hosted runner with `code_review` on and `acceptance_check` off, each rendered with the
+  command line of the working tree and passing `scripts/check.sh`; each module's files and
+  mentions appear only with it. The initial commit on `main` (`--no-git`, an empty clone, a
+  forced non-empty directory), and an interactive create that exits after its outro.
+- `20`-`25`: the pull request description sections, and the content of the generated skills.
+- `30`-`42`: the checks catch violations on variant A (an edited template-owned file, a damaged
+  project block, a stale `.claude/settings.json`, a decision record with the wrong number, a
+  stale index, a dead link or code path); merge readiness, the path classes and review level of
+  `--classes`, the readiness step of the `decisions` workflow on a pull request that a workflow
+  opened, and the generated "Gate files" section.
+- `60`-`69`: the hooks and the green stamp: what the guard hook asks for, denies, and lets
+  through, in sibling and inner worktrees too; the Stop dispatcher (the Ralph cap, the fast
+  check, a committed broken document, one combined message, no second run on an unchanged green
+  tree, the worktree of the input's `cwd`); the check after every edit; the SessionStart hook;
+  the stamp and the quiet output and `--if-changed` of `scripts/check.sh`.
+- `70`: in GitHub Actions the hooks run no code of the working tree, the review jobs disable
+  them, and every action is pinned to a full commit SHA with its `# v<version>` comment (the
+  review checks that the SHA is that version's).
+- `80`-`81`: smoke tests of reuse: a documentation-only project with every module off, and a
+  Python project with pytest and every module on, where the Acceptance check and the
+  fail-without-change driver run (it needs `uvx` and says SKIP without it).
+- `90`-`93`: `update` keeps project content (the project block, seeded files, project checks),
+  creates a missing seeded file, removes a file the template no longer owns, refuses a dirty
+  working tree and a downgrade, reports and replaces a local edit of a template-owned file,
+  converts a Copier answers file, and runs the migrations: 0.5.0; 2.0.1, which moves the
+  `.harness/` files of a Copier 0.7.0 project into `.claude/`; and 3.0.0 on a project created by
+  the 2.1.0 package (the release commit `761f382`, so the suite needs the history of this
+  repository).
+- `99`: this repository's template-owned files match `template/`.
+
+CI runs both through the `check` workflow, which checks out the full history and sets up
+Node.js; the checks run `npm ci` when `node_modules` is missing, and the Python test installs uv
+into `~/.local/bin` when `uvx` is missing, so the runner needs only Git and curl besides.
 
 ## 4. Versions
 
@@ -175,7 +131,12 @@ A release that needs a mechanical change in projects ships a `MIGRATIONS` entry 
 `src/config.js` that performs it, and its changeset says what the project must check by hand.
 The version part follows the table, not the migration: a migration may ship in any release, such
 as the `2.0.1` entry, which restores the harness settings and path classes that the 2.0.0
-conversion of a Copier project left in `.harness/`. An update changes an existing seeded file (`SEEDED`) only through a `MIGRATIONS`
+conversion of a Copier project left in `.harness/`. The `3.0.0` entry replaces a seeded
+`.claude/path-classes` that is still a 2.x default (by Git blob hash) with the 3.0.0 default and
+warns about a changed one, sets the caps of `.claude/harness.conf` that still hold the 2.x
+defaults to 2, and warns that a project's existing documentation map, docs/README.md, is no longer the template's; the
+answers of the removed questions `docs_review` and `dual_review` are dropped, and those of the
+other questions are kept. An update changes an existing seeded file (`SEEDED`) only through a `MIGRATIONS`
 entry, and that entry's changeset says so; any other change to a seeded file reaches new projects
 only, so its changeset says what an existing project should copy by hand.
 Before 1.0.0, MINOR takes the role of MAJOR.
@@ -185,21 +146,21 @@ Before 1.0.0, MINOR takes the role of MAJOR.
 1. On every push to `main` with pending changesets, the `version` workflow opens or updates the
    Version PR "Release: next version" on `changeset-release/main`: `npm run version-packages`
    consumes the changesets, bumps `package.json` and `package-lock.json`, writes the
-   `CHANGELOG.md` section `## X.Y.Z`, and runs `scripts/sync-self.sh`. It starts the `docs`
-   workflow on that branch with `workflow_dispatch`, which `GITHUB_TOKEN` may trigger. Whether
-   opening a pull request with `GITHUB_TOKEN` starts the `pull_request` workflows is an open
-   question: they started on #16, which a `version` run that the owner re-ran opened. The
-   Version PR is exempt from the description sections of readiness: its description is generated.
-   The workflows know it by its author, `github-actions[bot]`: readiness checks only its decision
-   records, and `docs-review` and `code-review` skip it, since the action refuses runs a bot
-   starts; readiness prints its gate and approval paths for the owner, who reviews them before the
-   merge, as part of the release decision. The repository setting "Allow GitHub Actions to create
-   and approve pull requests" must be on, or the `version` workflow cannot open the Version PR.
-   With it on, anyone with write access can have a workflow open a pull request as
-   `github-actions[bot]` and so skip the description sections and the reviews; the owner, who
-   merges every pull request, sees the author.
-2. Before merging it, the measurement of section 6 runs, and its proposals go to the owner.
-   Merging the Version PR is the owner's release decision.
+   `CHANGELOG.md` section `## X.Y.Z`, and runs `scripts/sync-self.sh`, which also runs the
+   migrations of the new version on this repository. It starts the `check` workflow on that
+   branch with `workflow_dispatch`, which `GITHUB_TOKEN` may trigger. Whether opening a pull
+   request with `GITHUB_TOKEN` starts the `pull_request` workflows is an open question: they
+   started on #16, which a `version` run that the owner re-ran opened. The Version PR is exempt
+   from the description sections of readiness: its description is generated. The workflows know
+   it by its author, `github-actions[bot]`: readiness checks only its decision records, and
+   `code-review` skips it, since the action refuses runs a bot starts; readiness prints its gate
+   paths for the owner, who reviews them before the merge, as part of the release decision. The
+   repository setting "Allow GitHub Actions to create and approve pull requests" must be on, or
+   the `version` workflow cannot open the Version PR. With it on, anyone with write access can
+   have a workflow open a pull request as `github-actions[bot]` and so skip the description
+   sections and the reviews; the owner, who merges every pull request, sees the author.
+2. Before merging it, the review of section 6 runs, and its proposals go to the owner. Merging
+   the Version PR is the owner's release decision.
 3. The push of that merge finds no changeset pending (an empty changeset counts as none: it
    releases nothing, and the action opens no Version PR for it): `scripts/tag-release.sh` tags `vX.Y.Z` and
    starts the `release` workflow on the tag. It reads the changesets with `@changesets/parse`,
@@ -208,20 +169,18 @@ Before 1.0.0, MINOR takes the role of MAJOR.
    that `package.json` and the `CHANGELOG.md` section are at `X.Y.Z`, runs the package tests,
    publishes a GitHub release with that section as its notes, then the package to npm with the
    repository secret `NPM_TOKEN`. A tag pushed by hand releases the same way.
-4. Projects update with their `update-template` skill (the generated `docs/contributing.md`,
-   section 5).
+4. Projects update with their `update-template` skill.
 
-## 6. Measurement and pruning
+## 6. Pruning
 
 Rules and checks are scaffolding that has to earn its keep: a failure is diagnosed, encoded as a
-rule or a check, and measured, and a rule or check that catches nothing is removed.
+rule or a check, and a rule or check that catches nothing is removed. There are no metrics of
+pull requests.
 
-- At each release, the maintainer runs `scripts/pr-metrics.sh --since <date of the previous
-  release>` in this repository and with `--repo owner/name` in the generated projects the
-  maintainer can read. It sums the "Metrics" sections of the merged pull requests (the generated
-  `docs/contributing.md`, section 3) by sensor, and names the sensors without a finding.
-- A rule or a check that neither fired nor caught anything over the period, by these metrics and
-  by the failures quoted under "Checks", is proposed for removal to the owner, in its own pull
-  request; the owner decides. A pull request without a "Metrics" section is counted, not read.
+- At each release, the maintainer reads the "Checks" sections and the review findings of the pull
+  requests merged since the previous release, in this repository and in the generated projects
+  the maintainer can read.
+- A rule or a check that neither fired nor caught anything over the period is proposed for
+  removal to the owner, in its own pull request; the owner decides.
 - A new rule or check names the recurring failure it addresses (section 2), so that the next
-  measurement can tell whether it still occurs.
+  review can tell whether it still occurs.
