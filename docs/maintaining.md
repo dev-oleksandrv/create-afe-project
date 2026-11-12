@@ -134,7 +134,7 @@ as the `2.0.1` entry, which restores the harness settings and path classes that 
 conversion of a Copier project left in `.harness/`. The `3.0.0` entry replaces a seeded
 `.claude/path-classes` that is still a 2.x default (by Git blob hash) with the 3.0.0 default and
 warns about a changed one, sets the caps of `.claude/harness.conf` that still hold the 2.x
-defaults to 2, and warns that an existing `docs/README.md` is no longer the template's; the
+defaults to 2, and warns that a project's existing documentation map, docs/README.md, is no longer the template's; the
 answers of the removed questions `docs_review` and `dual_review` are dropped, and those of the
 other questions are kept. An update changes an existing seeded file (`SEEDED`) only through a `MIGRATIONS`
 entry, and that entry's changeset says so; any other change to a seeded file reaches new projects
