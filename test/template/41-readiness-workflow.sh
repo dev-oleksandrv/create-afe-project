@@ -1,5 +1,5 @@
 # The readiness step of decisions.yml on a pull request that a workflow opened. Needs $a from
-# 10-variant-a.sh and record from 30-negative.sh.
+# 10-variant-a.sh, $b from 13-variant-b.sh, and record from 30-negative.sh.
 # A pull request that a workflow opened with GITHUB_TOKEN (a generated release pull request) has
 # a generated description: the readiness step of the workflow, run as written, checks only its
 # decision records, and the AI reviews skip it; a person's empty description still fails.
@@ -25,13 +25,13 @@ cp "$work/check-decisions.keep" "$a/scripts/check-decisions.sh"
 ready someone; [ $? -eq 1 ] && grep -q "no '## Metrics' section" "$work/ready.log" ||
   { cat "$work/ready.log"; fail "readiness: does not fail the empty description of a pull request a person opened on its sections"; }
 grep -qF 'only for a pull request that `github-actions[bot]` opened, and does not block' "$a/docs/contributing.md" &&
-  grep -qF 'opens or leaves draft, except one that `github-actions[bot]` opened;' "$a/docs/contributing.md" ||
-  fail "variant A: contributing.md does not state the exemption of a pull request a workflow opened"
+  grep -qF 'opens or leaves draft, except one that `github-actions[bot]` opened;' "$b/docs/contributing.md" ||
+  fail "contributing.md does not state the exemption of a pull request a workflow opened"
 (cd "$a" && mkdir -p src && echo x > src/app.py && echo x > Makefile && record 0001 proposed && scripts/gen-decisions-index.sh > docs/decisions/README.md)
 ready 'github-actions[bot]'; [ $? -ne 0 ] && grep -q "still 'proposed'" "$work/ready.log" && grep -q "class gate, for the owner's review: Makefile" "$work/ready.log" ||
   { cat "$work/ready.log"; fail "readiness: a pull request a workflow opened skips its decision records or hides its gate files"; }
 gitc "$a" checkout -q -- . && gitc "$a" clean -q -fd && git -C "$a" update-ref -d refs/remotes/origin/ready-base
-for w in docs-review code-review; do
-  grep -qF "if: \${{ !github.event.pull_request.draft && github.event.pull_request.user.login != 'github-actions[bot]' }}" "$a/.github/workflows/$w.yml" ||
+for w in code-review; do
+  grep -qF "if: \${{ !github.event.pull_request.draft && github.event.pull_request.user.login != 'github-actions[bot]' }}" "$b/.github/workflows/$w.yml" ||
     fail "$w.yml: reviews a pull request that a workflow opened"
 done

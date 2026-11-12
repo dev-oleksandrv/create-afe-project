@@ -165,9 +165,9 @@ template version, which `.afe-answers.json` records; the `update-template` skill
   - low (documents, generated files, a template update): no reviewer;
   - normal and gate: one pass by one reviewer, a fresh
     Claude subagent; only the fix of a blocker is checked again;
-  - high: one pass as for normal; the Santa loop is an optional module of the template.
-- In the pull request, `docs-review` reviews every pull request and `code-review` every one that changes code, contracts, checks, or workflows, once, when it
-  opens or leaves draft, except one that `github-actions[bot]` opened; a push does not run them again.
+  - high: one pass as for normal.
+- In the pull request, `code-review` reviews every one that changes code, contracts, checks, or workflows, once, when it
+  opens or leaves draft, except one that `github-actions[bot]` opened; a push does not run it again.
 - A finding names a file, a line, a class, and the rule it rests on; zero findings is valid, and
   style belongs to the linters. A `blocker`: merged as it is, the change breaks behaviour, a
   contract, security, or a product invariant (`docs/invariants.md`), loses data, fails an item of

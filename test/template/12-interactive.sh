@@ -5,8 +5,8 @@ echo "== interactive create in a terminal exits after its outro"
 if command -v script > /dev/null 2>&1; then
   it="$work/it"
   itcmd=(node "$root/bin/create-afe-project.js" "$it" --data project_name=sample --data 'project_description=A sample project.'
-    --data github_repo=example/sample --data ci_runner=github-hosted --data docs_review=true --data code_review=true
-    --data dual_review=false --data secret_scan=true --data acceptance_check=false --data fail_without_change=false)
+    --data github_repo=example/sample --data ci_runner=github-hosted --data code_review=true
+    --data secret_scan=true --data acceptance_check=false --data fail_without_change=false)
   if script --version > /dev/null 2>&1; then
     script -qec "$(printf '%q ' "${itcmd[@]}")" /dev/null > "$work/it.log" 2>&1 < /dev/null &
   else

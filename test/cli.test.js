@@ -16,10 +16,27 @@ const answer = (given) => collectAnswers({ given: { ...base, ...given }, useDefa
 test('questions take their defaults and skip the runner labels on a GitHub-hosted runner', async () => {
   const { answers, context } = await answer({});
   assert.deepEqual(Object.keys(answers), [
-    'project_name', 'project_description', 'github_repo', 'ci_runner', 'docs_review', 'code_review',
-    'dual_review', 'secret_scan', 'acceptance_check', 'fail_without_change',
+    'project_name', 'project_description', 'github_repo', 'ci_runner', 'code_review', 'secret_scan',
+    'acceptance_check', 'fail_without_change',
   ]);
   assert.equal(context.ci_runs_on_default, '["ubuntu-latest"]');
+});
+
+test('code review in CI is off and the acceptance check on by default; the removed review modules are no questions', async () => {
+  const { answers } = await answer({});
+  assert.equal(answers.code_review, false);
+  assert.equal(answers.acceptance_check, true);
+  assert.equal(answers.secret_scan, true);
+  assert.equal(answers.fail_without_change, false);
+  for (const name of ['docs_review', 'dual_review']) assert.throws(() => coerce(name, 'true'), new RegExp(`unknown question: ${name}`));
+});
+
+test('a project created with the defaults has check.yml and no docs-review or dual-review files', async () => {
+  const { context } = await answer({});
+  const paths = [...renderTemplate(TEMPLATE_DIR, context).keys()];
+  assert.ok(paths.includes('.github/workflows/check.yml'));
+  assert.ok(!paths.includes('.github/workflows/docs.yml'));
+  assert.deepEqual(paths.filter((p) => /docs-review|dual-review/.test(p)), []);
 });
 
 test('a self-hosted runner asks for its labels and runs on them', async () => {
@@ -37,9 +54,9 @@ test('validators reject what copier.yml rejected', async () => {
 });
 
 test('--data strings become booleans, and unknown questions fail', () => {
-  assert.equal(coerce('docs_review', 'false'), false);
-  assert.equal(coerce('docs_review', 'yes'), true);
-  assert.throws(() => coerce('docs_review', 'maybe'), UsageError);
+  assert.equal(coerce('code_review', 'false'), false);
+  assert.equal(coerce('code_review', 'yes'), true);
+  assert.throws(() => coerce('code_review', 'maybe'), UsageError);
   assert.throws(() => coerce('nope', 'x'), /unknown question: nope/);
 });
 
@@ -47,9 +64,12 @@ test('without a terminal a question with no answer fails instead of hanging', as
   await assert.rejects(collectAnswers({ given: {}, useDefaults: true, interactive: false }), /project_name has no answer/);
 });
 
-test('recorded answers win over defaults on an update', async () => {
-  const { answers } = await collectAnswers({ previous: { ...base, docs_review: false }, useDefaults: true, interactive: false });
-  assert.equal(answers.docs_review, false);
+test('recorded answers win over defaults on an update, and answers without a question are dropped', async () => {
+  const previous = { ...base, code_review: true, acceptance_check: false, docs_review: true, dual_review: false };
+  const { answers } = await collectAnswers({ previous, useDefaults: true, interactive: false });
+  assert.equal(answers.code_review, true);
+  assert.equal(answers.acceptance_check, false);
+  assert.ok(!('docs_review' in answers) && !('dual_review' in answers));
 });
 
 test('versions compare numerically, a missing one lowest', () => {
@@ -81,7 +101,7 @@ test('conditional names drop files and directories, .jinja is stripped, _gitigno
 
 test('every rendered file is template-owned or seeded, with every module on and off', async () => {
   for (const on of [true, false]) {
-    const flags = Object.fromEntries(['docs_review', 'code_review', 'dual_review', 'secret_scan', 'acceptance_check', 'fail_without_change'].map((k) => [k, on]));
+    const flags = Object.fromEntries(['code_review', 'secret_scan', 'acceptance_check', 'fail_without_change'].map((k) => [k, on]));
     const { context } = await answer(flags);
     const out = renderTemplate(TEMPLATE_DIR, context);
     const owned = String(out.get('.template/owned.txt').content).split('\n').filter((l) => l && !l.startsWith('#'));
@@ -107,11 +127,13 @@ test('a Copier docs_language other than English gets a warning that documents st
 });
 
 test('the message after create numbers the next steps and says whether the initial commit was made', () => {
-  const a = { project_name: 'sample', docs_review: true, code_review: false, dual_review: false };
+  const a = { project_name: 'sample', code_review: false };
   const done = messageAfterCreate(a, { done: true });
   assert.match(done, /^sample is ready\. Next:\n {2}1\. the generated files are committed on main\n/);
   assert.match(done, /\d+\. run \/afe-init in Claude Code/);
   assert.match(done, /\d+\. protect main and apply the repository settings with scripts\/protect-branch\.sh \(merge commits only, head branches deleted, secret scanning/);
   assert.doesNotMatch(done, /turn on secret scanning/);
   assert.match(messageAfterCreate(a, { done: false, reason: 'skipped with --no-git' }), /1\. commit the generated files on main .*skipped with --no-git/);
+  assert.doesNotMatch(done, /CLAUDE_CODE_OAUTH_TOKEN/);
+  assert.match(messageAfterCreate({ ...a, code_review: true }, { done: true }), /\d+\. add the CLAUDE_CODE_OAUTH_TOKEN secret and install the Claude GitHub App/);
 });

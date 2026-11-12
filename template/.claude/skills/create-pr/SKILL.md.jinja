@@ -1,7 +1,7 @@
 ---
 name: create-pr
-description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, the Ralph loop on the checks, and the description with its evidence, gate files, and metrics{% if dual_review %}, with the review before the pull request by path class{% endif %}{% if docs_review or code_review %}, then wait once for the review runs and answer each finding{% endif %}. Use when asked to create, open, or submit a pull request.
-allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), {% if dual_review %}Skill(dual-review), {% endif %}{% if docs_review or code_review %}Bash(gh pr comment:*), Bash(gh run view:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), {% endif %}Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*){% if fail_without_change %}, Bash(scripts/fail-without-change.sh:*){% endif %}
+description: Open a pull request for the current branch following docs/contributing.md - branch name, commit subjects, the Ralph loop on the checks, and the description with its evidence, gate files, and metrics{% if code_review %}, then wait once for the review runs and answer each finding{% endif %}. Use when asked to create, open, or submit a pull request.
+allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), {% if code_review %}Bash(gh pr comment:*), Bash(gh run view:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), Bash(sleep:*), {% endif %}Bash(scripts/check.sh), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*){% if fail_without_change %}, Bash(scripts/fail-without-change.sh:*){% endif %}
 ---
 
 # Create a pull request
@@ -43,12 +43,6 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    classes: note the gate files, and each approval path with the instruction that allowed it.
    The last run of `scripts/check.sh` before each push is on the tree that is pushed: after any
    change once the loop of step 5 passed, run the loop again.
-{%- if dual_review %}
-   Run the `dual-review` skill once for the tree before the push, unless this session already
-   has its verdict for it; it reviews by class or says why it does not run. Its fixes are
-   committed by section 2. Fixes that answer the review workflows later (step 9) do not run it
-   again.
-{%- else %}
    Review the tree once before the push, unless this session already did: for `review<TAB>none`
    write "Review: not run: class low"; otherwise give one fresh Claude subagent the brief of
    section 6 (the rubric and classes, the project's criteria, `docs/testing-rules.md`, the task,
@@ -56,7 +50,6 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    and the rule. Answer each finding once by section 6, commit the fixes, and have a fresh
    subagent check each fixed blocker once with only the finding and the fix diff. "Checks" names
    the review or why it did not run, and Metrics get its rows by class.
-{%- endif %}
 7. Push: `git push -u origin <branch>`.
 8. Description: write it to a file in the session's scratch directory, in the sections and order
    of section 3, from `git diff main...HEAD`, the commit messages, and the conversation. Then
@@ -76,12 +69,12 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
      the branch can still answer is resolved now. A finding is `blocking:` only from a Santa loop.
    - Run `scripts/check-decisions.sh --ready --base origin/main --pr-body <file>` and fix the
      description until it passes, or state each failure; a failure here alone is not a draft.
-{%- if docs_review or code_review %}
-9. Review in the pull request: the {% if docs_review %}`docs-review`{% endif %}{% if docs_review and code_review %} and {% endif %}{% if code_review %}`code-review`{% endif %} {% if docs_review and code_review %}workflows run{% else %}workflow runs{% endif %} once, when it opens or leaves
-   draft; on a draft, skip this step and say so.{% if code_review %} `code-review` posts nothing on a branch that changes
-   no code, contracts, checks, or workflows.{% endif %}
+{%- if code_review %}
+9. Review in the pull request: the `code-review` workflow runs once, when it opens or leaves
+   draft; on a draft, skip this step and say so. `code-review` posts nothing on a branch that changes
+   no code, contracts, checks, or workflows.
    - Wait once: poll `gh pr view --json statusCheckRollup` about every 30 seconds until each
-     entry of {% if docs_review %}`docs-review`{% endif %}{% if docs_review and code_review %} or {% endif %}{% if code_review %}`code-review`{% endif %} is `COMPLETED`, for at most {% if code_review %}30{% else %}20{% endif %} minutes; never one long sleep.
+     entry of `code-review` is `COMPLETED`, for at most 30 minutes; never one long sleep.
      A run that does not appear within a few minutes, does not finish, or does not end in
      `SUCCESS` is reported with its URL. So is a `SUCCESS` run whose log
      (`gh run view <id> --log`) says the action was skipped: the action skips a pull request
@@ -101,7 +94,7 @@ restate it. Nothing here changes a status, accepts a decision, or merges: the ow
    - A push does not run the workflows again; do not wait for another run. Count the answers in
      Metrics, rerun the readiness check of step 8, then `gh pr edit --body-file <file>`.
 {%- endif %}
-{% if docs_review or code_review %}10{% else %}9{% endif %}. Report: the verdict first, then the pull request URL, the checks with their results (a
+{% if code_review %}10{% else %}9{% endif %}. Report: the verdict first, then the pull request URL, the checks with their results (a
     failing one with its command and output), and the items of "Assumptions and open
     questions", "Owner decisions", "Gate files", "Metrics", and "Notes for the owner".
     - "Ready to merge" only when the readiness check and every other check pass and no blocker is

@@ -73,21 +73,9 @@ export const QUESTIONS = [
       LABELS.test(v) ? undefined : 'Enter a JSON array of quoted labels, such as ["self-hosted", "linux"]',
   },
   {
-    name: 'docs_review',
-    type: 'bool',
-    help: 'Let Claude check every pull request for outdated or broken docs? (needs the Claude GitHub App and the CLAUDE_CODE_OAUTH_TOKEN secret)',
-    default: true,
-  },
-  {
     name: 'code_review',
     type: 'bool',
-    help: 'Let Claude review pull requests that change code? (needs the same GitHub App and secret)',
-    default: true,
-  },
-  {
-    name: 'dual_review',
-    type: 'bool',
-    help: 'Have Claude Code review each branch before its pull request opens? (uses the Codex CLI if installed, otherwise Claude)',
+    help: 'Let Claude also review pull requests that change code in CI? (needs the Claude GitHub App and the CLAUDE_CODE_OAUTH_TOKEN secret)',
     default: false,
   },
   {
@@ -100,7 +88,7 @@ export const QUESTIONS = [
     name: 'acceptance_check',
     type: 'bool',
     help: 'Require a test for every requirement ID a pull request lists under Acceptance? (you set TEST_GLOBS in .claude/harness.conf later)',
-    default: false,
+    default: true,
   },
   {
     name: 'fail_without_change',
@@ -124,13 +112,13 @@ export function messageAfterCreate(a, commit = { done: false }) {
   steps.push(
     commit.done
       ? 'the generated files are committed on main'
-      : `commit the generated files on main (the one direct commit that docs/contributing.md allows; not made here: ${commit.reason ?? 'not asked'})`,
+      : `commit the generated files on main (the one direct commit to main; not made here: ${commit.reason ?? 'not asked'})`,
   );
   steps.push('add the remote origin, push, and run git remote set-head origin -a');
   steps.push('protect main and apply the repository settings with scripts/protect-branch.sh (merge commits only, head branches deleted, secret scanning where the plan offers it)');
   steps.push('set up the CI runner');
-  if (a.docs_review || a.code_review) steps.push('add the CLAUDE_CODE_OAUTH_TOKEN secret and install the Claude GitHub App');
-  if (a.dual_review) steps.push('optionally install and sign in to the Codex CLI');
+  if (a.code_review) steps.push('add the CLAUDE_CODE_OAUTH_TOKEN secret and install the Claude GitHub App');
+  steps.push('optionally install and sign in to the Codex CLI: the review before a pull request uses it when it is installed');
   steps.push('run scripts/check.sh');
   steps.push('run /afe-init in Claude Code to set up the code and its checks');
   return `${a.project_name} is ready. Next:\n${steps.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}`;

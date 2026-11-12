@@ -11,7 +11,7 @@
 #    other error is reported with the gh output; the script still applies the ruleset, then fails
 #    and names the secret-scanning error again in its last line.
 # 3. The repository ruleset "protect default branch": changes reach the default branch only through
-#    pull requests merged with a merge commit whose `check` (`docs` workflow) and `integrity`
+#    pull requests merged with a merge commit whose `check` (`check` workflow) and `integrity`
 #    (`decisions` workflow) jobs pass, with --require-base also `base`, and only these: `readiness`
 #    signals and AI review is a sensor; it cannot be force-pushed or deleted. Updating a ruleset
 #    that requires `base` keeps it without --require-base while the fail-without-change workflow

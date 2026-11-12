@@ -39,20 +39,11 @@ scripts/lib/json.mjs
 .claude/skills/create-pr/SKILL.md
 .claude/skills/afe-init/SKILL.md
 .claude/skills/update-template/SKILL.md
-{%- if docs_review %}
-.claude/skills/docs-review/SKILL.md
-{%- endif %}
 {%- if code_review %}
 .claude/skills/review-code/SKILL.md
 {%- endif %}
-{%- if dual_review %}
-.claude/skills/dual-review/SKILL.md
-{%- endif %}
-.github/workflows/docs.yml
+.github/workflows/check.yml
 .github/workflows/decisions.yml
-{%- if docs_review %}
-.github/workflows/docs-review.yml
-{%- endif %}
 {%- if code_review %}
 .github/workflows/code-review.yml
 {%- endif %}

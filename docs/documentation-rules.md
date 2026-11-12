@@ -118,16 +118,16 @@ These rules apply once code exists; they are fixed now so the first code follows
 | Invented facts | none | every new fact has a source or is marked unknown |
 | Duplication | none | new content links instead of copying |
 | Currency | the SessionStart hook flags each plan past its `review-by` (section 5), with the branch, its base, and the uncommitted files | `verified-against` and the map are updated |
-| Documentation updated together with code | `docs-review` workflow on pull requests, one pass, a sensor | reviewer confirms the owner document changed |
+| Documentation updated together with code | none | reviewer confirms the owner document changed |
 | ADRs on `main` change only their status line (section 5); new ADRs carry `scope` and `summary`; the decision index matches the records | `scripts/check-decisions.sh`: Stop hook and `decisions` workflow | none |
-| A new ADR meets the criteria of section 5 | none | `docs-review` reports it; the owner decides |
+| A new ADR meets the criteria of section 5 | none | the owner decides |
 | Template-owned files unchanged; one project block in `AGENTS.md`; the line budgets of the rule documents; `.claude/settings.json` generated, and every hook command it names exists (sections 2 and 9) | `scripts/check-template.sh`: Stop hook and `docs` workflow | none |
 | Each invariant names its check (section 2) | none | the review checks `docs/invariants.md` against the checks it names |
 | Project checks (section 9) | `scripts/check-project.sh` runs `scripts/checks.d/*.sh`: `scripts/check.sh` and `docs` workflow; in Claude Code, the commands of `.claude/harness.conf`: `CHECK_EDIT` on each file in the project that an Edit, Write, or MultiEdit call changes and `CHECK_EDIT_GLOBS` matches, and `CHECK_FAST` at a Stop when a file other than Markdown differs from the base; each skips when empty, `CHECK_FAST` also when it is the default `scripts/check-docs.sh` | as the project defines; a file changed by a shell command, and what neither command covers, wait for `scripts/check.sh` |
 | Code and tests meet the review rubric and the testing rules (`contributing.md`, section 6; `testing-rules.md`) | the project's test checks in `scripts/checks.d/`; `code-review` workflow, a sensor | reviewer applies the rubric, by the class of the paths |
 | Merge readiness (`contributing.md`, section 3) | `scripts/check-decisions.sh --ready`, in the forms that section names; `decisions` workflow; signals, does not block | whether the tests prove their identifiers; no `blocker` open; the owner's merge confirms the listed markers |
 | Measurement of the sensors (`contributing.md`, section 3) | `scripts/pr-metrics.sh` aggregates the Metrics of merged pull requests | the owner removes a rule or check that never fires |
-| Finishing with failing checks | Stop hooks in Claude Code: the documentation, decision, and template checks, `CHECK_FAST`, and the project's Stop hooks; a failing check blocks up to the Ralph cap (`contributing.md`, section 3); in GitHub Actions every template hook but the protect hook exits at once, as the base hooks of a Claude Code job on a pull request would run the pull request's scripts, and the review jobs disable all hooks; the protect hook runs no file of the working tree there, but reads its `.template/owned.txt` | none; the full `scripts/check.sh` runs before the pull request and in CI |
+| Finishing with failing checks | Stop hooks in Claude Code: the documentation, decision, and template checks, `CHECK_FAST`, and the project's Stop hooks; a failing check blocks up to the Ralph cap (`contributing.md`, section 3); in GitHub Actions every template hook but the protect hook exits at once, as the base hooks of a Claude Code job on a pull request would run the pull request's scripts, and the review job disables all hooks; the protect hook runs no file of the working tree there, but reads its `.template/owned.txt` | none; the full `scripts/check.sh` runs before the pull request and in CI |
 | Class approval and irreversible actions (section 8) | protect hook: owner prompt in Claude Code, denied headless; deny rules of `.claude/settings.json` | explicit, separate, owner-approved |
 
 Semantic review checklist for any documentation change:
@@ -155,7 +155,7 @@ that applies, from the template's built-in rules and the project's `.claude/path
 | low | Markdown outside the rules, the decision index, a template update | nothing | none |
 | normal | code, tests, scripts: every path no other class takes | nothing | one reviewer |
 | gate | workflows, project checks and Stop hooks, `.claude/harness.conf`, dependency manifests and lock files, linter, test, coverage, and mutation configuration | nothing; listed under "Gate files", reviewed by the owner after the merge | one reviewer |
-| high | security, secrets, access and authentication, data migrations, money and billing, public contracts (`contracts/`) | nothing | one reviewer; the Santa loop comes with the review module |
+| high | security, secrets, access and authentication, data migrations, money and billing, public contracts (`contracts/`) | nothing | one reviewer |
 | approval | `AGENTS.md`, the template-owned files, the generated manifest, answers file, and `.claude/settings.json`, the map, `.claude/path-classes`, `.claude/settings.project.json`, `.mcp.json`, credentials, ADRs on `main` or not `proposed` | the protect hook asks the owner; a headless run is denied | by the class of the content |
 
 The protect hook (`.claude/hooks/protect-docs.sh`) asks on Edit, Write, and MultiEdit calls, on

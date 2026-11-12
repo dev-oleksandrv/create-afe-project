@@ -1,0 +1,36 @@
+# The full check in CI: scripts/check.sh, the same entry point as locally, after the project's
+# setup command (scripts/env.sh setup, SETUP in .claude/harness.conf). The ruleset of
+# scripts/protect-branch.sh requires the job `check`; decision records and readiness are checked
+# by the `decisions` workflow.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # By hand, or by a workflow: a pull request opened with GITHUB_TOKEN starts no run by itself.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # Set the repository variable CI_RUNS_ON (a JSON array of runner labels) to run elsewhere
+    # without editing this template-owned file.
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Node.js for the documentation checks, which run through node and npx.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+
+      - name: setup
+        run: scripts/env.sh setup
+
+      - name: check
+        run: scripts/check.sh --verbose

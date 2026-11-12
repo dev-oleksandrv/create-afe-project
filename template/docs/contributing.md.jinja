@@ -163,21 +163,14 @@ template version, which `.afe-answers.json` records; the `update-template` skill
 - AI review is a sensor, not a gate: the checks decide by themselves, and a reviewer judges what
   they cannot. Reviewers propose; the owner decides. The review follows the highest class of the
   changed paths (`documentation-rules.md`, section 8), as `scripts/check-decisions.sh --classes`
-  prints it. Before the pull request the {% if dual_review %}`dual-review`{% else %}`create-pr`{% endif %} skill runs it:
+  prints it. Before the pull request the `create-pr` skill runs it:
   - low (documents, generated files, a template update): no reviewer;
-  - normal and gate: one pass by one reviewer, {% if dual_review %}the Codex CLI when it is installed, otherwise {% endif %}a fresh
+  - normal and gate: one pass by one reviewer, a fresh
     Claude subagent; only the fix of a blocker is checked again;
-{%- if dual_review %}
-  - high: the Santa loop: a Claude subagent and the Codex CLI (without Codex, a second fresh
-    Claude subagent with another lens) review independently; the author fixes the blockers and both
-    review again, until neither finds one or after `REVIEW_MAX_ROUNDS` rounds (`.claude/harness.conf`,
-    3 to 5): the open blockers go to the owner as `blocking:` items.
-{%- else %}
-  - high: one pass as for normal; the Santa loop is an optional module of the template.
-{%- endif %}
-{%- if docs_review or code_review %}
-- In the pull request, {% if docs_review %}`docs-review` reviews every pull request{% endif %}{% if docs_review and code_review %} and {% endif %}{% if code_review %}`code-review` every one that changes code, contracts, checks, or workflows{% endif %}, once, when it
-  opens or leaves draft, except one that `github-actions[bot]` opened; a push does not run {% if docs_review and code_review %}them{% else %}it{% endif %} again.
+  - high: one pass as for normal.
+{%- if code_review %}
+- In the pull request, `code-review` reviews every one that changes code, contracts, checks, or workflows, once, when it
+  opens or leaves draft, except one that `github-actions[bot]` opened; a push does not run it again.
 {%- endif %}
 - A finding names a file, a line, a class, and the rule it rests on; zero findings is valid, and
   style belongs to the linters. A `blocker`: merged as it is, the change breaks behaviour, a
