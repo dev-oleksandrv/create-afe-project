@@ -50,7 +50,7 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
 
 ## 3. Tests
 
-`scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/`: the questions,
+`scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/*.test.js`: the questions,
 their validators and defaults, the Jinja rendering and conditional names, that every rendered
 file is template-owned or seeded, the reading of a Copier answers file, and the warning for a
 Copier `docs_language` other than English, none for English.
@@ -59,7 +59,8 @@ without a changeset and with only an empty one, and not while a changeset with a
 pending; and that such a changeset, which has no heading, passes markdownlint through
 `.changeset/.markdownlint.jsonc` with the other rules still on, and that this file stays the root
 configuration plus `MD041: false`.
-`scripts/checks.d/10-template.sh` is the template test suite. It renders the template with the
+`scripts/checks.d/10-template.sh` runs the template test suite, the files of `test/template/` in
+name order. It renders the template with the
 command line of the working tree in four projects and runs `scripts/check.sh` in each, the line budgets of the rule documents included:
 
 - variant A, a GitHub-hosted runner with the default modules (`docs_review` and `code_review`
