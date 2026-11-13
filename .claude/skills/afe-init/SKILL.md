@@ -57,7 +57,7 @@ opened with the `create-pr` skill. It holds:
   lines, `AC-01: Given <context>, when <action>, then <outcome>`, numbered across the file.
 - One ADR for the stack from `docs/decisions/adr-template.md`, `status: accepted` on the owner's
   confirmation, the owner as decision-maker, the options considered with the owner's reasons;
-  regenerate the index with `scripts/gen-decisions-index.sh`.
+  regenerate the index with `scripts/gen-decisions-index.sh > docs/decisions/README.md`.
 - The project block of `AGENTS.md` (at most 10 lines): what the project is, its stack, its
   commands.
 - The scaffold:

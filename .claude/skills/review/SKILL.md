@@ -46,8 +46,9 @@ request. Suggestions never drive a loop; only blockers do, and only for `two`.
    `codex exec --sandbox read-only -C <repository root> - < <brief file>`. A run that fails,
    times out, or returns no valid JSON is not a pass: stop and report it.
 5. Answers, once per finding. A suggestion is fixed now or declined with a reason. A blocker is
-   fixed in the working tree or declined with a reason. After each set of fixes run
-   `scripts/env.sh fast`.
+   fixed in the working tree or declined with a reason.
+   After each set of fixes run `scripts/env.sh fast` and fix what it reports; the caller relies
+   on this run and does not repeat it.
    - `one`: a fresh reviewer of the same kind gets each fixed blocker with the finding and the
      fix diff only, and says whether the fix holds; nothing else is reviewed again.
    - `two`: after the fixes both reviewers review again, each from a fresh context with the

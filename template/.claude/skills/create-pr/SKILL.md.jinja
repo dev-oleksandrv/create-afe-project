@@ -1,7 +1,7 @@
 ---
 name: create-pr
 description: Open a pull request for the current branch - branch name, commit subjects, the full check, the review by the class of the changed paths, the description, then one blocking watch of the CI checks{% if code_review %} and the answers to the code-review findings{% endif %}. Flags - --skip-review skips the review (the caller is responsible for having reviewed the change); --skip-watch skips the CI watch. Use when asked to create, open, or submit a pull request.
-allowed-tools: Read, Grep, Glob, Edit, Write, Skill(review), Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh run view:*), {% if code_review %}Bash(gh pr comment:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), {% endif %}Bash(scripts/check.sh:*), Bash(scripts/env.sh fast), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
+allowed-tools: Read, Grep, Glob, Edit, Write, Skill(review), Bash(git status:*), Bash(git branch:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git switch:*), Bash(git push:*), Bash(gh pr view:*), Bash(gh pr create:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh run view:*), {% if code_review %}Bash(gh pr comment:*), Bash(gh api repos/{owner}/{repo}/pulls/:*), Bash(gh api repos/{owner}/{repo}/issues/:*), {% endif %}Bash(scripts/check.sh:*), Bash(scripts/check-decisions.sh:*), Bash(scripts/gen-decisions-index.sh:*)
 ---
 
 # Create a pull request
@@ -44,14 +44,17 @@ document. Nothing here merges: the owner does that.
      report.
    - Each commit subject follows the rules. Only the last unpushed commit may be reworded with
      `git commit --amend`; other subjects that do not are named in the report.
-3. Full check: when a file under `docs/decisions/` changed, run `scripts/gen-decisions-index.sh`
-   first. Run `scripts/check.sh --if-changed`; on failure fix, commit, and run it again, at most
+3. Full check: when a file under `docs/decisions/` changed, first run
+   `scripts/gen-decisions-index.sh > docs/decisions/README.md`. Run
+   `scripts/check.sh --if-changed`; on failure fix, commit, and run it again, at most
    `RALPH_MAX_ITERATIONS` runs (`.claude/harness.conf`). At the cap: stop the loop, skip steps 4
    and 7, open the pull request as a draft with the failing command and the lines of its output
    that show the failure under "Checks", and report.
-4. Review, unless `--skip-review`: run the `review` skill once for the tree, base `main`. Commit
-   its fixes, then run `scripts/env.sh fast`. Its "Checks" line and open blockers go into the
-   description. With `--skip-review` write "Review: skipped by flag" under "Checks".
+4. Review, unless `--skip-review`: run the `review` skill once for the tree, base `main`, then
+   commit its fixes. This step relies on the review skill's run of `scripts/env.sh fast` after
+   its fixes and does not run it again. Its "Checks" line and open blockers go into the
+   description. With `--skip-review` write "Review: skipped by flag" under "Checks"; there are
+   no review fixes, so no fast check runs.
 5. If the tree changed since step 3: `scripts/check.sh --if-changed` once more; a failure is
    fixed as in step 3, within the same cap.
 6. Push and describe: `git push -u origin <branch>`. Write the description to a file in the
