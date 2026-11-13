@@ -23,7 +23,7 @@ fa081520948550e0cad85a1b69b0ca2741052fd704f86e538b3b59535916edb1  scripts/lib/ha
 b16f187a74cbe9264266283ed6e865c3ea74d30ef66ac6f2d2dc0889a9f41790  .claude/hooks/protect-docs.sh
 2f55e4b1e7a6e245cdb88414e77cb5854ddfb8669fd1e331f5939f45f42f7dd4  .claude/hooks/post-edit-check.sh
 9fc8ac8525737e922d0589692554efbf2a0957e78827531b5d453f29f1c382e5  .claude/hooks/session-start.sh
-c84b05c9377fb92977224bed2c637ffb4d7e43f15ab809fd561a8dfa9570659e  .claude/hooks/stop-check-docs.sh
+3e94c0678250a6881379500ad147955c425e821d447e106da976b83391e3b978  .claude/hooks/stop-check-docs.sh
 18877a4f475fb58443053068b35c8ba9b10c906d2132e610791a56df6eee1e15  .claude/hooks/stop-check-decisions.sh
 472dfb6e98c96bb63cc8671d4394472c46b22e502560d81685b8cbc4f7c6138b  .claude/hooks/stop-check-template.sh
 a9c78ad4963825fb4cb434bed110ab53a2217a3338de85992f7d325870215545  .claude/hooks/stop-check-fast.sh
