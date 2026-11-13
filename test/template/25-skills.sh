@@ -80,3 +80,25 @@ for s in 'chore/project-setup' 'docs/requirements.md' 'REQ-001: <statement>' 'AC
 done
 ! grep -n -E 'docs/architecture|status: requirement|docs/requirements/|chore/scaffold|ci/verification-gates' "$init" > "$work/a-init-grep.log" ||
   { cat "$work/a-init-grep.log"; fail "afe-init keeps the architecture documents, the requirement status, or the three pull requests"; }
+
+# The index script prints to stdout: every mention in .claude/, AGENTS.md, and README.md is a
+# permission rule (Bash(...)) or the whole command with its redirect, never the bare script name.
+for v in a b; do
+  d="$work/$v"
+  grep -r -h -o -E '(Bash\()?`?scripts/gen-decisions-index\.sh[^`),]*' "$d/.claude" "$d/AGENTS.md" "$d/README.md" |
+    grep -v -x -F -e 'Bash(scripts/gen-decisions-index.sh:*' -e '`scripts/gen-decisions-index.sh > docs/decisions/README.md' \
+    > "$work/$v-index-grep.log"
+  [ ! -s "$work/$v-index-grep.log" ] ||
+    { cat "$work/$v-index-grep.log"; fail "variant $v: scripts/gen-decisions-index.sh is named without '> docs/decisions/README.md'"; }
+done
+
+# One fast check after the review fixes: the review skill runs it once; create-pr does not run it
+# again and only says that it relies on the review skill's run.
+[ "$(grep -c -F 'scripts/env.sh fast' "$a/.claude/skills/review/SKILL.md" | tr -d ' ')" = 2 ] &&
+  grep -qF 'After each set of fixes run `scripts/env.sh fast`' "$a/.claude/skills/review/SKILL.md" ||
+  fail "review/SKILL.md does not name scripts/env.sh fast once for after its fixes (and once in allowed-tools)"
+for v in a b; do
+  pr="$work/$v/.claude/skills/create-pr/SKILL.md"
+  ! grep -n -F 'scripts/env.sh fast' "$pr" | grep -v -F 'relies on the review skill' > "$work/$v-pr-fast.log" ||
+    { cat "$work/$v-pr-fast.log"; fail "variant $v: create-pr runs scripts/env.sh fast itself"; }
+done
