@@ -3,13 +3,14 @@
 # project's code checks), scripts/check-docs.sh, scripts/check-decisions.sh, and
 # scripts/check-template.sh, every part even when an earlier one fails, then reports which parts
 # failed; exit 0 means every part passed. A passing part prints one line, a failing part at most
-# the last 60 lines of its output. On success it stores the full green stamp (scripts/lib/stamp.sh),
-# a local cache that GitHub Actions never reads or writes.
+# the last 60 lines of its output. On success it stores the full green stamps of both kinds, code
+# and docs (scripts/lib/stamp.sh), a local cache that GitHub Actions never reads or writes.
 #
 # Usage: scripts/check.sh [--verbose] [--if-changed]
 #   --verbose     print the whole output of every part.
-#   --if-changed  when the tree is unchanged since the last passing run (the full stamp), print
-#                 one line and exit 0 without running anything; safe to call often.
+#   --if-changed  when the tree is unchanged since the last passing run (the full stamps of both
+#                 kinds match), print one line and exit 0 without running anything; safe to call
+#                 often.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -22,12 +23,13 @@ for arg in "$@"; do
   esac
 done
 
-stamp=
+code_stamp= docs_stamp=
 if [ -z "${GITHUB_ACTIONS:-}" ] && git rev-parse --git-dir > /dev/null 2>&1; then
   # shellcheck source=scripts/lib/stamp.sh
   . scripts/lib/stamp.sh
-  stamp=$(tree_stamp)
-  if [ -n "$if_changed" ] && [ "$(stamp_read full)" = "$stamp" ]; then
+  code_stamp=$(tree_stamp code) docs_stamp=$(tree_stamp docs)
+  if [ -n "$if_changed" ] && [ "$(stamp_read full code)" = "$code_stamp" ] &&
+    [ "$(stamp_read full docs)" = "$docs_stamp" ]; then
     echo "#### unchanged since the last passing run"
     exit 0
   fi
@@ -60,5 +62,7 @@ if [ "${#failed[@]}" -gt 0 ]; then
   echo "#### failed: ${failed[*]}"
   exit 1
 fi
-[ -z "$stamp" ] || stamp_write full "$stamp"
+if [ -n "$code_stamp" ]; then
+  stamp_write full code "$code_stamp" && stamp_write full docs "$docs_stamp"
+fi
 echo "#### all checks passed"
