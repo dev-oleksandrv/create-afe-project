@@ -22,7 +22,8 @@
 # It stores the fast stamp of each kind whose parts and the project's Stop hooks all passed, even
 # when the other kind failed. All parts pass: it resets the Ralph count and prints nothing. A part
 # fails: one message on stderr names each failing part with at most the last 40 lines of its
-# output, and exit 2 sends the agent back, up to RALPH_MAX_ITERATIONS failing stops per session,
+# output (scripts/check-docs.sh: a summary instead, see docs_brief; its missing tool report: the
+# first 10 lines), and exit 2 sends the agent back, up to RALPH_MAX_ITERATIONS failing stops per session,
 # agent, and worktree (scripts/lib/harness-conf.sh); at the cap a systemMessage on stdout tells the
 # user, and later stops of the same key on the same tree (both stamps) exit 0 at once, silently,
 # until the tree changes. During an unresolved merge conflict it lets the agent stop.
@@ -86,17 +87,49 @@ failures= warnings= failed=
 # The kinds whose parts did not all pass: code, docs, or both (the project's Stop hooks).
 bad=
 # part <name> <kind> <how> <command>...: runs the command from the root, stdin from $part_input;
-# <kind> is code, docs, or both; <how> is docs (exit 3 warns), project (exit 2 fails, another
-# non-zero exit warns), or plain (non-zero fails). Either way the kind does not get its stamp.
+# <kind> is code, docs, or both; <how> is docs (exit 3 warns, a failure gets docs_brief), project
+# (exit 2 fails, another non-zero exit warns), or plain (non-zero fails). Either way the kind does
+# not get its stamp.
 part_input=
+# docs_brief <output>: keeps a documentation failure from flooding the chat: per file, the count of
+# each rule in its "<path>:<line>[:<col>] error <RULE>/..." lines (markdownlint), then the first 10
+# lines of the output without the markdownlint-cli2 version banner, then how many lines remain.
+docs_brief() {
+  printf '%s\n' "$1" | awk '
+    /^markdownlint-cli2 v/ { next }
+    { total++; if (total <= 10) first[total] = $0 }
+    $1 ~ /^[^ :]+:[0-9]+(:[0-9]+)?$/ && $2 == "error" && $3 ~ /^[A-Za-z]+[0-9]+/ {
+      file = $1; sub(/:[0-9]+(:[0-9]+)?$/, "", file)
+      if (!(file in nf)) { nf[file] = 1; order[++n] = file }
+      key = file SUBSEP $3
+      if (!(key in cnt)) { rules[file] = rules[file] (rules[file] == "" ? "" : ", ") $3; cnt[key] = 0 }
+      cnt[key]++
+    }
+    END {
+      for (i = 1; i <= n; i++) {
+        file = order[i]; line = ""; m = split(rules[file], r, ", ")
+        for (j = 1; j <= m; j++) line = line (j > 1 ? ", " : "") r[j] " x" cnt[file SUBSEP r[j]]
+        print file ": " line
+      }
+      for (i = 1; i <= total && i <= 10; i++) print first[i]
+      if (total > 10) print "... " (total - 10) " more lines"
+    }'
+}
 part() {
-  local name=$1 kind=$2 how=$3 out code
+  local name=$1 kind=$2 how=$3 out code cmd
   shift 3
   out=$(printf '%s' "$part_input" | "$@" 2>&1)
   code=$?
   [ "$code" -eq 0 ] && return 0
   bad+=" $kind"
-  out=$(printf '%s\n' "$out" | tail -n 40)
+  if [ "$how" = docs ] && [ "$code" -eq 3 ]; then
+    out=$(printf '%s\n' "$out" | head -n 10)
+  elif [ "$how" = docs ]; then
+    cmd=$(printf '%q ' "$@")
+    out=$(docs_brief "$out"; printf 'Full output: %s' "${cmd% }")
+  else
+    out=$(printf '%s\n' "$out" | tail -n 40)
+  fi
   if { [ "$how" = docs ] && [ "$code" -eq 3 ]; } || { [ "$how" = project ] && [ "$code" -ne 2 ]; }; then
     warnings+=$(printf '\n== %s could not run or exited %s, not blocking:\n%s' "$name" "$code" "$out")
   else

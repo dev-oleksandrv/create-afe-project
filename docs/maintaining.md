@@ -41,7 +41,10 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   `stop-dispatch.sh` checks what changed at each Stop and SubagentStop, running the checks of a
   kind only when its stamp does not match, up to the Ralph cap, counted per session, agent, and
   worktree; it tells the user at the cap and then lets the same key stop on the same tree without
-  running anything until the tree changes. A sub-agent that stops in the main session's tree (the
+  running anything until the tree changes. Its failure message gives each failing part the last
+  40 lines of its output, except `scripts/check-docs.sh`: per file the count of each markdownlint
+  rule, the first 10 lines, how many lines remain, and the command for the full output (a missing
+  tool: the first 10 lines). A sub-agent that stops in the main session's tree (the
   root of `CLAUDE_PROJECT_DIR`) runs nothing: the main agent's Stop checks it. `post-edit-check.sh`
   runs `CHECK_EDIT`; `session-start.sh` prints the local state. The last three resolve the
   generated project, the nearest git repository with `.template/owned.txt`, from the input's
