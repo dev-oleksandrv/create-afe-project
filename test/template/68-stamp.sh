@@ -51,7 +51,25 @@ rm "$a/README.md" && [ "$(st tree_stamp docs)" != "$d1" ] || fail "stamp: a dele
 git -C "$a" reset -q --hard HEAD~1
 [ "$(st tree_stamp code)" = "$c0" ] && [ "$(st tree_stamp docs)" = "$d0" ] && [ -z "$(git -C "$a" status --porcelain)" ] ||
   fail "stamp: differs after the tree is restored"
-ls "$gd" | grep -q '^afe-stamp-index' && fail "stamp: leaves its temporary index in the git directory"
+ls "$gd" | grep -q '^afe-stamp' && fail "stamp: leaves its temporary index or object directory in the git directory"
+# The stamp writes no object into the repository, in the main tree and in a linked worktree: a
+# large untracked file and a changed tracked file leave `git count-objects -v` as it was, nothing
+# temporary is left in the git directory, and the stamp still follows the large file.
+gitc "$a" worktree add -q -b stamp-wt "$work/stamp-wt" HEAD || fail "stamp: git worktree add fails"
+for t in "$a" "$work/stamp-wt"; do
+  tgd=$(git -C "$t" rev-parse --absolute-git-dir)
+  head -c 6000000 /dev/urandom > "$t/big.bin" && echo x >> "$t/.claude/harness.conf"
+  o0=$(git -C "$t" count-objects -v 2>/dev/null)
+  b1=$(cd "$t" && . scripts/lib/stamp.sh && tree_stamp code)
+  [ "$(git -C "$t" count-objects -v 2>/dev/null)" = "$o0" ] || fail "stamp: writes objects into the repository ($t)"
+  head -c 6000000 /dev/urandom > "$t/big.bin"
+  b2=$(cd "$t" && . scripts/lib/stamp.sh && tree_stamp code)
+  [ -n "$b1" ] && [ "$b2" != "$b1" ] || fail "stamp: unchanged when a large untracked file changes ($t)"
+  [ "$(git -C "$t" count-objects -v 2>/dev/null)" = "$o0" ] || fail "stamp: writes objects into the repository after a change ($t)"
+  ls "$tgd" | grep -q '^afe-stamp' && fail "stamp: leaves its temporary index or object directory in $tgd"
+  rm "$t/big.bin" && gitc "$t" checkout -q -- .claude/harness.conf
+done
+gitc "$a" worktree remove --force "$work/stamp-wt" && gitc "$a" branch -q -D stamp-wt
 # The stamps live in the worktree's git directory, one file per scope and kind; a full stamp
 # satisfies a fast request of its kind, not the reverse.
 rm -f "$gd"/afe-green-*

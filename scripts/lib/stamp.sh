@@ -9,8 +9,8 @@
 #   its commit (a nested repository without a commit, or a file git cannot read, is left out, as
 #   `git add -A --ignore-errors` leaves it out). It is over content alone, never over HEAD or the real index, so neither `git add`
 #   nor `git commit` of the same content changes it, and a commit of one kind leaves the other
-#   kind's stamp as it was. The blobs of changed files land in the object database, as with
-#   `git add`.
+#   kind's stamp as it was. `git add` writes the blobs it hashes into a temporary object directory,
+#   with the repository's objects as its alternate, so the stamp adds nothing to `.git`.
 # tree_stamp <kind>: prints the stamp of one kind, code or docs.
 # stamp_read <scope> <kind>: prints the stored stamp of the scope, fast or full, or nothing.
 # stamp_write <scope> <kind> [stamp]: stores the stamp, by default the tree's; the files are
@@ -22,16 +22,21 @@ stamp_sha256() {
 }
 
 tree_stamps() {
-  local gd idx tmp kind
+  local gd idx objs tmp kind
   gd=$(git rev-parse --absolute-git-dir 2>/dev/null) || return 1
   idx=$(git rev-parse --git-path index 2>/dev/null) || return 1
-  tmp=$(mktemp "$gd/afe-stamp-index.XXXXXX") || return 1
-  if [ -f "$idx" ]; then cp "$idx" "$tmp"; else rm -f "$tmp"; fi
-  GIT_INDEX_FILE=$tmp git -c advice.addEmbeddedRepo=false add -A --ignore-errors > /dev/null 2>&1
+  objs=$(git rev-parse --git-path objects 2>/dev/null) && objs=$(CDPATH= cd "$objs" && pwd) || return 1
+  # One temporary directory holds the index and the object directory, so one rm removes both.
+  tmp=$(mktemp -d "$gd/afe-stamp.XXXXXX") || return 1
+  if [ -f "$idx" ]; then cp "$idx" "$tmp/index"; fi
+  mkdir "$tmp/objects"
+  GIT_INDEX_FILE=$tmp/index GIT_OBJECT_DIRECTORY=$tmp/objects GIT_ALTERNATE_OBJECT_DIRECTORIES=$objs \
+    git -c advice.addEmbeddedRepo=false add -A --ignore-errors > /dev/null 2>&1
+  # The listing reads the index alone, never an object.
   for kind in ':(exclude)*.md' '*.md'; do
-    GIT_INDEX_FILE=$tmp git ls-files -s -z -- "$kind" 2>/dev/null | stamp_sha256
+    GIT_INDEX_FILE=$tmp/index git ls-files -s -z -- "$kind" 2>/dev/null | stamp_sha256
   done
-  rm -f "$tmp"
+  rm -rf "$tmp"
 }
 
 tree_stamp() {
