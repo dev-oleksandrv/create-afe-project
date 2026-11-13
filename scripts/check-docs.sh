@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Documentation checks, run by scripts/check.sh and by the Stop dispatcher: markdownlint-cli2 with the
 # configuration file .markdownlint-cli2.jsonc, then scripts/check-links.mjs (links, and the
-# backticked code paths of docs/ and AGENTS.md). Requires Node.js (node and npx). Both run even
-# when the first fails; the exit code is that of the first failing one, else 3 when a tool is
-# missing, else 0.
+# backticked code paths of docs/ outside docs/decisions/ and of AGENTS.md). Requires Node.js (node
+# and npx). Both run even when the first fails; the exit code is that of the first failing one,
+# else 3 when a tool is missing, else 0.
 #
 # Usage: scripts/check-docs.sh [file ...]
 #   With files: lint and link-check only those of them that are existing Markdown files; a

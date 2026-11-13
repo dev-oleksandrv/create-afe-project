@@ -7,7 +7,9 @@
 // not a link.
 //
 // Code paths, in the Markdown files under docs/ and in AGENTS.md: every backticked token outside
-// fenced code blocks that is a path candidate exists. A candidate contains "/", has no
+// fenced code blocks that is a path candidate exists. The Markdown files under docs/decisions/
+// (the decision records and their index) are exempt, in the full scan and as arguments: they
+// record history, and a path in them may go stale; their links are checked as above. A candidate contains "/", has no
 // whitespace, none of * ? < > { } $ |, and no scheme, and its first segment is the name of an
 // entry in the repository root; a trailing ":line", "#anchor", or "::name" is stripped first.
 // Any other token, such as origin/main or owner/name, is not a path and is not checked. The root
@@ -166,10 +168,11 @@ function candidate(token) {
   return path && rootEntries.has(path.split('/')[0]) ? path : null;
 }
 
-// Does the file take the code-path check: Markdown under docs/, or AGENTS.md at the root.
+// Does the file take the code-path check: Markdown under docs/ but not under docs/decisions/, or
+// AGENTS.md at the root.
 function codePathFile(file) {
   const rel = relative(root, resolve(root, file)).split('\\').join('/');
-  return rel === 'AGENTS.md' || (rel.startsWith('docs/') && rel.endsWith('.md'));
+  return rel === 'AGENTS.md' || (rel.startsWith('docs/') && !rel.startsWith('docs/decisions/') && rel.endsWith('.md'));
 }
 
 function codePaths(file, text) {
