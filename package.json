@@ -1,6 +1,6 @@
 {
   "name": "create-afe-project",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Create and update agent-friendly repositories: documentation rules, decision records, checks, and Claude Code hooks and skills.",
   "license": "MIT",
   "type": "module",
