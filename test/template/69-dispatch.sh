@@ -16,6 +16,26 @@ stop; [ $? -eq 2 ] && [ "$(grep -c '^Stop checks failed' "$work/stop.log")" -eq 
   grep -qx fast-broke "$work/stop.log" || { cat "$work/stop.log"; fail "stop-dispatch: two failing parts do not give one message that names both"; }
 stop; [ $? -eq 0 ] && grep -q "Ralph loop cap of 2 reached" "$work/stop.log" || { cat "$work/stop.log"; fail "stop-dispatch: blocks at the cap"; }
 rm "$a/docs/bad.md"
+# A long documentation failure is summarised per file and rule, capped at 10 raw lines, without the
+# version banner, and points to the full output; the failing fast check keeps its last 40 lines.
+cp "$a/scripts/check-docs.sh" "$work/check-docs.keep"
+{ printf '#!/usr/bin/env bash\necho "markdownlint-cli2 v0 (markdownlint v0)"\n'
+  i=1; while [ $i -le 30 ]; do printf 'echo "docs/a.md:%s:1 error MD029/ol-prefix Prefix"\n' $i; i=$((i+1)); done
+  printf 'echo "docs/a.md:5 error MD036/no-emphasis-as-heading Emphasis"\necho "docs/b.md:2:3 error MD029/ol-prefix Prefix"\nexit 1\n'; } > "$a/scripts/check-docs.sh"
+sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=seq -f fast-%g 50; exit 1#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
+echo x > "$a/docs/long.md"
+stop '{"session_id":"long"}'
+[ $? -eq 2 ] && grep -qx 'docs/a.md: MD029/ol-prefix x30, MD036/no-emphasis-as-heading x1' "$work/stop.log" &&
+  grep -qx 'docs/b.md: MD029/ol-prefix x1' "$work/stop.log" && grep -qx '\.\.\. 22 more lines' "$work/stop.log" &&
+  grep -qx 'Full output: scripts/check-docs.sh docs/long.md' "$work/stop.log" && ! grep -q 'markdownlint-cli2 v0' "$work/stop.log" &&
+  [ "$(grep -c ' error MD029' "$work/stop.log")" -eq 10 ] && grep -qx fast-50 "$work/stop.log" && grep -qx fast-11 "$work/stop.log" &&
+  ! grep -qx fast-10 "$work/stop.log" || { cat "$work/stop.log"; fail "stop-dispatch: a long documentation failure is not summarised and capped, or the fast check loses its tail"; }
+# A missing tool (exit 3) is reported in at most 10 lines.
+printf '#!/usr/bin/env bash\nseq -f missing-%%g 20\nexit 3\n' > "$a/scripts/check-docs.sh"
+stop '{"session_id":"long3"}'
+[ $? -eq 2 ] && grep -qx missing-10 "$work/stop.log" && ! grep -qx missing-11 "$work/stop.log" ||
+  { cat "$work/stop.log"; fail "stop-dispatch: a missing documentation tool is reported in more than 10 lines"; }
+cp "$work/check-docs.keep" "$a/scripts/check-docs.sh" && rm -f "$a/docs/long.md" "$gd"/afe-ralph-long*
 # A green tree: the first stop runs the fast check, a second stop on the unchanged tree runs nothing,
 # and a change runs it again.
 sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=touch $work/fast.marker#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"

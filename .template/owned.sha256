@@ -23,7 +23,7 @@ c6a95af93a58498abbe28c826361217e1dacdc31b7e8f63923cc641425af3992  scripts/check-
 495fca0c7d8c805c6cceb83ffa7824a427b7aa269beb5c0a06258f51a316d8ef  .claude/hooks/guard.sh
 016af67dc103912d3c1f5064e1f8ebc3ef4c74a08422d383b918ca0a25712a7e  .claude/hooks/post-edit-check.sh
 a76590ed73fc59d32b724bf131890addc628aa2c27fb74da64d6c3dd43aa3339  .claude/hooks/session-start.sh
-485f7a9ec669f3845b67831e8e607c3e0e0ea9d3440bf166dbc7dbd3ca6d2fa3  .claude/hooks/stop-dispatch.sh
+dda84291a0f44ddf9d942fc4b3e77a7cc3a4b12a9a0c3067104e423321d410ef  .claude/hooks/stop-dispatch.sh
 2cf27639cd1fa45c510e53da9144066af148d921b43c77b4f8275d54ac4b9426  .claude/skills/create-pr/SKILL.md
 4f081a3b8ef9eae251c5d8a87dcff1fffa1e487225a639ae6d3222f3a8edf091  .claude/skills/review/SKILL.md
 00f51e01b8e1ce8d5bdd1019cfec90f5e74efc5be1b74167b2b3ec0e0ab78ae7  .claude/skills/review/rubric.md
