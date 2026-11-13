@@ -750,6 +750,16 @@ printf '#Bad heading\n\n[missing](nowhere.md)\n' > "$a/docs/bad.md"
 gitc "$a" add -A && gitc "$a" commit -q -m bad
 (cd "$a" && printf '{}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/stop-check-docs.sh > /dev/null 2>&1)
 [ $? -eq 2 ] || fail "stop-check-docs lets a committed broken document through"
+# A long failure is summarised per file and rule, capped at 10 raw lines, and points to the full output.
+{ printf '#!/usr/bin/env bash\necho "markdownlint-cli2 v0 (markdownlint v0)"\n'
+  i=1; while [ $i -le 30 ]; do printf 'echo "docs/a.md:%s:1 error MD029/ol-prefix Prefix"\n' $i; i=$((i+1)); done
+  printf 'echo "docs/a.md:5 error MD036/no-emphasis-as-heading Emphasis"\necho "docs/b.md:2:3 error MD029/ol-prefix Prefix"\nexit 1\n'; } > "$a/scripts/check-docs.sh"
+(cd "$a" && printf '{"session_id":"long"}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/stop-check-docs.sh > "$work/long.log" 2>&1)
+[ $? -eq 2 ] && grep -qx 'docs/a.md: MD029/ol-prefix x30, MD036/no-emphasis-as-heading x1' "$work/long.log" &&
+  grep -qx 'docs/b.md: MD029/ol-prefix x1' "$work/long.log" && grep -qx '\.\.\. 22 more lines' "$work/long.log" &&
+  grep -qx 'Full output: scripts/check-docs.sh' "$work/long.log" && ! grep -q 'markdownlint-cli2 v0' "$work/long.log" &&
+  [ "$(grep -c ' error MD029' "$work/long.log")" -eq 10 ] || { cat "$work/long.log"; fail "stop-check-docs: a long failure is not summarised and capped"; }
+gitc "$a" checkout -q -- scripts/check-docs.sh
 gitc "$a" switch -q main && gitc "$a" branch -q -D feature
 # A pushed feature branch must still be compared with main, not with its own upstream.
 git init -q --bare "$work/origin.git"
