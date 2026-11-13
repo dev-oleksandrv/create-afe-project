@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Template integrity (docs/documentation-rules.md, sections 2 and 9): every template-owned file
-# listed in .template/owned.txt matches its hash in .template/owned.sha256, AGENTS.md contains
-# exactly one project block, the rule documents stay within their line budgets, and the generated
-# .claude/settings.json is current. The hash of AGENTS.md ignores the content of its project block.
+# Template integrity: every template-owned file listed in .template/owned.txt matches its hash in
+# .template/owned.sha256, AGENTS.md contains exactly one project block, both parts of AGENTS.md
+# stay within their line budgets, and the generated .claude/settings.json is current. The hash of AGENTS.md ignores the content of its project block.
 #
 # Usage: scripts/check-template.sh [--write]
 #   --write  record the current hashes; the template runs it after `create-afe-project` and
@@ -14,6 +13,9 @@ list=.template/owned.txt
 manifest=.template/owned.sha256
 start='<!-- project:start -->'
 end='<!-- project:end -->'
+# The line budgets of AGENTS.md: the template part and the project block.
+agents_max=70
+block_max=10
 
 if command -v sha256sum >/dev/null; then sha() { sha256sum | cut -d' ' -f1; }
 else sha() { shasum -a 256 | cut -d' ' -f1; }; fi
@@ -47,7 +49,7 @@ while IFS= read -r p; do
   if [ ! -f "$p" ]; then
     fail "$p: template-owned file is missing"
   elif [ "$(content "$p" | sha)" != "$(awk -v p="$p" '$2==p {print $1}' "$manifest")" ]; then
-    fail "$p: differs from the template; change it in the template repository and update (docs/contributing.md, section 5)"
+    fail "$p: differs from the template; change it in the template repository and update"
   fi
 done < <(paths)
 [ "$(paths | sort)" = "$(awk '{print $2}' "$manifest" | sort)" ] ||
@@ -58,22 +60,17 @@ echo "== AGENTS.md has exactly one project block"
   [ "$(grep -n -x -F "$start" AGENTS.md | cut -d: -f1)" -lt "$(grep -n -x -F "$end" AGENTS.md | cut -d: -f1)" ] ||
   fail "AGENTS.md: expected one '$start' line followed by one '$end' line"
 
-echo "== AGENTS.md: template part at most 90 lines, project block at most 10 (documentation-rules.md, section 2)"
+echo "== AGENTS.md: template part at most $agents_max lines, project block at most $block_max"
 block=$(awk -v s="$start" -v e="$end" '$0==s {f=1; next} $0==e {f=0} f' AGENTS.md | wc -l | tr -d ' ')
 total=$(wc -l < AGENTS.md | tr -d ' ')
-[ "$block" -le 10 ] || fail "AGENTS.md: the project block has $block lines; at most 10"
-[ $((total - block)) -le 90 ] || fail "AGENTS.md: the template part has $((total - block)) lines; at most 90 (a template defect)"
-
-echo "== rule documents within their line budgets (documentation-rules.md, section 2)"
-for spec in docs/documentation-rules.md:200 docs/contributing.md:200 docs/testing-rules.md:80; do
-  n=$(wc -l < "${spec%:*}" | tr -d ' ')
-  [ "$n" -le "${spec##*:}" ] || fail "${spec%:*}: $n lines; at most ${spec##*:} (a template defect)"
-done
+[ "$block" -le "$block_max" ] || fail "AGENTS.md: the project block has $block lines; at most $block_max"
+[ $((total - block)) -le "$agents_max" ] ||
+  fail "AGENTS.md: the template part has $((total - block)) lines; at most $agents_max (a template defect)"
 
 echo "== .claude/settings.json is generated from the template's and the project's settings"
 out=$(scripts/gen-settings.sh --check 2>&1) || fail "${out#FAIL: }"
 
-# Harness drift (docs/documentation-rules.md, section 7): a hook whose script is gone fails silently.
+# Harness drift: a hook whose script is gone fails silently.
 echo "== every hook command of .claude/settings.json exists and is executable"
 while IFS= read -r hc; do
   script=${hc%% *}; script=${script//\"/}; script=${script//\$CLAUDE_PROJECT_DIR/.}; script=${script//\$\{CLAUDE_PROJECT_DIR\}/.}

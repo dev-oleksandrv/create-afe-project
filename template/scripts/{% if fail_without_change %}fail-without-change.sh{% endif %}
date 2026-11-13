@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Fail-without-change driver, the `fail_without_change` module (docs/testing-rules.md, section
-# 3): each test file that the change adds, modifies, renames, or copies, by TEST_GLOBS of
-# .claude/harness.conf, must pass with the change and fail on the base: a failure on both sides,
-# such as a missing toolchain, is no evidence. It builds a temporary git worktree at the merge
-# base, copies the change's version of the test files and of FWC_TOOLCHAIN_GLOBS into it, runs
-# FWC_INSTALL there (SETUP when FWC_INSTALL is empty), then FWC_TEST with one test file as its
-# last argument, and reads pass or fail from the exit code, per file: a file that passes on the
-# base fails the check, unless --allow-pass-on-base is given (the pull request label
-# `tests-pass-on-base`). When FWC_CLASSIFIER is set, it receives the log and the test file and
-# exits 0 when the base failed for the expected reason. It skips when TEST_GLOBS or FWC_TEST is
-# empty, or when no test file changed. It runs the project's own commands, locally before the
-# pull request and in the module's workflow (.github/workflows/fail-without-change.yml).
+# Fail-without-change driver, the `fail_without_change` module: each test file that the change
+# adds, modifies, renames, or copies, by TEST_GLOBS of .claude/harness.conf, must pass with the
+# change and fail on the base: a failure on both sides, such as a missing toolchain, is no
+# evidence. It builds a temporary git worktree at the merge base, copies the change's version of
+# the test files and of FWC_TOOLCHAIN_GLOBS into it, runs FWC_INSTALL there (SETUP when FWC_INSTALL
+# is empty), then FWC_TEST with one test file as its last argument, and reads pass or fail from the
+# exit code, per file: a file that passes on the base fails the check, unless --allow-pass-on-base
+# is given (the pull request label `tests-pass-on-base`). When FWC_CLASSIFIER is set, it receives
+# the log and the test file and exits 0 when the base failed for the expected reason. It skips when
+# TEST_GLOBS or FWC_TEST is empty, or when no test file changed. It runs the project's own
+# commands, locally before the pull request and in the module's workflow
+# (.github/workflows/fail-without-change.yml).
 #
 # Usage: scripts/fail-without-change.sh [--base <ref>] [--allow-pass-on-base]
 set -uo pipefail

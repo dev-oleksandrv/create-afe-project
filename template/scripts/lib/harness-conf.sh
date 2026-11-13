@@ -1,4 +1,4 @@
-# Sourced by the scripts that read .claude/harness.conf (docs/contributing.md, section 3).
+# Sourced by the scripts and hooks that read .claude/harness.conf, from the root of the repository.
 # conf_get KEY [default]: prints the value of the last `KEY=value` line of the file, without
 # surrounding quotes, or the default when the key is missing or empty. The file is read, never run.
 conf_get() {
@@ -23,26 +23,43 @@ matching_files() {
   done
 }
 
-# The Ralph loop's cap in the Stop hooks (docs/contributing.md, section 3). ralph_block <name>
-# <message>: below RALPH_MAX_ITERATIONS failing stops of hook <name>, prints the message and
-# exits 2, which sends the agent back to fix it; at the cap, prints the message and that the cap
-# is reached, resets the count, and exits 0, so the agent stops and reports the failure.
-# ralph_pass <name>: resets the count when the hook's check passes. The counts live in the git
-# directory, one file per hook and Claude Code session (RALPH_SESSION, the hook input's
-# session_id), so an interrupted loop does not shorten the next one.
-ralph_count_file() { printf '%s/ralph-stops-%s-%s' "$(git rev-parse --git-dir 2>/dev/null || echo /tmp)" "${RALPH_SESSION:-none}" "$1"; }
+# The Ralph loop's cap of the Stop dispatcher (.claude/hooks/stop-dispatch.sh): one count of
+# failing stops per Claude Code session, agent, and git worktree, in a file of the worktree's own
+# git directory named after the key that the dispatcher passes (the hook input's session_id, and
+# its agent_id for a sub-agent, which carries the session_id of its parent), so an interrupted loop
+# does not shorten the next one, and parallel sub-agents and two worktrees of one session count
+# apart. Next to the count, afe-ralph-<key>.cap holds the tree stamp at which the cap was reached,
+# so a later stop of the same key on the same tree does not block again.
+# ralph_block <key> <message> [parts] [stamp]: prints the message on stderr; below
+# RALPH_MAX_ITERATIONS failing stops, exits 2, which sends the agent back to fix it; at the cap,
+# adds that the cap is reached, prints {"systemMessage": "..."} on stdout, a one-line summary that
+# names the failing parts, so the user sees it too, resets the count, stores the stamp as the cap
+# record, and exits 0, so the agent stops and reports the failure.
+# ralph_capped <key> <stamp>: true when the cap record of the key holds the stamp.
+# ralph_pass <key>: resets the count and removes the cap record.
+ralph_count_file() {
+  printf '%s/afe-ralph-%s' "$(git rev-parse --absolute-git-dir 2>/dev/null || echo "${TMPDIR:-/tmp}")" \
+    "$(printf '%s' "${1:-none}" | tr -c 'A-Za-z0-9_.-' '_')"
+}
 ralph_block() {
   local f n cap
   f=$(ralph_count_file "$1")
   n=$(( $(cat "$f" 2>/dev/null || echo 0) + 1 ))
-  cap=$(conf_get RALPH_MAX_ITERATIONS 5)
+  cap=$(conf_get RALPH_MAX_ITERATIONS 2)
   printf '%s\n' "$2" >&2
   if [ "$n" -ge "$cap" ]; then
     rm -f "$f"
-    printf 'Ralph loop cap of %s reached: stop now and report the failing command and its output (docs/contributing.md, section 3).\n' "$cap" >&2
+    [ -z "${4:-}" ] || printf '%s\n' "$4" > "$f.cap"
+    printf 'Ralph loop cap of %s reached: stop now and report the failing command and its output.\n' "$cap" >&2
+    node scripts/lib/json.mjs message "$(printf 'Stop checks still fail after %s attempts: %s; cap reached' "$n" "${3:-see the hook output}" | tr '\n' ' ')" 2>/dev/null
     exit 0
   fi
   echo "$n" > "$f"
   exit 2
 }
-ralph_pass() { rm -f "$(ralph_count_file "$1")"; }
+ralph_capped() {
+  local f
+  f=$(ralph_count_file "$1").cap
+  [ -n "${2:-}" ] && [ -f "$f" ] && [ "$(cat "$f")" = "$2" ]
+}
+ralph_pass() { local f; f=$(ralph_count_file "$1"); rm -f "$f" "$f.cap"; }

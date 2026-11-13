@@ -8,8 +8,10 @@ allowed-tools: Read, Grep, Glob, Edit, Bash(git status:*), Bash(git switch:*), B
 
 Arguments: none for the latest release, or a template version such as `1.2.0`.
 
-The rules are in `docs/contributing.md`, section 5, and file ownership in
-`docs/documentation-rules.md`, section 9. Read both first; this skill applies them.
+The template-owned files, listed in `.template/owned.txt`, change only through an update to a
+template version, which `.afe-answers.json` records; a change the project needs in one of them
+is made in the template first. Seeded files belong to the project once created; generated files
+are regenerated, never edited.
 
 ## Procedure
 
@@ -27,17 +29,16 @@ The rules are in `docs/contributing.md`, section 5, and file ownership in
    template-owned files, keeps the project block of `AGENTS.md`, creates missing seeded files,
    runs the migrations the changelog names, the only way it changes an existing seeded file, and
    regenerates `.template/owned.sha256`, the decision index, and `.claude/settings.json`.
-5. Review its report by the rules of `docs/contributing.md`, section 5: a replaced local edit of
-   a template-owned file is listed; it is lost unless the change goes to the template. When you
-   cannot tell whether an edit was intended, stop and list it as a `blocking:` question. Each
-   `Warning:` line of the report, such as a `.harness/` file to merge by hand, goes under "Notes
-   for the owner".
+5. Review its report: a replaced local edit of a template-owned file is listed; it is lost
+   unless the change goes to the template. When you cannot tell whether an edit was intended,
+   stop and list it as an open question. Each `Warning:` line of the report, such as a
+   `.harness/` file to merge by hand, goes under "Open questions".
 6. Checks: run `scripts/check.sh`. A failure caused by the new template version is listed in the
    report with the template's changelog entry that explains it; do not edit a template-owned file
    to make it pass.
 7. Commit and open the pull request with the `create-pr` skill, title
    `Template: update to <target>`. Under "Summary" list the changelog entries from the previous
-   version to the target, and under "Notes for the owner" every replaced local edit and every
-   removed file of the report.
+   version to the target and every removed file of the report, and under "Open questions" every
+   replaced local edit.
 8. Report: the previous and the new version, the pull request, the checks, and the replaced
    edits.

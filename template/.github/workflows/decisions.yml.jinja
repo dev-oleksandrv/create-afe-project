@@ -1,8 +1,6 @@
-# Decision-record integrity and merge readiness (docs/documentation-rules.md, sections 5 and 7).
-# Same script as the local Stop hook
-# .claude/hooks/stop-check-decisions.sh. The ruleset of scripts/protect-branch.sh, once the owner
-# sets it, requires `integrity`; `readiness` is never required: a failing run tells the owner
-# that merging now is a deliberate exception.
+# Decision-record integrity and merge readiness: scripts/check-decisions.sh, as locally. The
+# ruleset of scripts/protect-branch.sh, once the owner sets it, requires `integrity`; `readiness`
+# is never required: a failing run tells the owner that merging now is a deliberate exception.
 name: decisions
 
 on:
@@ -25,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: records on the base branch change only their status line
+      - name: added decision records and the index
         env:
           BASE_REF: {{ '${{' }} github.base_ref {{ '}}' }}
         run: scripts/check-decisions.sh --base "origin/$BASE_REF"
@@ -38,10 +36,10 @@ jobs:
           fetch-depth: 0
 
       # The description goes through the environment, never into the command line.
-      # Readiness reads the description and the diff (docs/contributing.md, section 3). A pull
-      # request that a workflow opened with GITHUB_TOKEN has a generated description: only its
-      # decision records are checked. `shell: bash` adds pipefail: a failing --classes is not
-      # hidden by the pipe into awk.
+      # Readiness reads the description and the diff. A pull request that a workflow opened with
+      # GITHUB_TOKEN has a generated description: only its decision records are checked, and its
+      # gate files are listed. `shell: bash` adds pipefail: a failing --classes is not hidden by
+      # the pipe into awk.
       - name: description ready, no added record still proposed
         shell: bash
         env:
@@ -52,7 +50,7 @@ jobs:
           if [ "$PR_AUTHOR" = 'github-actions[bot]' ]; then
             echo "== a pull request opened by a workflow: its generated description is not checked"
             scripts/check-decisions.sh --base "origin/$BASE_REF" --classes |
-              awk -F '\t' '$1 == "gate" || $1 == "approval" {print "class " $1 ", for the owner'"'"'s review: " $2}'
+              awk -F '\t' '$1 == "gate" {print "class " $1 ", for the owner'"'"'s review: " $2}'
             scripts/check-decisions.sh --base "origin/$BASE_REF" --ready
           else
             printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"

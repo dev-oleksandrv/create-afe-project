@@ -32,7 +32,7 @@ port, the ecosystem gate lines and English-only documents, are owner decisions i
 
 Chosen option: "keep `.claude/`", because every existing project, hook, and check uses these
 paths today and the move needs a MAJOR release. The ownership of both seeded files is in
-[`docs/documentation-rules.md`](../documentation-rules.md), section 9.
+`docs/documentation-rules.md`, section 9.
 
 Rejected: the move to `.harness/` (a MAJOR release and a migration in every project, now); a
 later decision (the choice stays unrecorded while ports continue).

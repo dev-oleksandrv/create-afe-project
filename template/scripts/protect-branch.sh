@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Protects the default branch on GitHub (AGENTS.md, section 4) and applies the repository settings
-# the rules assume (docs/contributing.md, sections 1 and 3), with the GitHub CLI; run it once as a
+# Protects the default branch on GitHub and applies the repository settings that AGENTS.md and the
+# create-pr skill assume, with the GitHub CLI; run it once as a
 # repository admin, after the first push, and again with --require-base when that applies. A change
 # of repository settings is an owner action: an agent runs it only on the owner's explicit
 # instruction. In this order:
@@ -11,7 +11,7 @@
 #    other error is reported with the gh output; the script still applies the ruleset, then fails
 #    and names the secret-scanning error again in its last line.
 # 3. The repository ruleset "protect default branch": changes reach the default branch only through
-#    pull requests merged with a merge commit whose `check` (`docs` workflow) and `integrity`
+#    pull requests merged with a merge commit whose `check` (`check` workflow) and `integrity`
 #    (`decisions` workflow) jobs pass, with --require-base also `base`, and only these: `readiness`
 #    signals and AI review is a sensor; it cannot be force-pushed or deleted. Updating a ruleset
 #    that requires `base` keeps it without --require-base while the fail-without-change workflow

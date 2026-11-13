@@ -9,14 +9,13 @@ export const TEMPLATE_URL = 'https://github.com/dev-oleksandrv/create-afe-projec
 // generated name.
 export const RENAMES = { _gitignore: '.gitignore' };
 
-// Seeded files: created once, owned by the project afterwards (docs/documentation-rules.md,
-// section 9, in a generated project). An update creates a missing one; it changes an existing one
-// only through an entry of MIGRATIONS, such as 2.0.1, which can replace a default one.
+// Seeded files: created once, owned by the project afterwards. An update creates a missing one; it
+// changes an existing one only through an entry of MIGRATIONS, such as 2.0.1 or 3.0.0, which can
+// replace a default one.
 export const SEEDED = [
   'README.md',
   'CLAUDE.md',
   '.gitignore',
-  'docs/README.md',
   '.claude/path-classes',
   '.claude/harness.conf',
   '.claude/settings.project.json',
@@ -29,6 +28,10 @@ export const TASKS = [
   'scripts/check-template.sh --write',
   'scripts/gen-decisions-index.sh > docs/decisions/README.md',
 ];
+
+// Questions of earlier versions that 3.0.0 removed: a recorded answer to one is dropped, and a
+// --data or --data-file value for one, such as from a 2.x answers file, is ignored.
+export const REMOVED_QUESTIONS = ['docs_review', 'dual_review'];
 
 const LABELS = /^\[\s*"[A-Za-z0-9_.:-]+"(\s*,\s*"[A-Za-z0-9_.:-]+")*\s*\]$/;
 
@@ -73,21 +76,9 @@ export const QUESTIONS = [
       LABELS.test(v) ? undefined : 'Enter a JSON array of quoted labels, such as ["self-hosted", "linux"]',
   },
   {
-    name: 'docs_review',
-    type: 'bool',
-    help: 'Let Claude check every pull request for outdated or broken docs? (needs the Claude GitHub App and the CLAUDE_CODE_OAUTH_TOKEN secret)',
-    default: true,
-  },
-  {
     name: 'code_review',
     type: 'bool',
-    help: 'Let Claude review pull requests that change code? (needs the same GitHub App and secret)',
-    default: true,
-  },
-  {
-    name: 'dual_review',
-    type: 'bool',
-    help: 'Have Claude Code review each branch before its pull request opens? (uses the Codex CLI if installed, otherwise Claude)',
+    help: 'Let Claude also review pull requests that change code in CI? (needs the Claude GitHub App and the CLAUDE_CODE_OAUTH_TOKEN secret)',
     default: false,
   },
   {
@@ -100,7 +91,7 @@ export const QUESTIONS = [
     name: 'acceptance_check',
     type: 'bool',
     help: 'Require a test for every requirement ID a pull request lists under Acceptance? (you set TEST_GLOBS in .claude/harness.conf later)',
-    default: false,
+    default: true,
   },
   {
     name: 'fail_without_change',
@@ -124,13 +115,13 @@ export function messageAfterCreate(a, commit = { done: false }) {
   steps.push(
     commit.done
       ? 'the generated files are committed on main'
-      : `commit the generated files on main (the one direct commit that docs/contributing.md allows; not made here: ${commit.reason ?? 'not asked'})`,
+      : `commit the generated files on main (the one direct commit to main; not made here: ${commit.reason ?? 'not asked'})`,
   );
   steps.push('add the remote origin, push, and run git remote set-head origin -a');
   steps.push('protect main and apply the repository settings with scripts/protect-branch.sh (merge commits only, head branches deleted, secret scanning where the plan offers it)');
   steps.push('set up the CI runner');
-  if (a.docs_review || a.code_review) steps.push('add the CLAUDE_CODE_OAUTH_TOKEN secret and install the Claude GitHub App');
-  if (a.dual_review) steps.push('optionally install and sign in to the Codex CLI');
+  if (a.code_review) steps.push('add the CLAUDE_CODE_OAUTH_TOKEN secret and install the Claude GitHub App');
+  steps.push('optionally install and sign in to the Codex CLI: the review before a pull request uses it when it is installed');
   steps.push('run scripts/check.sh');
   steps.push('run /afe-init in Claude Code to set up the code and its checks');
   return `${a.project_name} is ready. Next:\n${steps.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}`;
@@ -144,6 +135,21 @@ const SEEDED_2_0_0 = {
   'path-classes': '8cf0e645771ce2d60146eccfa09a0987fbddc99e',
 };
 
+// The default .claude/path-classes of every 2.x release, by Git blob hash: 2.0.0 and 2.1.0.
+const PATH_CLASSES_2_X = [SEEDED_2_0_0['path-classes'], 'b049d71a405812909923fe56a12336f307f41a9c'];
+
+// The default .claude/harness.conf of every 2.x release, by Git blob hash: 2.0.0 and 2.1.0 seed
+// the same file, which has no template expressions.
+const HARNESS_CONF_2_X = [SEEDED_2_0_0['harness.conf']];
+
+// Names of documents and files that 3.0.0 removed, as plain substrings: a project file that still
+// names one gets a warning after the update.
+const REMOVED_IN_3_0_0 = [
+  'docs/documentation-rules.md', 'docs/contributing.md', 'docs/testing-rules.md', 'docs/README.md',
+  'protect-docs.sh', 'stop-check-', 'stop-run-project-hooks.sh', 'pr-metrics.sh', 'docs-review',
+  'dual-review', '.github/workflows/docs.yml',
+];
+
 // Migrations of an update, by the version that introduces them. `before` runs before the template
 // files are written, `after` after them; both run in the project directory, as bash commands,
 // with AFE_TEMPLATE set to the template directory of this package and AFE_NOTES to a file whose
@@ -152,7 +158,8 @@ const SEEDED_2_0_0 = {
 // package's.
 export const MIGRATIONS = [
   // 0.5.0 replaces the seeded .claude/protected-paths, which the update deletes, with
-  // .claude/path-classes: its glob lines are kept as class approval, and the file is removed.
+  // .claude/path-classes: its glob lines are kept as class approval lines (which 3.0.0 ignores),
+  // and the file is removed.
   {
     version: '0.5.0',
     before: '[ ! -f .claude/protected-paths ] || cp .claude/protected-paths .claude/protected-paths.pre-0.5',
@@ -164,8 +171,8 @@ export const MIGRATIONS = [
   // lines; 2.0.0 ignored them and seeded the defaults. A .claude/ file is replaced only when it is
   // a default (of 2.0.0 or of this package); otherwise both stay, and the update reports the merge
   // by hand. .harness/ is removed when nothing else is left in it. After a move, the files that are
-  // not template-owned and still name the .harness/ paths, such as the seeded map docs/README.md, are
-  // reported for a change by hand.
+  // not template-owned and still name the .harness/ paths, such as the seeded map docs/README.md of
+  // 2.x, are reported for a change by hand.
   {
     version: '2.0.1',
     after: [
@@ -189,16 +196,60 @@ export const MIGRATIONS = [
       `[ ! -d .harness ] || rmdir .harness 2> /dev/null || true`,
     ].join('\n'),
   },
+  // 3.0.0 has two configurable path classes, high and gate, and a fix-loop cap of 2. A seeded
+  // .claude/path-classes that is still a 2.x default is replaced with the 3.0.0 default; one the
+  // project changed stays, and the update reports its approval lines (now ignored) and the
+  // ecosystem gate blocks of 2.1.0 (now added by afe-init for the chosen stack) for a change by
+  // hand. A .claude/harness.conf that is still a 2.x default is replaced with the 3.0.0 default;
+  // in one the project changed, RALPH_MAX_ITERATIONS and REVIEW_MAX_ROUNDS go to 2 only where they
+  // still hold the 2.x defaults, 5 and 3. The template stops seeding the documentation map
+  // docs/README.md: an existing one stays, as a project file, and the update says so. The files
+  // the template no longer owns, such as the removed rule documents, Stop hooks, and skills, go
+  // the usual way: they are not in the new .template/owned.txt. Last, each tracked file that is
+  // not template-owned, not generated, and not warned about above, and that names a removed file,
+  // gets a warning; nothing is changed.
+  {
+    version: '3.0.0',
+    after: [
+      `f=.claude/path-classes`,
+      `if [ -f $f ] && ! cmp -s $f "$AFE_TEMPLATE/$f"; then`,
+      `  case "$(git hash-object --no-filters $f 2> /dev/null)" in`,
+      `    ${PATH_CLASSES_2_X.join('|')}) cat "$AFE_TEMPLATE/$f" > $f ;;`,
+      `    *) echo "$f is not a default of the template, so it stays as it is: remove its approval lines by hand (3.0.0 ignores class approval and has only high and gate), and you may trim the ecosystem gate blocks to the files of your stack" >> "$AFE_NOTES" ;;`,
+      `  esac`,
+      `fi`,
+      `f=.claude/harness.conf`,
+      `if [ -f $f ]; then`,
+      `  case "$(git hash-object --no-filters $f 2> /dev/null)" in`,
+      `    ${HARNESS_CONF_2_X.join('|')}) cat "$AFE_TEMPLATE/$f" > $f ;;`,
+      `    *) if grep -q -E '^(RALPH_MAX_ITERATIONS=5|REVIEW_MAX_ROUNDS=3)[[:space:]]*$' $f; then`,
+      `      sed -E 's/^RALPH_MAX_ITERATIONS=5[[:space:]]*$/RALPH_MAX_ITERATIONS=2/; s/^REVIEW_MAX_ROUNDS=3[[:space:]]*$/REVIEW_MAX_ROUNDS=2/' $f > $f.tmp &&`,
+      `        cat $f.tmp > $f && rm $f.tmp || exit 1`,
+      `    fi ;;`,
+      `  esac`,
+      `fi`,
+      `[ ! -f docs/README.md ] ||`,
+      `  echo "docs/README.md is no longer maintained by the template: it stays as a project file, and scripts/check.sh fails on its links and paths to files that do not exist, such as the removed docs/documentation-rules.md; update it, or delete it together with the links to it, such as those in README.md" >> "$AFE_NOTES"`,
+      `git -c core.quotepath=off ls-files 2> /dev/null | { [ -f .template/owned.txt ] && grep -v -x -F -f .template/owned.txt || cat; } |`,
+      `  while IFS= read -r p; do`,
+      `    case $p in .claude/settings.json|.template/*|docs/decisions/README.md|node_modules/*|*/node_modules/*) continue ;; esac`,
+      `    [ -f "$p" ] && ! { cut -d ' ' -f 1 "$AFE_NOTES" 2> /dev/null | grep -q -x -F -e "$p"; } || continue`,
+      `    hit=$(grep -o -I -F ${REMOVED_IN_3_0_0.map((n) => `-e '${n}'`).join(' ')} -- "$p" 2> /dev/null | awk '!s[$0]++' | paste -s -d , - | sed 's/,/, /g')`,
+      `    [ -z "$hit" ] || echo "$p names removed files ($hit); update or remove those references" >> "$AFE_NOTES"`,
+      `  done`,
+      `exit 0`,
+    ].join('\n'),
+  },
 ];
 
 // Warnings about the answers of a Copier answers file that have no question here and are dropped:
-// a docs_language other than English, since documents are English only (AGENTS.md, section 5).
+// a docs_language other than English, since documents are English only (.claude/rules/docs.md).
 // ecosystems gets none: the seeded .claude/path-classes gates the ecosystems without a question.
 export function legacyNotes(answers) {
   const notes = [];
   const language = answers.docs_language;
   if (language != null && String(language).trim() !== '' && !/^\s*(english|en)\s*$/i.test(String(language))) {
-    notes.push(`docs_language was ${language}; it is not carried over: documents stay in English (AGENTS.md, section 5)`);
+    notes.push(`docs_language was ${language}; it is not carried over: documents stay in English (.claude/rules/docs.md)`);
   }
   return notes;
 }

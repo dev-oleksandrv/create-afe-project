@@ -1,11 +1,11 @@
-# Personal Claude Code instructions, never committed (docs/documentation-rules.md, section 9)
+# Personal Claude Code instructions, never committed
 CLAUDE.local.md
 
 # Tooling
 node_modules/
 .DS_Store
 
-# Personal Claude Code settings, never committed (docs/documentation-rules.md, section 9)
+# Personal Claude Code settings, never committed
 .claude/settings.local.json
 
 # Local secrets, never committed

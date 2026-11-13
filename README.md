@@ -13,17 +13,15 @@ Claude Code skills that apply them. It implements the pillars of
 | Part | Files |
 | --- | --- |
 | Agent rules | `AGENTS.md` with one project block, `CLAUDE.md` |
-| Testing rules: what a test is for and must prove | `docs/testing-rules.md` |
-| Documentation rules, statuses, and file ownership | `docs/documentation-rules.md`, `docs/README.md` |
-| Branches, commits, pull requests, template updates, review of pull requests | `docs/contributing.md` |
+| Testing and documentation rules, loaded when a matching file is touched | `.claude/rules/testing.md`, `.claude/rules/docs.md` |
 | Decision records | `docs/decisions/adr-template.md`, a generated `docs/decisions/README.md` |
 | Checks and environment | `scripts/check.sh` and the scripts it runs, the link check `scripts/check-links.mjs` included; `scripts/env.sh` for the environment commands; `scripts/protect-branch.sh` for the repository settings and the GitHub ruleset of `main`; optional `scripts/check-acceptance.sh` and `scripts/fail-without-change.sh` |
-| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated): deny rules for secrets and destructive pushes; `.claude/hooks/`: the protect hook (asks before protected edits, publishing, and a known token format; denies a push to `main`), the SessionStart hook (prints the branch, its base and the commits ahead, the count of uncommitted and untracked files, merge conflicts, and the plans with their `review-by`), the check after every edit, and the Stop hooks; `.claude/skills/`: `afe-init` (sets up the code, its stack, and its checks with the owner), `create-pr`, `update-template`, optional `docs-review`, `review-code`, and `dual-review` |
-| CI | `.github/workflows/` (`docs`, `decisions`, optional `secret-scan`, `docs-review`, `code-review`, and `fail-without-change`) |
+| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated): deny rules for secrets and destructive pushes; `.claude/hooks/`: the guard hook (asks before an edit of `AGENTS.md`, an irreversible action such as publishing, and a known token format; denies a push to `main`), the SessionStart hook (prints the branch, its base and the commits ahead, the count of uncommitted and untracked files, and merge conflicts), the check after every edit, and the Stop dispatcher for `Stop` and `SubagentStop`; `.claude/skills/`: `afe-init` (sets up the code, its stack, and its checks with the owner), `create-pr` (branches, commits, the pull request), `review` (the review before the pull request, with its rubric), `update-template`, optional `review-code` |
+| CI | `.github/workflows/` (`check`, `decisions`, optional `secret-scan`, `code-review`, and `fail-without-change`) |
 
-Every file has one owner: the template, the project, or a generator. The rules are in
-[`template/docs/documentation-rules.md.jinja`](template/docs/documentation-rules.md.jinja),
-section 9.
+Every file has one owner: the template (the files that `.template/owned.txt` lists), the
+project (seeded files, created once), or a generator; [`src/config.js`](src/config.js) lists the
+seeded and the generated files.
 
 ## Requirements
 
@@ -39,11 +37,10 @@ npx create-afe-project@latest <directory>
 ```
 
 The wizard asks for the project name, a one-sentence description, the GitHub repository, the CI
-runner (GitHub-hosted, or a self-hosted Linux runner), whether pull requests get the Claude
-documentation review and code review, whether the review before a pull request adds the Santa
-loop (with the Codex CLI when it is installed, otherwise with two Claude subagents), whether CI
-scans every change for secrets with gitleaks, and whether to add the Acceptance check and the
-fail-without-change driver. It then writes the generated files and prints the next
+runner (GitHub-hosted, or a self-hosted Linux runner), whether pull requests that change code get
+the Claude code review in CI (off by default), whether CI scans every change for secrets with
+gitleaks, and whether to add the Acceptance check (on by default) and the fail-without-change
+driver. It then writes the generated files and prints the next
 steps. Without a terminal, or with `--defaults`, it takes answers from `--data key=value` and
 `--data-file answers.json`, then the defaults:
 
@@ -56,8 +53,7 @@ npx create-afe-project@latest acme --defaults --data project_name=acme \
 
 ## Update a project
 
-In the project, the `update-template` skill does it, following the project's
-`docs/contributing.md`, section 5: a branch from a clean `main`, then
+In the project, the `update-template` skill does it: a branch from a clean `main`, then
 
 ```bash
 npx create-afe-project@latest update --defaults
