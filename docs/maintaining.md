@@ -32,9 +32,9 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   the code paths of `scripts/check-links.mjs`, judged by the files git knows; both run when one
   fails), `scripts/check-decisions.sh`, and `scripts/check-template.sh`, with a green stamp
   (`scripts/lib/stamp.sh`) for `--if-changed`. The stamp has two kinds, `docs` (Markdown) and
-  `code` (every other path), each over the content of its files, not over `HEAD`, so a commit of
-  Markdown alone keeps the `code` stamp; `--if-changed` skips only when the `full` stamps of both
-  kinds match.
+  `code` (every other path), each over the content of its files in a temporary index, not over
+  `HEAD` or the real index, so neither `git add` nor `git commit` of the same content changes it;
+  `--if-changed` skips only when the `full` stamps of both kinds match.
   The hooks of `.claude/hooks/`: `guard.sh` asks before an edit of `AGENTS.md`, a known token
   format, and the irreversible commands it names, and denies a push to the default branch;
   `stop-dispatch.sh` checks what changed at each Stop and SubagentStop, running the checks of a

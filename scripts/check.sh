@@ -27,8 +27,9 @@ code_stamp= docs_stamp=
 if [ -z "${GITHUB_ACTIONS:-}" ] && git rev-parse --git-dir > /dev/null 2>&1; then
   # shellcheck source=scripts/lib/stamp.sh
   . scripts/lib/stamp.sh
-  code_stamp=$(tree_stamp code) docs_stamp=$(tree_stamp docs)
-  if [ -n "$if_changed" ] && [ "$(stamp_read full code)" = "$code_stamp" ] &&
+  { IFS= read -r code_stamp; IFS= read -r docs_stamp; } < <(tree_stamps)
+  if [ -n "$if_changed" ] && [ -n "$code_stamp" ] && [ -n "$docs_stamp" ] &&
+    [ "$(stamp_read full code)" = "$code_stamp" ] &&
     [ "$(stamp_read full docs)" = "$docs_stamp" ]; then
     echo "#### unchanged since the last passing run"
     exit 0
@@ -62,7 +63,7 @@ if [ "${#failed[@]}" -gt 0 ]; then
   echo "#### failed: ${failed[*]}"
   exit 1
 fi
-if [ -n "$code_stamp" ]; then
+if [ -n "$code_stamp" ] && [ -n "$docs_stamp" ]; then
   stamp_write full code "$code_stamp" && stamp_write full docs "$docs_stamp"
 fi
 echo "#### all checks passed"

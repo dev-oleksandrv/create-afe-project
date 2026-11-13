@@ -29,7 +29,7 @@ unchanged tree, and every deterministic check of code quality stays.
   branch. The five Stop hooks become one dispatcher, `.claude/hooks/stop-dispatch.sh`, on Stop and
   SubagentStop, which checks the worktree of the agent and skips the documentation or code checks
   when a green stamp (`scripts/lib/stamp.sh`) of that kind, Markdown or every other path, shows
-  its files unchanged since the last pass. A sub-agent that stops in the main session's tree is
+  its files' content unchanged since the last pass, also across `git add` and `git commit`. A sub-agent that stops in the main session's tree is
   not checked; the main agent's Stop is. After the Ralph cap, a stop on the same unchanged tree
   no longer blocks again. The template integrity check runs
   in `scripts/check.sh` only. The guard hook has tests.

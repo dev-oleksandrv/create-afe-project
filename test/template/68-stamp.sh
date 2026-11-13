@@ -38,6 +38,20 @@ git -C "$a" commit -q --allow-empty -m empty
 echo x >> "$a/README.md" && gitc "$a" commit -q -am docs
 [ "$(st tree_stamp code)" = "$c0" ] && [ "$(st tree_stamp docs)" != "$d0" ] || fail "stamp: a commit of Markdown alone changes the code stamp, or not the docs stamp"
 git -C "$a" reset -q --hard HEAD~2
+# `git add` and `git commit` of the same content keep both stamps; an edit, an untracked file, and
+# a deletion change the stamp of their kind.
+echo x >> "$a/README.md" && echo x > "$a/code.txt"
+c1=$(st tree_stamp code) d1=$(st tree_stamp docs)
+gitc "$a" add -A && [ "$(st tree_stamp code)" = "$c1" ] && [ "$(st tree_stamp docs)" = "$d1" ] || fail "stamp: git add of the same content changes a stamp"
+gitc "$a" commit -q -m same && [ "$(st tree_stamp code)" = "$c1" ] && [ "$(st tree_stamp docs)" = "$d1" ] || fail "stamp: git commit of the same content changes a stamp"
+echo y >> "$a/code.txt" && [ "$(st tree_stamp code)" != "$c1" ] || fail "stamp: an edit of a committed file does not change the code stamp"
+gitc "$a" checkout -q -- code.txt && echo y > "$a/other.md" && [ "$(st tree_stamp docs)" != "$d1" ] || fail "stamp: an untracked Markdown file does not change the docs stamp"
+rm "$a/other.md" "$a/code.txt" && [ "$(st tree_stamp code)" != "$c1" ] || fail "stamp: a deleted file does not change the code stamp"
+rm "$a/README.md" && [ "$(st tree_stamp docs)" != "$d1" ] || fail "stamp: a deleted Markdown file does not change the docs stamp"
+git -C "$a" reset -q --hard HEAD~1
+[ "$(st tree_stamp code)" = "$c0" ] && [ "$(st tree_stamp docs)" = "$d0" ] && [ -z "$(git -C "$a" status --porcelain)" ] ||
+  fail "stamp: differs after the tree is restored"
+ls "$gd" | grep -q '^afe-stamp-index' && fail "stamp: leaves its temporary index in the git directory"
 # The stamps live in the worktree's git directory, one file per scope and kind; a full stamp
 # satisfies a fast request of its kind, not the reverse.
 rm -f "$gd"/afe-green-*

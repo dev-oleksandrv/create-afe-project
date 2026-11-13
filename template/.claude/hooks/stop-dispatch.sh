@@ -62,7 +62,7 @@ if [ -n "$(git ls-files -u 2>/dev/null)" ]; then
   exit 0
 fi
 
-code_stamp=$(tree_stamp code) docs_stamp=$(tree_stamp docs)
+{ IFS= read -r code_stamp; IFS= read -r docs_stamp; } < <(tree_stamps)
 code_green= docs_green=
 stamp_matches fast code "$code_stamp" && code_green=1
 stamp_matches fast docs "$docs_stamp" && docs_green=1

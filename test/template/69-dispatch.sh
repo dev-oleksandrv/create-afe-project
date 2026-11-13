@@ -36,9 +36,10 @@ stop; [ $? -eq 0 ] && [ ! -e "$work/fast.marker" ] && [ -e "$work/docs.marker" ]
 rm -f "$work/docs.marker" && echo z > "$a/src.txt"
 stop; [ $? -eq 0 ] && [ -e "$work/fast.marker" ] && [ ! -e "$work/docs.marker" ] ||
   { cat "$work/stop.log"; fail "stop-dispatch: a change of code after a green run runs the documentation check, or not the fast check"; }
-# A commit of Markdown alone keeps the code stamp: the fast check does not run.
-rm -f "$work/fast.marker" && gitc "$a" add README.md && gitc "$a" commit -q -m docs
-stop; [ $? -eq 0 ] && [ ! -e "$work/fast.marker" ] || { cat "$work/stop.log"; fail "stop-dispatch: a commit of Markdown alone runs the fast check"; }
+# A green stop, then a commit of the same content: the next stop runs nothing.
+rm -f "$work/fast.marker" "$work/docs.marker" && gitc "$a" add README.md && gitc "$a" commit -q -m docs
+stop; [ $? -eq 0 ] && [ ! -e "$work/fast.marker" ] && [ ! -e "$work/docs.marker" ] ||
+  { cat "$work/stop.log"; fail "stop-dispatch: a commit of the same content after a green stop runs a check"; }
 # The full stamps of scripts/check.sh satisfy the dispatcher for both kinds.
 rm -f "$work/fast.marker" "$work/docs.marker" "$gd"/afe-green-fast-* && echo y > "$a/src.txt" && echo y >> "$a/README.md" &&
   (cd "$a" && . scripts/lib/stamp.sh && stamp_write full code && stamp_write full docs)
