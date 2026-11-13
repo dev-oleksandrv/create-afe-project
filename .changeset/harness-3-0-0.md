@@ -32,9 +32,9 @@ unchanged tree, and every deterministic check of code quality stays.
   in `scripts/check.sh` only. The guard hook has tests.
 - Checks: `scripts/check.sh` is quiet by default (`--verbose` prints everything) and takes
   `--if-changed`; `scripts/check-docs.sh` takes a file list; the link check also fails on a
-  backticked path that does not exist in `docs/` and `AGENTS.md`. The fix-loop caps are 2
-  (`RALPH_MAX_ITERATIONS`, `REVIEW_MAX_ROUNDS`). The `docs` workflow is now `check.yml`, with the
-  same job name `check`.
+  backticked path that does not exist in `docs/` outside `docs/decisions/` and in `AGENTS.md`.
+  The fix-loop caps are 2 (`RALPH_MAX_ITERATIONS`, `REVIEW_MAX_ROUNDS`). The `docs` workflow is
+  now `check.yml`, with the same job name `check`.
 - Documents: `docs/documentation-rules.md`, `docs/contributing.md`, `docs/testing-rules.md`, and
   the map `docs/README.md` leave the template; `AGENTS.md` is shorter, and the scoped rules
   `.claude/rules/testing.md` and `.claude/rules/docs.md` hold what survives. Document statuses,
@@ -47,14 +47,17 @@ documents, the five Stop hooks, `protect-docs.sh`, `pr-metrics.sh`, the `docs-re
 `dual-review` skills, and the `docs` and `docs-review` workflows. It drops the answers to
 `docs_review` and `dual_review` and keeps the project's `code_review` and `acceptance_check`;
 a 2.x answers file given as `--data-file` still works. A `.claude/path-classes` that is still a
-2.x default becomes the 3.0.0 default. `RALPH_MAX_ITERATIONS=5` and `REVIEW_MAX_ROUNDS=3` in
-`.claude/harness.conf` become 2; other values stay. Check by hand what the update reports:
+2.x default becomes the 3.0.0 default, and so does a `.claude/harness.conf` that is still the 2.x
+default. In a changed `.claude/harness.conf`, such as one that `afe-init` configured,
+`RALPH_MAX_ITERATIONS=5` and `REVIEW_MAX_ROUNDS=3` become 2; other values stay. Check by hand
+what the update reports:
 
 - `Warning: .claude/path-classes is not a default of the template`: remove its `approval` lines,
   and trim the ecosystem gate blocks to the files of your stack if you like.
 - `Warning: docs/README.md is no longer maintained by the template`: it stays as a project file,
   and `scripts/check.sh` fails on its links and paths to removed files; update it, or delete it
   together with the links to it, such as those in `README.md`.
-
-Your own documents, decision records, and the comments of `.claude/harness.conf` may still name
-the removed documents; `scripts/check.sh` reports the links among them.
+- `Warning: <path> names removed files (<names>); update or remove those references`: one line
+  for each tracked file that is not template-owned, such as `README.md`, `.gitignore`, your
+  decision records and documents, or the comments of a changed `.claude/harness.conf`, that
+  still names a removed document or file. The update changes none of them.

@@ -138,6 +138,18 @@ const SEEDED_2_0_0 = {
 // The default .claude/path-classes of every 2.x release, by Git blob hash: 2.0.0 and 2.1.0.
 const PATH_CLASSES_2_X = [SEEDED_2_0_0['path-classes'], 'b049d71a405812909923fe56a12336f307f41a9c'];
 
+// The default .claude/harness.conf of every 2.x release, by Git blob hash: 2.0.0 and 2.1.0 seed
+// the same file, which has no template expressions.
+const HARNESS_CONF_2_X = [SEEDED_2_0_0['harness.conf']];
+
+// Names of documents and files that 3.0.0 removed, as plain substrings: a project file that still
+// names one gets a warning after the update.
+const REMOVED_IN_3_0_0 = [
+  'docs/documentation-rules.md', 'docs/contributing.md', 'docs/testing-rules.md', 'docs/README.md',
+  'protect-docs.sh', 'stop-check-', 'stop-run-project-hooks.sh', 'pr-metrics.sh', 'docs-review',
+  'dual-review', '.github/workflows/docs.yml',
+];
+
 // Migrations of an update, by the version that introduces them. `before` runs before the template
 // files are written, `after` after them; both run in the project directory, as bash commands,
 // with AFE_TEMPLATE set to the template directory of this package and AFE_NOTES to a file whose
@@ -188,11 +200,14 @@ export const MIGRATIONS = [
   // .claude/path-classes that is still a 2.x default is replaced with the 3.0.0 default; one the
   // project changed stays, and the update reports its approval lines (now ignored) and the
   // ecosystem gate blocks of 2.1.0 (now added by afe-init for the chosen stack) for a change by
-  // hand. In .claude/harness.conf, RALPH_MAX_ITERATIONS and REVIEW_MAX_ROUNDS go to 2 only where
-  // they still hold the 2.x defaults, 5 and 3. The template stops seeding the documentation map
+  // hand. A .claude/harness.conf that is still a 2.x default is replaced with the 3.0.0 default;
+  // in one the project changed, RALPH_MAX_ITERATIONS and REVIEW_MAX_ROUNDS go to 2 only where they
+  // still hold the 2.x defaults, 5 and 3. The template stops seeding the documentation map
   // docs/README.md: an existing one stays, as a project file, and the update says so. The files
   // the template no longer owns, such as the removed rule documents, Stop hooks, and skills, go
-  // the usual way: they are not in the new .template/owned.txt.
+  // the usual way: they are not in the new .template/owned.txt. Last, each tracked file that is
+  // not template-owned, not generated, and not warned about above, and that names a removed file,
+  // gets a warning; nothing is changed.
   {
     version: '3.0.0',
     after: [
@@ -204,12 +219,24 @@ export const MIGRATIONS = [
       `  esac`,
       `fi`,
       `f=.claude/harness.conf`,
-      `if [ -f $f ] && grep -q -E '^(RALPH_MAX_ITERATIONS=5|REVIEW_MAX_ROUNDS=3)[[:space:]]*$' $f; then`,
-      `  sed -E 's/^RALPH_MAX_ITERATIONS=5[[:space:]]*$/RALPH_MAX_ITERATIONS=2/; s/^REVIEW_MAX_ROUNDS=3[[:space:]]*$/REVIEW_MAX_ROUNDS=2/' $f > $f.tmp &&`,
-      `    cat $f.tmp > $f && rm $f.tmp || exit 1`,
+      `if [ -f $f ]; then`,
+      `  case "$(git hash-object --no-filters $f 2> /dev/null)" in`,
+      `    ${HARNESS_CONF_2_X.join('|')}) cat "$AFE_TEMPLATE/$f" > $f ;;`,
+      `    *) if grep -q -E '^(RALPH_MAX_ITERATIONS=5|REVIEW_MAX_ROUNDS=3)[[:space:]]*$' $f; then`,
+      `      sed -E 's/^RALPH_MAX_ITERATIONS=5[[:space:]]*$/RALPH_MAX_ITERATIONS=2/; s/^REVIEW_MAX_ROUNDS=3[[:space:]]*$/REVIEW_MAX_ROUNDS=2/' $f > $f.tmp &&`,
+      `        cat $f.tmp > $f && rm $f.tmp || exit 1`,
+      `    fi ;;`,
+      `  esac`,
       `fi`,
       `[ ! -f docs/README.md ] ||`,
       `  echo "docs/README.md is no longer maintained by the template: it stays as a project file, and scripts/check.sh fails on its links and paths to files that do not exist, such as the removed docs/documentation-rules.md; update it, or delete it together with the links to it, such as those in README.md" >> "$AFE_NOTES"`,
+      `git -c core.quotepath=off ls-files 2> /dev/null | { [ -f .template/owned.txt ] && grep -v -x -F -f .template/owned.txt || cat; } |`,
+      `  while IFS= read -r p; do`,
+      `    case $p in .claude/settings.json|.template/*|docs/decisions/README.md|node_modules/*|*/node_modules/*) continue ;; esac`,
+      `    [ -f "$p" ] && ! { cut -d ' ' -f 1 "$AFE_NOTES" 2> /dev/null | grep -q -x -F -e "$p"; } || continue`,
+      `    hit=$(grep -o -I -F ${REMOVED_IN_3_0_0.map((n) => `-e '${n}'`).join(' ')} -- "$p" 2> /dev/null | awk '!s[$0]++' | paste -s -d , - | sed 's/,/, /g')`,
+      `    [ -z "$hit" ] || echo "$p names removed files ($hit); update or remove those references" >> "$AFE_NOTES"`,
+      `  done`,
       `exit 0`,
     ].join('\n'),
   },
