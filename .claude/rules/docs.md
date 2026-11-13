@@ -12,7 +12,8 @@ paths:
   front matter.
 - Reference code by a path that exists: a Markdown link, or a backticked path. The link check
   (`scripts/check-links.mjs`) fails on a path that does not exist, in `AGENTS.md` and under
-  `docs/`.
+  `docs/`; ADRs under `docs/decisions/` are exempt from the backticked-path check, not from
+  the link check.
 - Write an ADR only for a decision that is costly to reverse and had a real alternative:
   language, runtime, framework; storage and persistent formats; public protocols and contracts;
   security, isolation, authentication model; external service or infrastructure. Copy

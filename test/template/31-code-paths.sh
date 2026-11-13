@@ -17,6 +17,13 @@ expect_pass "tokens that are not path candidates are ignored" bash -c 'note docs
   node scripts/check-links.mjs'
 expect_pass "a path in a fenced code block is not checked" bash -c 'printf "# Note\n\n\x60\x60\x60sh\nscripts/nope.sh \x60scripts/nope.sh\x60\n\x60\x60\x60\n" > docs/note.md && node scripts/check-links.mjs'
 expect_pass "Markdown outside docs/ and AGENTS.md is not checked for code paths" bash -c 'note note.md "See \`scripts/nope.sh\`." && mkdir -p src && note src/README.md "See \`scripts/nope.sh\`." && node scripts/check-links.mjs'
+expect_pass "the decision records under docs/decisions/ are not checked for code paths, in the full scan and as an argument" bash -c 'note docs/decisions/0001-x.md "See \`scripts/nope.sh\`." &&
+  node scripts/check-links.mjs && node scripts/check-links.mjs docs/decisions/0001-x.md &&
+  note docs/other.md "See \`scripts/nope.sh\`." && ! node scripts/check-links.mjs > out.log && grep -qxF "FAIL: docs/other.md:3: \`scripts/nope.sh\`: no such file or directory" out.log &&
+  ! grep -q "0001-x.md" out.log'
+expect_pass "a dead Markdown link in a decision record still fails" bash -c 'note docs/decisions/0001-x.md "See [x](nope.md)." &&
+  ! node scripts/check-links.mjs > out.log && grep -qxF "FAIL: docs/decisions/0001-x.md:3: nope.md: no such file or directory" out.log &&
+  ! node scripts/check-links.mjs docs/decisions/0001-x.md > out.log && grep -qxF "FAIL: docs/decisions/0001-x.md:3: nope.md: no such file or directory" out.log'
 expect_pass "a code path is checked in a file given as an argument, relative or absolute" bash -c 'note docs/note.md "See \`scripts/nope.sh\`." &&
   ! node scripts/check-links.mjs docs/note.md > out.log && grep -q "^FAIL: docs/note.md:3: " out.log &&
   ! node scripts/check-links.mjs "$PWD/docs/note.md" > out.log && grep -q "^FAIL: docs/note.md:3: " out.log'
