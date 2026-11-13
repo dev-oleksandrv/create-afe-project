@@ -27,8 +27,11 @@ unchanged tree, and every deterministic check of code quality stays.
 - Hooks: `.claude/hooks/protect-docs.sh` becomes `guard.sh`; it asks only before an edit of
   `AGENTS.md`, a known token format, and irreversible commands, and denies a push to the default
   branch. The five Stop hooks become one dispatcher, `.claude/hooks/stop-dispatch.sh`, on Stop and
-  SubagentStop, which checks the worktree of the agent and skips a tree that a green stamp
-  (`scripts/lib/stamp.sh`) shows unchanged since the last pass. The template integrity check runs
+  SubagentStop, which checks the worktree of the agent and skips the documentation or code checks
+  when a green stamp (`scripts/lib/stamp.sh`) of that kind, Markdown or every other path, shows
+  its files' content unchanged since the last pass, also across `git add` and `git commit`. A sub-agent that stops in the main session's tree is
+  not checked; the main agent's Stop is. After the Ralph cap, a stop on the same unchanged tree
+  no longer blocks again. The template integrity check runs
   in `scripts/check.sh` only. The guard hook has tests.
 - Checks: `scripts/check.sh` is quiet by default (`--verbose` prints everything) and takes
   `--if-changed`; `scripts/check-docs.sh` takes a file list; the link check also fails on a

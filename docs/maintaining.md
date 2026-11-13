@@ -31,11 +31,17 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   (the project's `scripts/checks.d/`), `scripts/check-docs.sh` (markdownlint, then the links and
   the code paths of `scripts/check-links.mjs`, judged by the files git knows; both run when one
   fails), `scripts/check-decisions.sh`, and `scripts/check-template.sh`, with a green stamp
-  (`scripts/lib/stamp.sh`) for `--if-changed`.
+  (`scripts/lib/stamp.sh`) for `--if-changed`. The stamp has two kinds, `docs` (Markdown) and
+  `code` (every other path), each over the content of its files in a temporary index, not over
+  `HEAD` or the real index, so neither `git add` nor `git commit` of the same content changes it;
+  `--if-changed` skips only when the `full` stamps of both kinds match.
   The hooks of `.claude/hooks/`: `guard.sh` asks before an edit of `AGENTS.md`, a known token
   format, and the irreversible commands it names, and denies a push to the default branch;
-  `stop-dispatch.sh` checks what changed at each Stop and SubagentStop, up to the Ralph cap,
-  counted per session, agent, and worktree, and tells the user at the cap; `post-edit-check.sh`
+  `stop-dispatch.sh` checks what changed at each Stop and SubagentStop, running the checks of a
+  kind only when its stamp does not match, up to the Ralph cap, counted per session, agent, and
+  worktree; it tells the user at the cap and then lets the same key stop on the same tree without
+  running anything until the tree changes. A sub-agent that stops in the main session's tree (the
+  root of `CLAUDE_PROJECT_DIR`) runs nothing: the main agent's Stop checks it. `post-edit-check.sh`
   runs `CHECK_EDIT`; `session-start.sh` prints the local state. The last three resolve the
   generated project, the nearest git repository with `.template/owned.txt`, from the input's
   `cwd` (`scripts/lib/root.sh`), so they work in any git worktree and for sub-agents and pass
@@ -96,8 +102,9 @@ header of each file names what it needs. The groups, by number:
   `--classes`, the readiness step of the `decisions` workflow on a pull request that a workflow
   opened, and the generated "Gate files" section.
 - `60`-`69`: the hooks and the green stamp: what the guard hook asks for, denies, and lets
-  through, in sibling and inner worktrees too; the Stop dispatcher (the Ralph cap, the fast
-  check, a committed broken document, one combined message, no second run on an unchanged green
+  through, in sibling and inner worktrees too; the Stop dispatcher (the Ralph cap and its record
+  of the capped tree, the fast check, a committed broken document, one combined message, no
+  second run on an unchanged green tree, a stamp per kind, a sub-agent in the main session's
   tree, the worktree of the input's `cwd`, a nested repository without the harness); the check
   after every edit; the SessionStart hook;
   the stamp and the quiet output and `--if-changed` of `scripts/check.sh`.

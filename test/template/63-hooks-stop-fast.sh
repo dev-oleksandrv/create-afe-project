@@ -30,7 +30,8 @@ echo x > "$a/src.txt"
 fast; [ $? -eq 2 ] && grep -q fast-ran "$work/fast.log" || { cat "$work/fast.log"; fail "stop-dispatch: an untracked file and a failing CHECK_FAST do not block"; }
 rm "$work/fail.flag"
 fast; [ $? -eq 0 ] && [ ! -s "$work/fast.log" ] || { cat "$work/fast.log"; fail "stop-dispatch: a passing CHECK_FAST blocks or prints"; }
-gitc "$a" switch -q -c fastbr && gitc "$a" add src.txt && gitc "$a" commit -q -m src && touch "$work/fail.flag"
+# A committed change of content (a commit of the green content alone keeps the green stamp).
+gitc "$a" switch -q -c fastbr && echo committed > "$a/src.txt" && gitc "$a" add src.txt && gitc "$a" commit -q -m src && touch "$work/fail.flag"
 fast; [ $? -eq 2 ] || { cat "$work/fast.log"; fail "stop-dispatch: a committed change and a failing CHECK_FAST do not block"; }
 gitc "$a" switch -q -c c2 && echo b > "$a/src.txt" && gitc "$a" commit -q -am b
 gitc "$a" switch -q fastbr && echo c > "$a/src.txt" && gitc "$a" commit -q -am c
