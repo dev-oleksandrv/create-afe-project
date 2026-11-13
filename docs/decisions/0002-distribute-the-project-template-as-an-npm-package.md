@@ -14,7 +14,7 @@ supersedes: [ADR-0001]
 [ADR 0001](0001-distribute-the-project-template-with-copier.md) distributes the template with
 Copier, which needs Python, uv or pipx, and `--trust`. Most projects already have Node.js, and the
 checks already use `npx`. The ownership rules forbid local edits of template-owned files
-(template/docs/documentation-rules.md.jinja, section 9), so an update does not need to merge
+(`template/docs/documentation-rules.md.jinja`, section 9), so an update does not need to merge
 them. Which mechanism creates and updates projects with the fewest extra tools?
 
 ## Considered Options
