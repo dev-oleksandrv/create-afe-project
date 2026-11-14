@@ -16,7 +16,7 @@ Claude Code skills that apply them. It implements the pillars of
 | Testing and documentation rules, loaded when a matching file is touched | `.claude/rules/testing.md`, `.claude/rules/docs.md` |
 | Decision records | `docs/decisions/adr-template.md`, a generated `docs/decisions/README.md` |
 | Checks and environment | `scripts/check.sh` and the scripts it runs, the link check `scripts/check-links.mjs` included; `scripts/env.sh` for the environment commands; `scripts/protect-branch.sh` for the repository settings and the GitHub ruleset of `main`; optional `scripts/check-acceptance.sh` and `scripts/fail-without-change.sh` |
-| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated): deny rules for secrets and destructive pushes, ask rules for irreversible commands such as a merge, a release, or publishing; `.claude/hooks/`: the guard hook (asks before a known token format; denies a push to `main`), the SessionStart hook (prints the branch, its base and the commits ahead, the count of uncommitted and untracked files, and merge conflicts), the check after every edit, and the Stop dispatcher for `Stop` and `SubagentStop`; `.claude/skills/`: `afe-init` (sets up the code, its stack, and its checks with the owner), `create-pr` (branches, commits, the pull request), `review` (the review before the pull request, with its rubric), `update-template`, optional `review-code` |
+| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated) with deny and ask rules; `.claude/hooks/`: the guard hook, the SessionStart hook, the check after every edit, and the Stop dispatcher; `.claude/skills/`: `afe-init`, `create-pr`, `review`, `update-template`, optional `review-code` |
 | CI | `.github/workflows/` (`check`, `decisions`, optional `secret-scan`, `code-review`, and `fail-without-change`) |
 
 Every file has one owner: the template (the files that `.template/owned.txt` lists), the
@@ -36,12 +36,9 @@ npm create afe-project@latest <directory>
 npx create-afe-project@latest <directory>
 ```
 
-The wizard asks for the project name, a one-sentence description, the GitHub repository, the CI
-runner (GitHub-hosted, or a self-hosted Linux runner), whether pull requests that change code get
-the Claude code review in CI (off by default), whether CI scans every change for secrets with
-gitleaks, and whether to add the Acceptance check (on by default) and the fail-without-change
-driver. It then writes the generated files and prints the next
-steps. Without a terminal, or with `--defaults`, it takes answers from `--data key=value` and
+The wizard asks about the project and which optional checks to turn on
+([`src/config.js`](src/config.js) lists the questions), then writes the generated files and
+prints the next steps. Without a terminal, or with `--defaults`, it takes answers from `--data key=value` and
 `--data-file answers.json`, then the defaults:
 
 ```bash

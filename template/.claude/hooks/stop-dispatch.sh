@@ -1,30 +1,20 @@
 #!/usr/bin/env bash
 # Stop and SubagentStop hook: Claude Code may not finish a turn, or a sub-agent its task, while a
-# check of what changed fails. It resolves the generated project from the input's cwd
-# (scripts/lib/root.sh), so a sub-agent in another git worktree is checked in that worktree. A
-# sub-agent's stop (SubagentStop, or an input with agent_id) in the main session's tree, the root
-# of CLAUDE_PROJECT_DIR, runs nothing and prints nothing: the main agent's Stop checks that tree,
-# and a sub-agent must not be sent back for what it did not change.
-# The green stamp (scripts/lib/stamp.sh) has two kinds, docs (Markdown) and code (every other
-# path); a kind whose stamp matches the last passing run of this hook or of scripts/check.sh runs
-# nothing, and with both matching the hook runs nothing at all, so a second run for the same stop,
-# from Stop and SubagentStop both, is a no-op. Else it runs, for the paths that differ from the base
-# of the change (scripts/lib/git-base.sh), committed or not, untracked included, each part that has
-# input, every part even when an earlier one fails:
-# - a Markdown file changed and the docs stamp does not match: scripts/check-docs.sh with the
-#   changed Markdown files (all files when one was deleted), a missing tool (exit 3) is reported
-#   without blocking; and, when a path under docs/decisions/ changed, scripts/check-decisions.sh,
-#   the integrity checks;
-# - a path other than Markdown changed, the code stamp does not match, and CHECK_FAST of
-#   .claude/harness.conf is set and is not scripts/check-docs.sh: scripts/env.sh fast.
-# It stores the fast stamp of each kind whose parts all passed, even when the other kind failed.
-# All parts pass: it resets the Ralph count and prints nothing. A part
-# fails: one message on stderr names each failing part with at most the last 40 lines of its
-# output (scripts/check-docs.sh: a summary instead, see docs_brief; its missing tool report: the
-# first 10 lines), and exit 2 sends the agent back, up to RALPH_MAX_ITERATIONS failing stops per session,
-# agent, and worktree (scripts/lib/harness-conf.sh); at the cap a systemMessage on stdout tells the
-# user, and later stops of the same key on the same tree (both stamps) exit 0 at once, silently,
-# until the tree changes. During an unresolved merge conflict it lets the agent stop.
+# check of what changed fails. It checks the generated project that holds the input's cwd
+# (scripts/lib/root.sh), so a sub-agent in another git worktree is checked there; a sub-agent that
+# stops in the main session's tree, the root of CLAUDE_PROJECT_DIR, runs nothing: the main agent's
+# Stop checks that tree.
+# A kind of the green stamp (scripts/lib/stamp.sh: docs, code) that matches the last passing run
+# runs nothing. Otherwise, for the paths that differ from the base of the change
+# (scripts/lib/git-base.sh), committed or not, untracked included, every part runs even when an
+# earlier one fails:
+# - a Markdown file changed: scripts/check-docs.sh with the changed files (all files when one was
+#   deleted), and scripts/check-decisions.sh when a path under docs/decisions/ changed;
+# - another path changed, and CHECK_FAST of .claude/harness.conf is set and is not
+#   scripts/check-docs.sh: scripts/env.sh fast.
+# A failing part sends the agent back (exit 2) with one message for all failing parts, up to the
+# Ralph cap (scripts/lib/harness-conf.sh). During an unresolved merge conflict it lets the agent
+# stop.
 # Not in GitHub Actions: claude-code-action restores .claude/ from the base branch there, but the
 # scripts this hook runs or sources stay at the pull request's head, next to the review job's
 # credentials.

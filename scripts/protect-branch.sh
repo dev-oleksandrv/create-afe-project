@@ -1,24 +1,14 @@
 #!/usr/bin/env bash
 # Protects the default branch on GitHub and applies the repository settings that AGENTS.md and the
-# create-pr skill assume, with the GitHub CLI; run it once as a
-# repository admin, after the first push, and again with --require-base when that applies. A change
-# of repository settings is an owner action: an agent runs it only on the owner's explicit
-# instruction. In this order:
-# 1. Merge commits only, without squash and rebase merging, and "Automatically delete head
-#    branches": these work on every plan.
-# 2. Secret scanning with push protection: public repositories have them; a private one may need
-#    GitHub Advanced Security, so a refusal by the plan is reported and the script goes on. Any
-#    other error is reported with the gh output; the script still applies the ruleset, then fails
-#    and names the secret-scanning error again in its last line.
-# 3. The repository ruleset "protect default branch": changes reach the default branch only through
-#    pull requests merged with a merge commit whose `check` (`check` workflow) and `integrity`
-#    (`decisions` workflow) jobs pass, with --require-base also `base`, and only these: `readiness`
-#    signals and AI review is a sensor; it cannot be force-pushed or deleted. Updating a ruleset
-#    that requires `base` keeps it without --require-base while the fail-without-change workflow
-#    exists, drops it otherwise, and says which; a ruleset it cannot read stops the run unchanged.
-#    Rulesets need a public repository, or a GitHub plan that offers them for private ones;
-#    without one, the rule rests on the owner and review, and the script says so and ends without
-#    error, unless secret scanning failed as in 2. It looks the ruleset up by name among the repository's own, not inherited ones.
+# create-pr skill assume, with the GitHub CLI. A repository admin runs it once after the first
+# push; a change of repository settings is an owner action, so an agent runs it only on the
+# owner's explicit instruction. In this order:
+# 1. Merge commits only, and "Automatically delete head branches".
+# 2. Secret scanning with push protection; a refusal by the plan (a private repository may need
+#    GitHub Advanced Security) is reported and the script goes on.
+# 3. The repository ruleset "protect default branch": a pull request merged with a merge commit,
+#    no deletion or force push, and the checks `check` and `integrity`, with --require-base also
+#    `base`. Without rulesets on the plan, the script says so and ends without error.
 #
 # Usage: scripts/protect-branch.sh [--dry-run] [--repo owner/name] [--require-base]
 #   --dry-run       print the settings and the ruleset as one JSON object and change nothing
