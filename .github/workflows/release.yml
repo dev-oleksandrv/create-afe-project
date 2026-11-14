@@ -2,7 +2,8 @@
 # scripts/tag-release.sh pushes after a Version PR merges and starts with workflow_dispatch, or a
 # tag pushed by hand. It checks that package.json and CHANGELOG.md are at X.Y.Z, runs the package
 # tests, publishes a GitHub release with the CHANGELOG.md section as its notes, and publishes the
-# npm package create-afe-project.
+# npm package create-afe-project. npm authenticates by trusted publishing (OIDC, id-token: write):
+# the package's settings on npmjs.com name this repository and release.yml; no token is stored.
 name: release
 
 on:
@@ -55,6 +56,4 @@ jobs:
         run: gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
 
       - name: npm package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public

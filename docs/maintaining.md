@@ -187,8 +187,10 @@ Before 1.0.0, MINOR takes the role of MAJOR.
    which the pinned `@changesets/cli` installs (`npm ci`), and fails without tagging when a
    changeset does not parse. The workflow checks that the tag is on `main` and
    that `package.json` and the `CHANGELOG.md` section are at `X.Y.Z`, runs the package tests,
-   publishes a GitHub release with that section as its notes, then the package to npm with the
-   repository secret `NPM_TOKEN`. A tag pushed by hand releases the same way.
+   publishes a GitHub release with that section as its notes, then the package to npm by trusted
+   publishing: the package settings on npmjs.com name this repository and `release.yml`, and npm
+   takes a short-lived OIDC token from the run, so no npm token is stored. A tag pushed by hand
+   releases the same way.
 4. Projects update with their `update-template` skill.
 
 ## 6. Pruning
