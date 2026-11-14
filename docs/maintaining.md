@@ -80,22 +80,21 @@ files updates with `create-afe-project@3` first.
 1. A push to `main` with pending changesets makes the `version` workflow open or update the
    Version PR "Release: next version". It needs the repository setting "Allow GitHub Actions to
    create and approve pull requests".
-2. Before merging it, the review of section 6 runs, and its proposals go to the owner. Merging
+2. The owner approves the workflow runs of the Version PR on its page: the runs of a pull
+   request opened with `GITHUB_TOKEN` wait for that, the required check `integrity` among them.
+3. Before merging it, the review of section 6 runs, and its proposals go to the owner. Merging
    the Version PR is the owner's release decision.
-3. The push of that merge tags `vX.Y.Z` and starts the `release` workflow, which publishes the
+4. The push of that merge tags `vX.Y.Z` and starts the `release` workflow, which publishes the
    GitHub release and the npm package by trusted publishing, so no npm token is stored. A tag
    pushed by hand releases the same way.
-4. Projects update with their `update-template` skill.
+5. Projects update with their `update-template` skill.
 
 The details are in the headers of `.github/workflows/version.yml`,
-`.github/workflows/release.yml`, and `scripts/tag-release.sh`. Two things they do not say:
-
-- The workflows know the Version PR by its author, `github-actions[bot]`, and exempt it from
-  the description sections and the reviews. With the repository setting above, anyone with write
-  access can have a workflow open such a pull request; the owner, who merges every pull request,
-  sees the author.
-- Open question: whether a pull request opened with `GITHUB_TOKEN` starts the `pull_request`
-  workflows. They started on #16, which a `version` run that the owner re-ran opened.
+`.github/workflows/release.yml`, and `scripts/tag-release.sh`. One thing they do not say: the
+workflows know the Version PR by its author, `github-actions[bot]`, and exempt it from the
+description sections and the reviews. With the repository setting above, anyone with write access
+can have a workflow open such a pull request; the owner, who merges every pull request, sees the
+author.
 
 ## 6. Pruning
 
