@@ -1,5 +1,5 @@
-# The guard hook denies a push to the default branch once the remote has it. Needs $a, hook, and
-# $ghp from 10-, 60-, and 65-*.sh, and $work/r-none.md from 40-readiness.sh.
+# The guard hook denies a push to the default branch once the remote has it. Needs $a from
+# 10-variant-a.sh, hook and $ghp from 60-hooks-guard.sh, and $work/r-none.md from 40-readiness.sh.
 # A pushed feature branch must still be compared with main, not with its own upstream.
 git init -q --bare "$work/origin.git"
 git -C "$a" remote add origin "$work/origin.git" && gitc "$a" push -q origin main

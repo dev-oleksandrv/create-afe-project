@@ -3,14 +3,12 @@
 # adds, modifies, renames, or copies, by TEST_GLOBS of .claude/harness.conf, must pass with the
 # change and fail on the base: a failure on both sides, such as a missing toolchain, is no
 # evidence. It builds a temporary git worktree at the merge base, copies the change's version of
-# the test files and of FWC_TOOLCHAIN_GLOBS into it, runs FWC_INSTALL there (SETUP when FWC_INSTALL
-# is empty), then FWC_TEST with one test file as its last argument, and reads pass or fail from the
-# exit code, per file: a file that passes on the base fails the check, unless --allow-pass-on-base
-# is given (the pull request label `tests-pass-on-base`). When FWC_CLASSIFIER is set, it receives
-# the log and the test file and exits 0 when the base failed for the expected reason. It skips when
-# TEST_GLOBS or FWC_TEST is empty, or when no test file changed. It runs the project's own
-# commands, locally before the pull request and in the module's workflow
-# (.github/workflows/fail-without-change.yml).
+# the test files and of FWC_TOOLCHAIN_GLOBS into it, runs SETUP there, then FWC_TEST with one test
+# file as its last argument, and reads pass or fail from the exit code, per file: a file that
+# passes on the base fails the check, unless --allow-pass-on-base is given (the pull request label
+# `tests-pass-on-base`). It skips when TEST_GLOBS or FWC_TEST is empty, or when no test file
+# changed. It runs the project's own commands, locally before the pull request and in the
+# module's workflow (.github/workflows/fail-without-change.yml).
 #
 # Usage: scripts/fail-without-change.sh [--base <ref>] [--allow-pass-on-base]
 set -uo pipefail
@@ -51,15 +49,14 @@ printf '%s\n' "$tests" "$toolchain" | sed '/^$/d' | sort -u | while IFS= read -r
   mkdir -p "$wt/$(dirname "$f")" && cp -p "$f" "$wt/$f"
 done
 
-install=$(conf_get FWC_INSTALL "$(conf_get SETUP)")
+install=$(conf_get SETUP)
 if [ -n "$install" ] && ! (cd "$wt" && bash -c "$install") < /dev/null > "$work/install.log" 2>&1; then
-  echo "FAIL: FWC_INSTALL failed on the base: $install"
+  echo "FAIL: SETUP failed on the base: $install"
   tail -n 20 "$work/install.log"
   exit 1
 fi
 
 failures=0
-classifier=$(conf_get FWC_CLASSIFIER)
 while IFS= read -r t; do
   # shellcheck disable=SC2016
   if ! bash -c "$test_cmd \"\$1\"" fwc "$t" < /dev/null > "$work/now.log" 2>&1; then
@@ -76,10 +73,6 @@ while IFS= read -r t; do
       echo "FAIL: $t passes on the base; a new or changed test must fail without the change"
       failures=$((failures + 1))
     fi
-  elif [ -n "$classifier" ] && ! bash -c "$classifier \"\$1\" \"\$2\"" fwc "$work/test.log" "$t" < /dev/null > "$work/class.log" 2>&1; then
-    echo "FAIL: $t fails on the base for another reason than the change (FWC_CLASSIFIER):"
-    tail -n 20 "$work/class.log"
-    failures=$((failures + 1))
   else
     echo "ok: $t passes with the change and fails on the base"
   fi

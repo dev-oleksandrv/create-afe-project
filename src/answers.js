@@ -3,8 +3,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as p from '@clack/prompts';
-import { parse as parseYaml } from 'yaml';
-import { ANSWERS_FILE, LEGACY_ANSWERS_FILE, QUESTIONS, REMOVED_QUESTIONS, computed } from './config.js';
+import { ANSWERS_FILE, QUESTIONS, REMOVED_QUESTIONS, computed } from './config.js';
 
 export class UsageError extends Error {}
 
@@ -96,28 +95,15 @@ export async function collectAnswers({ given = {}, previous = {}, useDefaults = 
 }
 
 /**
- * Reads the recorded answers of a project: the answers file, or a Copier answers file of a project
- * generated before the template moved to npm.
+ * Reads the recorded answers of a project from its answers file.
  * @param {string} dir
- * @returns {{ version: string | null, answers: Record<string, unknown>, legacy: boolean } | null}
+ * @returns {{ version: string | null, answers: Record<string, unknown> } | null}
  */
 export function readAnswers(dir) {
   const file = join(dir, ANSWERS_FILE);
-  if (existsSync(file)) {
-    const { _version = null, ...rest } = JSON.parse(readFileSync(file, 'utf8'));
-    return { version: _version, answers: strip(rest), legacy: false };
-  }
-  const legacy = join(dir, LEGACY_ANSWERS_FILE);
-  if (existsSync(legacy)) {
-    const data = parseYaml(readFileSync(legacy, 'utf8')) ?? {};
-    const commit = typeof data._commit === 'string' ? data._commit.replace(/^v/, '').split('-')[0] : null;
-    return { version: commit, answers: strip(data), legacy: true };
-  }
-  return null;
-}
-
-function strip(data) {
-  return Object.fromEntries(Object.entries(data).filter(([k]) => !k.startsWith('_')));
+  if (!existsSync(file)) return null;
+  const { _version = null, ...rest } = JSON.parse(readFileSync(file, 'utf8'));
+  return { version: _version, answers: Object.fromEntries(Object.entries(rest).filter(([k]) => !k.startsWith('_'))) };
 }
 
 /**

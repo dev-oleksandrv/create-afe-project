@@ -15,13 +15,10 @@
 scripts/check.sh
 ```
 
-The full check runs, in this order, the project's code checks (`scripts/checks.d/`, through
-`scripts/check-project.sh`), the link check with its check of backticked code paths
-(`scripts/check-docs.sh`), the decision records (`scripts/check-decisions.sh`), and
-the template integrity (`scripts/check-template.sh`). It runs every part even when an earlier one
-fails; a passing part prints one line, a failing part the end of its output, and `--verbose`
-prints everything. `scripts/check.sh --if-changed` returns at once when nothing changed since the
-last passing run. CI runs the same check in the `check` workflow.
+The full check runs the project's code checks (`scripts/checks.d/`), the link check, the
+decision records, and the template integrity. `--verbose` prints everything, and `--if-changed`
+returns at once when nothing changed since the last passing run. CI runs the same check in the
+`check` workflow.
 
 Requires Git, bash, and Node.js 20 or later; nothing else to install. External links are not
 checked; a project that wants it adds a check such as [lychee](https://lychee.cli.rs/) in
@@ -51,11 +48,7 @@ The answers in `.afe-answers.json` turn these on or off:
 
 Changes reach `main` only through pull requests with passing checks, merged with a merge
 commit. After the first push, a repository admin applies the repository settings and the GitHub
-ruleset once (`--dry-run` shows them first): merge commits only and "Automatically delete head
-branches", on every plan; secret scanning with push protection, which a private repository may
-need GitHub Advanced Security for; and a ruleset on `main` that requires a pull request, allows
-no deletion or force push, and requires the checks `check` and `integrity`{% if fail_without_change %} (and, once
-set as below, `base`){% endif %}, and only these.
+ruleset once; `--dry-run` shows them first, and the header of the script says what they are.
 Rulesets need a public repository or, for a private one, a paid plan.
 
 ```bash

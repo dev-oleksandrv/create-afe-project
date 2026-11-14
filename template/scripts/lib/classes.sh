@@ -37,7 +37,7 @@ class_of() {
   fi
   if [ -z "$name" ]; then
     case "$1" in
-      *.md|.template/owned.sha256|.afe-answers.json|.copier-answers.yml|.claude/settings.json) name=low ;;
+      *.md|.template/owned.sha256|.afe-answers.json|.claude/settings.json) name=low ;;
       *) name=normal ;;
     esac
   fi
@@ -52,7 +52,7 @@ review_level() {
   local p c best=1 update=1 answers=0
   for p in "$@"; do
     case "$p" in
-      .afe-answers.json|.copier-answers.yml) answers=1 ;;
+      .afe-answers.json) answers=1 ;;
       AGENTS.md|.template/owned.sha256|.claude/settings.json|docs/decisions/README.md) ;;
       README.md|CLAUDE.md|.gitignore|.claude/path-classes|.claude/harness.conf|\
       .claude/settings.project.json) ;;

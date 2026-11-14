@@ -1,12 +1,11 @@
 // Creates a project from the template, and updates a project to the template of this package.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { UsageError, collectAnswers, compareVersions, readAnswers, writeAnswers } from './answers.js';
-import { LEGACY_ANSWERS_FILE, MIGRATIONS, QUESTIONS, SEEDED, TASKS, legacyNotes, messageAfterCreate } from './config.js';
+import { MIGRATIONS, QUESTIONS, SEEDED, TASKS, messageAfterCreate } from './config.js';
 import { renderTemplate } from './render.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,7 +13,6 @@ export const TEMPLATE_DIR = join(ROOT, 'template');
 export const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
 
 const OWNED_LIST = '.template/owned.txt';
-const MANIFEST = '.template/owned.sha256';
 const START = '<!-- project:start -->';
 const END = '<!-- project:end -->';
 
@@ -67,38 +65,6 @@ function withBlock(rendered, block) {
   const si = lines.indexOf(START);
   const ei = lines.indexOf(END);
   return [...lines.slice(0, si + 1), ...block, ...lines.slice(ei)].join('\n');
-}
-
-/** The content that the manifest hash covers, as scripts/check-template.sh computes it. */
-function hashed(rel, text) {
-  if (rel !== 'AGENTS.md') return text;
-  let skip = false;
-  const kept = [];
-  for (const line of text.split('\n')) {
-    if (line === START) {
-      kept.push(line);
-      skip = true;
-    } else if (line === END) {
-      skip = false;
-      kept.push(line);
-    } else if (!skip) kept.push(line);
-  }
-  return kept.join('\n');
-}
-
-const sha256 = (text) => createHash('sha256').update(text).digest('hex');
-
-/** Template-owned files whose content no longer matches the recorded manifest. */
-function editedOwnedFiles(dir) {
-  const manifest = join(dir, MANIFEST);
-  if (!existsSync(manifest)) return [];
-  const edited = [];
-  for (const line of listed(readFileSync(manifest, 'utf8'))) {
-    const [hash, rel] = line.split(/\s+/, 2);
-    const file = join(dir, rel);
-    if (existsSync(file) && sha256(hashed(rel, readFileSync(file, 'utf8'))) !== hash) edited.push(rel);
-  }
-  return edited;
 }
 
 function isDirty(dir) {
@@ -189,11 +155,10 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
   const newOwned = listed(String(rendered.get(OWNED_LIST).content));
   const oldOwnedFile = join(dir, OWNED_LIST);
   const oldOwned = existsSync(oldOwnedFile) ? listed(readFileSync(oldOwnedFile, 'utf8')) : [];
-  const edited = editedOwnedFiles(dir);
-  // Recorded answers without a question here are dropped: those of a Copier answers file, some with
-  // a warning, and those of a question removed since, such as docs_review in 3.0.0.
+  // Recorded answers without a question here are dropped: those of a question removed since, such
+  // as docs_review in 3.0.0.
   const dropped = Object.keys(recorded.answers).filter((k) => !QUESTIONS.some((q) => q.name === k));
-  const notes = recorded.legacy ? legacyNotes(recorded.answers) : [];
+  const notes = [];
   const pending = MIGRATIONS.filter(
     (m) => compareVersions(m.version, recorded.version) > 0 && compareVersions(m.version, VERSION) <= 0,
   );
@@ -226,7 +191,6 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
       }
     }
     writeAnswers(dir, VERSION, answers);
-    if (recorded.legacy) rmSync(join(dir, LEGACY_ANSWERS_FILE));
 
     for (const m of pending) if (m.after) run(dir, m.after, quiet, env);
     if (existsSync(env.AFE_NOTES)) notes.push(...listed(readFileSync(env.AFE_NOTES, 'utf8')));
@@ -236,7 +200,7 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
   runTasks(dir, quiet);
 
   return {
-    from: recorded.version, to: VERSION, removed, edited, seeded, unowned,
-    migrations: pending.map((m) => m.version), legacy: recorded.legacy, dropped, notes,
+    from: recorded.version, to: VERSION, removed, seeded, unowned,
+    migrations: pending.map((m) => m.version), dropped, notes,
   };
 }

@@ -188,7 +188,7 @@ check_size() {
   limit=$(conf_get DIFF_WARN_LINES)
   [ -n "$limit" ] || return 0
   n=$(git diff --numstat "$mb" -- . ':(exclude).template/owned.sha256' ':(exclude).afe-answers.json' \
-        ':(exclude).copier-answers.yml' ':(exclude).claude/settings.json' ':(exclude)docs/decisions/README.md' | awk '{a += $1 + $2} END {print a + 0}')
+        ':(exclude).claude/settings.json' ':(exclude)docs/decisions/README.md' | awk '{a += $1 + $2} END {print a + 0}')
   n=$((n + $(git ls-files -z --others --exclude-standard | xargs -0 cat 2>/dev/null | wc -l | tr -d ' ')))
   [ "$n" -le "$limit" ] || echo "WARNING: the change has $n changed lines, more than DIFF_WARN_LINES ($limit); split it, or say in the description why it is one change"
 }

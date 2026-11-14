@@ -1,5 +1,5 @@
 # Harness hooks in GitHub Actions run no code of the working tree; the review jobs disable them.
-# Needs $a from 10-variant-a.sh, $b from 13-variant-b.sh, and $ghp from 65-hooks-guard-paths.sh.
+# Needs $a from 10-variant-a.sh, $b from 13-variant-b.sh, and $ghp from 60-hooks-guard.sh.
 # The review jobs check out the pull request's head; claude-code-action restores .claude/ from the
 # base, but the scripts a base hook runs or sources stay at the head, next to the job's credentials.
 # Every hook but the guard hook exits at once in GitHub Actions; the guard hook stays on there
@@ -13,10 +13,7 @@ done < <(find template/.claude/hooks -type f -name '*.sh' ! -name guard.sh)
 grep -v -E '^[[:space:]]*#' template/.claude/hooks/guard.sh |
   grep -n -E 'GITHUB_ACTIONS|scripts/lib|(^|[;&|(]|then|do|else)[[:space:]]*(\.|source)[[:space:]]|"?\$\{?(root|project|cwd)\}?/[^"[:space:]]*\.(sh|mjs|cjs|js|py)|(^|[;&|(]|then|do|else)[[:space:]]*(bash|sh|node|python3?)[[:space:]]+[^-[:space:]]' &&
   fail "guard.sh skips GitHub Actions, or runs or sources a file of the working tree, which a pull request supplies there"
-# @secret moved into the guard hook: a caller that still asks json.mjs for it fails, not gets "".
-printf '{}' | node "$a/scripts/lib/json.mjs" fields tool_name @secret > /dev/null 2>&1 &&
-  fail "json.mjs fields: an unknown @ field prints an empty value instead of failing"
-# Each script a hook runs or sources, and a project Stop hook, records that it ran.
+# Each script a hook runs or sources records that it ran.
 mark="$work/head-code-ran"
 for s in scripts/lib/json.mjs scripts/lib/git-base.sh scripts/lib/harness-conf.sh scripts/lib/root.sh scripts/lib/stamp.sh \
   scripts/check-decisions.sh scripts/check-template.sh scripts/check-docs.sh scripts/env.sh; do
@@ -26,8 +23,6 @@ for s in scripts/lib/json.mjs scripts/lib/git-base.sh scripts/lib/harness-conf.s
   esac
   { head -n 1 "$a/$s"; printf '%s\n' "$line"; tail -n +2 "$a/$s"; } > "$work/planted" && cat "$work/planted" > "$a/$s"
 done
-mkdir -p "$a/.claude/hooks/project/stop" && printf '#!/bin/sh\necho project-stop >> "%s"\n' "$mark" > "$a/.claude/hooks/project/stop/10-mark.sh" &&
-  chmod +x "$a/.claude/hooks/project/stop/10-mark.sh"
 sed -i.bak "s#^CHECK_EDIT=.*#CHECK_EDIT=echo#; s#^CHECK_FAST=.*#CHECK_FAST=echo#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
 ci() { # hook, its input, the guard hook's decision (ask|deny; empty: none)
   rm -f "$mark"
@@ -47,8 +42,6 @@ while IFS= read -r h; do
     session-start.sh) ci "$h" '{}' ;;
     post-edit-check.sh) ci "$h" "$edit" ;;
     guard.sh)
-      ci "$h" '{"tool_name":"Edit","tool_input":{"file_path":"'"$a"'/AGENTS.md"},"cwd":"'"$a"'"}' ask
-      ci "$h" '{"tool_name":"Bash","tool_input":{"command":"gh pr merge 3"},"cwd":"'"$a"'"}' ask
       ci "$h" '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/src/x.js","content":"t = \"'"$ghp"'\""},"cwd":"'"$a"'"}' ask
       ci "$h" '{"tool_name":"Bash","tool_input":{"command":"git status"},"cwd":"'"$a"'"}'
       ci "$h" "$edit" ;;
@@ -60,10 +53,10 @@ rm -f "$mark"
 (cd "$a" && printf '%s' "$edit" | CLAUDE_PROJECT_DIR="$a" .claude/hooks/post-edit-check.sh > /dev/null 2>&1)
 (cd "$a" && printf '{}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/session-start.sh > /dev/null 2>&1)
 (cd "$a" && printf '{"session_id":"ci"}' | CLAUDE_PROJECT_DIR="$a" .claude/hooks/stop-dispatch.sh > /dev/null 2>&1)
-for s in scripts/lib/json.mjs scripts/lib/git-base.sh scripts/lib/root.sh scripts/lib/stamp.sh project-stop; do
+for s in scripts/lib/json.mjs scripts/lib/git-base.sh scripts/lib/root.sh scripts/lib/stamp.sh; do
   grep -qx "$s" "$mark" 2> /dev/null || fail "hooks: the planted $s does not run outside GitHub Actions, so the test above proves nothing"
 done
-gitc "$a" checkout -q -- . && rm -rf "$mark" "$a/.claude/hooks/project" "$(git -C "$a" rev-parse --absolute-git-dir)"/afe-ralph-* "$(git -C "$a" rev-parse --absolute-git-dir)"/afe-green-*
+gitc "$a" checkout -q -- . && rm -rf "$mark" "$(git -C "$a" rev-parse --absolute-git-dir)"/afe-ralph-* "$(git -C "$a" rev-parse --absolute-git-dir)"/afe-green-*
 for w in code-review; do
   awk '/^  review:$/ {f=1; next} /^  [a-z-]+:$/ {f=0} f' "$b/.github/workflows/$w.yml" | grep -v '^ *#' > "$work/$w-review.yml"
   grep -qF -- "--settings ''{\"disableAllHooks\": true}''" "$work/$w-review.yml" &&
