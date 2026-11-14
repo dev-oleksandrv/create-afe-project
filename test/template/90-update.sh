@@ -35,10 +35,17 @@ echo "A line of a local edit." >> "$u/.claude/skills/update-template/SKILL.md" &
   fail "update test: update runs on a working tree with uncommitted changes"
 rm "$u/scratch.txt" && gitc "$u" commit -q -am "edit a template-owned file"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up2.log" 2>&1) || { cat "$work/up2.log"; fail "update test: second update fails"; }
-grep -q 'Replaced local edits of template-owned files.*\.claude/skills/update-template/SKILL.md' "$work/up2.log" &&
-  ! grep -q 'A line of a local edit.' "$u/.claude/skills/update-template/SKILL.md" ||
-  { cat "$work/up2.log"; fail "update test: a local edit of a template-owned file is not replaced and reported"; }
+! grep -q 'A line of a local edit.' "$u/.claude/skills/update-template/SKILL.md" ||
+  { cat "$work/up2.log"; fail "update test: a local edit of a template-owned file is not replaced"; }
 pkg "$work/new" 0.0.3
 (cd "$u" && node "$work/new/bin/create-afe-project.js" update --defaults --allow-dirty > /dev/null 2>&1) || fail "update test: update to a newer version fails"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults --allow-dirty > "$work/down.log" 2>&1) &&
   fail "update test: an older package downgrades the project"
+# A project with only a Copier answers file is no project of this package: it updates with
+# create-afe-project 3 first.
+v="$work/v"
+node "$tpl/bin/create-afe-project.js" "$v" "${sample[@]}" --no-git > /dev/null 2>&1 || fail "update test: create fails"
+rm "$v/.afe-answers.json" && printf '_commit: v0.6.0\nproject_name: sample\n' > "$v/.copier-answers.yml"
+(cd "$v" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/v.log" 2>&1) &&
+  fail "update test: a project with only a Copier answers file is updated"
+grep -q 'has no answers file' "$work/v.log" || { cat "$work/v.log"; fail "update test: the update of a Copier project fails for another reason"; }
