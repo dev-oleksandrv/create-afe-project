@@ -11,7 +11,7 @@ Arguments: none, or a sentence about what to build.
 
 The owner started this skill: the answers given in it are the owner's instructions, so what the
 owner confirms is recorded as decided, and nothing else is. Read `AGENTS.md` first; this skill
-applies it. Expect a permission prompt for the project block of `AGENTS.md`.
+applies it.
 
 ## 1. Look before asking
 
