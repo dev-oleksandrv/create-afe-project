@@ -91,29 +91,12 @@ bad=
 # (exit 2 fails, another non-zero exit warns), or plain (non-zero fails). Either way the kind does
 # not get its stamp.
 part_input=
-# docs_brief <output>: keeps a documentation failure from flooding the chat: per file, the count of
-# each rule in its "<path>:<line>[:<col>] error <RULE>/..." lines (markdownlint), then the first 10
-# lines of the output without the markdownlint-cli2 version banner, then how many lines remain.
+# docs_brief <output>: keeps a documentation failure from flooding the chat: the first 10 lines of
+# the output, then how many lines remain.
 docs_brief() {
   printf '%s\n' "$1" | awk '
-    /^markdownlint-cli2 v/ { next }
-    { total++; if (total <= 10) first[total] = $0 }
-    $1 ~ /^[^ :]+:[0-9]+(:[0-9]+)?$/ && $2 == "error" && $3 ~ /^[A-Za-z]+[0-9]+/ {
-      file = $1; sub(/:[0-9]+(:[0-9]+)?$/, "", file)
-      if (!(file in nf)) { nf[file] = 1; order[++n] = file }
-      key = file SUBSEP $3
-      if (!(key in cnt)) { rules[file] = rules[file] (rules[file] == "" ? "" : ", ") $3; cnt[key] = 0 }
-      cnt[key]++
-    }
-    END {
-      for (i = 1; i <= n; i++) {
-        file = order[i]; line = ""; m = split(rules[file], r, ", ")
-        for (j = 1; j <= m; j++) line = line (j > 1 ? ", " : "") r[j] " x" cnt[file SUBSEP r[j]]
-        print file ": " line
-      }
-      for (i = 1; i <= total && i <= 10; i++) print first[i]
-      if (total > 10) print "... " (total - 10) " more lines"
-    }'
+    { total++; if (total <= 10) print }
+    END { if (total > 10) print "... " (total - 10) " more lines" }'
 }
 part() {
   local name=$1 kind=$2 how=$3 out code cmd

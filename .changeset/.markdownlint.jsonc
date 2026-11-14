@@ -1,8 +1,0 @@
-{
-  // Changesets start with front matter and a summary, never a heading: the summary becomes a
-  // bullet of CHANGELOG.md (docs/maintaining.md, section 2). This file replaces the "config" of
-  // .markdownlint-cli2.jsonc in this directory, so it repeats it and turns off MD041 only.
-  "default": true,
-  "MD013": false,
-  "MD041": false
-}

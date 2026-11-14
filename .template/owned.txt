@@ -36,4 +36,3 @@ scripts/lib/stamp.sh
 .github/workflows/decisions.yml
 .github/workflows/code-review.yml
 .github/workflows/secret-scan.yml
-.markdownlint-cli2.jsonc

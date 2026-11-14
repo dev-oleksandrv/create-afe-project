@@ -10,26 +10,23 @@ stop; [ $? -eq 0 ] && [ ! -s "$work/stop.log" ] || { cat "$work/stop.log"; fail 
 # Two failing parts: one message names both, then the stop at the cap lets the agent stop.
 gitc "$a" switch -q -c disp
 sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=echo fast-broke; exit 1#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
-printf '#Bad heading\n' > "$a/docs/bad.md"
+printf '# Bad\n\nSee [x](nope.md).\n' > "$a/docs/bad.md"
 stop; [ $? -eq 2 ] && [ "$(grep -c '^Stop checks failed' "$work/stop.log")" -eq 1 ] &&
   grep -q '^== scripts/check-docs.sh failed' "$work/stop.log" && grep -q '^== the fast check.* failed' "$work/stop.log" &&
   grep -qx fast-broke "$work/stop.log" || { cat "$work/stop.log"; fail "stop-dispatch: two failing parts do not give one message that names both"; }
 stop; [ $? -eq 0 ] && grep -q "Ralph loop cap of 2 reached" "$work/stop.log" || { cat "$work/stop.log"; fail "stop-dispatch: blocks at the cap"; }
 rm "$a/docs/bad.md"
-# A long documentation failure is summarised per file and rule, capped at 10 raw lines, without the
-# version banner, and points to the full output; the failing fast check keeps its last 40 lines.
+# A long documentation failure is capped at its first 10 lines, counts the rest, and points to the
+# full output; the failing fast check keeps its last 40 lines.
 cp "$a/scripts/check-docs.sh" "$work/check-docs.keep"
-{ printf '#!/usr/bin/env bash\necho "markdownlint-cli2 v0 (markdownlint v0)"\n'
-  i=1; while [ $i -le 30 ]; do printf 'echo "docs/a.md:%s:1 error MD029/ol-prefix Prefix"\n' $i; i=$((i+1)); done
-  printf 'echo "docs/a.md:5 error MD036/no-emphasis-as-heading Emphasis"\necho "docs/b.md:2:3 error MD029/ol-prefix Prefix"\nexit 1\n'; } > "$a/scripts/check-docs.sh"
+printf '#!/usr/bin/env bash\nseq -f "FAIL: docs/a.md:%%g: nope.md" 32\nexit 1\n' > "$a/scripts/check-docs.sh"
 sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=seq -f fast-%g 50; exit 1#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
 echo x > "$a/docs/long.md"
 stop '{"session_id":"long"}'
-[ $? -eq 2 ] && grep -qx 'docs/a.md: MD029/ol-prefix x30, MD036/no-emphasis-as-heading x1' "$work/stop.log" &&
-  grep -qx 'docs/b.md: MD029/ol-prefix x1' "$work/stop.log" && grep -qx '\.\.\. 22 more lines' "$work/stop.log" &&
-  grep -qx 'Full output: scripts/check-docs.sh docs/long.md' "$work/stop.log" && ! grep -q 'markdownlint-cli2 v0' "$work/stop.log" &&
-  [ "$(grep -c ' error MD029' "$work/stop.log")" -eq 10 ] && grep -qx fast-50 "$work/stop.log" && grep -qx fast-11 "$work/stop.log" &&
-  ! grep -qx fast-10 "$work/stop.log" || { cat "$work/stop.log"; fail "stop-dispatch: a long documentation failure is not summarised and capped, or the fast check loses its tail"; }
+[ $? -eq 2 ] && grep -qx 'FAIL: docs/a.md:10: nope.md' "$work/stop.log" && ! grep -qx 'FAIL: docs/a.md:11: nope.md' "$work/stop.log" &&
+  grep -qx '\.\.\. 22 more lines' "$work/stop.log" && grep -qx 'Full output: scripts/check-docs.sh docs/long.md' "$work/stop.log" &&
+  grep -qx fast-50 "$work/stop.log" && grep -qx fast-11 "$work/stop.log" &&
+  ! grep -qx fast-10 "$work/stop.log" || { cat "$work/stop.log"; fail "stop-dispatch: a long documentation failure is not capped, or the fast check loses its tail"; }
 # A missing tool (exit 3) is reported in at most 10 lines.
 printf '#!/usr/bin/env bash\nseq -f missing-%%g 20\nexit 3\n' > "$a/scripts/check-docs.sh"
 stop '{"session_id":"long3"}'
@@ -80,7 +77,7 @@ rm -f "$work/fast.marker" "$a/src.txt" "$gd"/afe-ralph-* && gitc "$a" checkout -
 # A stop whose cwd is a second worktree checks that worktree, not the session's project, and
 # counts in that worktree's git directory.
 dwt="$work/disp-wt"
-gitc "$a" worktree add -q -b dispwt "$dwt" && printf '#Bad heading\n' > "$dwt/docs/bad.md"
+gitc "$a" worktree add -q -b dispwt "$dwt" && printf '# Bad\n\nSee [x](nope.md).\n' > "$dwt/docs/bad.md"
 dgd=$(git -C "$dwt" rev-parse --absolute-git-dir)
 stop '{"session_id":"wt","cwd":"'"$dwt"'"}' "$work"
 [ $? -eq 2 ] && grep -q '^== scripts/check-docs.sh failed' "$work/stop.log" && [ -f "$dgd/afe-ralph-wt" ] && [ ! -e "$gd/afe-ralph-wt" ] ||
@@ -94,7 +91,7 @@ stop '{"session_id":"wt","cwd":"'"$a"'"}' "$work"
 git -C "$a" worktree remove --force "$dwt" && gitc "$a" branch -q -D dispwt
 # A cwd in a nested repository without the harness (a vendored clone) checks the project around
 # it, not nothing.
-mkdir -p "$a/vendor/dep" && git -C "$a/vendor/dep" init -q && printf '#Bad heading\n' > "$a/docs/bad.md"
+mkdir -p "$a/vendor/dep" && git -C "$a/vendor/dep" init -q && printf '# Bad\n\nSee [x](nope.md).\n' > "$a/docs/bad.md"
 stop '{"session_id":"nested","cwd":"'"$a"'/vendor/dep"}' "$a/vendor/dep"
 [ $? -eq 2 ] && grep -q '^== scripts/check-docs.sh failed' "$work/stop.log" ||
   { cat "$work/stop.log"; fail "stop-dispatch: a cwd in a nested repository without the harness does not check the project"; }

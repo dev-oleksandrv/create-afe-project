@@ -28,10 +28,9 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   `secret_scan`, `acceptance_check`, and `fail_without_change`). A module's files use a
   conditional file name, and the documents mention the module only inside the same condition.
 - What a generated project runs. The checks: `scripts/check.sh` runs `scripts/check-project.sh`
-  (the project's `scripts/checks.d/`), `scripts/check-docs.sh` (markdownlint, then the links and
-  the code paths of `scripts/check-links.mjs`, judged by the files git knows; both run when one
-  fails), `scripts/check-decisions.sh`, and `scripts/check-template.sh`, with a green stamp
-  (`scripts/lib/stamp.sh`) for `--if-changed`. The stamp has two kinds, `docs` (Markdown) and
+  (the project's `scripts/checks.d/`), `scripts/check-docs.sh` (the links and the code paths of
+  `scripts/check-links.mjs`, judged by the files git knows), `scripts/check-decisions.sh`, and
+  `scripts/check-template.sh`, with a green stamp (`scripts/lib/stamp.sh`) for `--if-changed`. The stamp has two kinds, `docs` (Markdown) and
   `code` (every other path), each over the content of its files in a temporary index, not over
   `HEAD` or the real index, so neither `git add` nor `git commit` of the same content changes it;
   the blobs it hashes go to a temporary object directory, so it adds nothing to `.git`;
@@ -42,10 +41,10 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   kind only when its stamp does not match, up to the Ralph cap, counted per session, agent, and
   worktree; it tells the user at the cap and then lets the same key stop on the same tree without
   running anything until the tree changes. Its failure message gives each failing part the last
-  40 lines of its output, except `scripts/check-docs.sh`: per file the count of each markdownlint
-  rule, the first 10 lines, how many lines remain, and the command for the full output (a missing
-  tool: the first 10 lines). A sub-agent that stops in the main session's tree (the
-  root of `CLAUDE_PROJECT_DIR`) runs nothing: the main agent's Stop checks it. `post-edit-check.sh`
+  40 lines of its output, except `scripts/check-docs.sh`: the first 10 lines, how many lines
+  remain, and the command for the full output (a missing tool: the first 10 lines). A sub-agent
+  that stops in the main session's tree (the root of `CLAUDE_PROJECT_DIR`) runs nothing: the main
+  agent's Stop checks it. `post-edit-check.sh`
   runs `CHECK_EDIT`; `session-start.sh` prints the local state. The last three resolve the
   generated project, the nearest git repository with `.template/owned.txt`, from the input's
   `cwd` (`scripts/lib/root.sh`), so they work in any git worktree and for sub-agents and pass
@@ -85,9 +84,7 @@ English, none for English.
 
 `scripts/checks.d/15-release.sh` runs `scripts/tag-release.sh` against a local origin: it tags
 without a changeset and with only an empty one, and not while a changeset with a release is
-pending; and that such a changeset, which has no heading, passes markdownlint through
-`.changeset/.markdownlint.jsonc` with the other rules still on, and that this file stays the root
-configuration plus `MD041: false`.
+pending.
 
 `scripts/checks.d/10-template.sh` runs the template test suite: it sources
 [`test/template/lib.sh`](../test/template/lib.sh), then each `test/template/[0-9]*.sh` in name
