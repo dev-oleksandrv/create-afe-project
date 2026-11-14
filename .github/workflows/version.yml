@@ -5,8 +5,10 @@
 # that merge finds nothing pending, and scripts/tag-release.sh tags the version and starts the
 # release workflow.
 #
-# Everything runs with GITHUB_TOKEN, which starts no workflow by itself: the checks of the
-# Version PR and the release are started with workflow_dispatch, the one event it may trigger.
+# Everything runs with GITHUB_TOKEN, which starts no workflow by itself: the `check` workflow on
+# the Version PR and the release are started with workflow_dispatch, the one event it may trigger.
+# The pull_request runs of the Version PR, the required check `integrity` of decisions.yml among
+# them, wait for the owner's approval on the pull request, so it stays blocked until then.
 # The repository setting "Allow GitHub Actions to create and approve pull requests" must be on.
 name: version
 
