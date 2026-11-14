@@ -1,6 +1,6 @@
 {
   "_note": "Written by create-afe-project; never edit by hand.",
-  "_version": "3.1.0",
+  "_version": "4.0.0",
   "project_name": "create-afe-project",
   "project_description": "An npm package that creates and updates agent-friendly repositories: documentation rules, decision records, checks, and Claude Code hooks and skills.",
   "github_repo": "dev-oleksandrv/create-afe-project",
