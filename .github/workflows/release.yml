@@ -46,6 +46,13 @@ jobs:
           node-version: lts/*
           registry-url: https://registry.npmjs.org
 
+      # Trusted publishing needs npm 11.5.1 or later; lts/* is not pinned.
+      - name: npm supports trusted publishing
+        run: |
+          v="$(npm --version)"
+          node -e 'const [a,b,c]=process.argv[1].split(".").map(Number); process.exit(a>11||(a==11&&(b>5||(b==5&&c>=1)))?0:1)' "$v" ||
+            { echo "npm $v cannot publish by trusted publishing; it needs 11.5.1 or later"; exit 1; }
+
       - name: package tests
         run: npm ci && npm test
 
