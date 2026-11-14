@@ -16,11 +16,9 @@
 #   without blocking; and, when a path under docs/decisions/ changed, scripts/check-decisions.sh,
 #   the integrity checks;
 # - a path other than Markdown changed, the code stamp does not match, and CHECK_FAST of
-#   .claude/harness.conf is set and is not scripts/check-docs.sh: scripts/env.sh fast;
-# - always: each .claude/hooks/project/stop/*.sh in name order, with the hook input on stdin; exit 2
-#   or a hook that is not executable fails, another exit code is reported without blocking.
-# It stores the fast stamp of each kind whose parts and the project's Stop hooks all passed, even
-# when the other kind failed. All parts pass: it resets the Ralph count and prints nothing. A part
+#   .claude/harness.conf is set and is not scripts/check-docs.sh: scripts/env.sh fast.
+# It stores the fast stamp of each kind whose parts all passed, even when the other kind failed.
+# All parts pass: it resets the Ralph count and prints nothing. A part
 # fails: one message on stderr names each failing part with at most the last 40 lines of its
 # output (scripts/check-docs.sh: a summary instead, see docs_brief; its missing tool report: the
 # first 10 lines), and exit 2 sends the agent back, up to RALPH_MAX_ITERATIONS failing stops per session,
@@ -28,11 +26,10 @@
 # user, and later stops of the same key on the same tree (both stamps) exit 0 at once, silently,
 # until the tree changes. During an unresolved merge conflict it lets the agent stop.
 # Not in GitHub Actions: claude-code-action restores .claude/ from the base branch there, but the
-# scripts this hook and the project's Stop hooks run or source stay at the pull request's head,
-# next to the review job's credentials.
+# scripts this hook runs or sources stay at the pull request's head, next to the review job's
+# credentials.
 [ -z "${GITHUB_ACTIONS:-}" ] || exit 0
 set -uo pipefail
-shopt -s nullglob
 lib=$(cd "$(dirname "$0")/../../scripts/lib" 2>/dev/null && pwd) || exit 0
 # shellcheck source=scripts/lib/root.sh
 . "$lib/root.sh" 2>/dev/null || exit 0
@@ -84,13 +81,11 @@ done < <( { git -c core.quotePath=false diff --name-only --no-renames "$base" --
   git -c core.quotePath=false ls-files --others --exclude-standard; } 2>/dev/null | sort -u)
 
 failures= warnings= failed=
-# The kinds whose parts did not all pass: code, docs, or both (the project's Stop hooks).
+# The kinds whose parts did not all pass: code, docs.
 bad=
-# part <name> <kind> <how> <command>...: runs the command from the root, stdin from $part_input;
-# <kind> is code, docs, or both; <how> is docs (exit 3 warns, a failure gets docs_brief), project
-# (exit 2 fails, another non-zero exit warns), or plain (non-zero fails). Either way the kind does
-# not get its stamp.
-part_input=
+# part <name> <kind> <how> <command>...: runs the command from the root, without stdin; <kind> is
+# code or docs; <how> is docs (exit 3 warns, a failure gets docs_brief) or plain (non-zero fails).
+# Either way the kind does not get its stamp.
 # docs_brief <output>: keeps a documentation failure from flooding the chat: the first 10 lines of
 # the output, then how many lines remain.
 docs_brief() {
@@ -101,7 +96,7 @@ docs_brief() {
 part() {
   local name=$1 kind=$2 how=$3 out code cmd
   shift 3
-  out=$(printf '%s' "$part_input" | "$@" 2>&1)
+  out=$("$@" 2>&1 < /dev/null)
   code=$?
   [ "$code" -eq 0 ] && return 0
   bad+=" $kind"
@@ -113,7 +108,7 @@ part() {
   else
     out=$(printf '%s\n' "$out" | tail -n 40)
   fi
-  if { [ "$how" = docs ] && [ "$code" -eq 3 ]; } || { [ "$how" = project ] && [ "$code" -ne 2 ]; }; then
+  if [ "$how" = docs ] && [ "$code" -eq 3 ]; then
     warnings+=$(printf '\n== %s could not run or exited %s, not blocking:\n%s' "$name" "$code" "$out")
   else
     failures+=$(printf '\n== %s failed (exit %s):\n%s' "$name" "$code" "$out")
@@ -137,19 +132,9 @@ if [ -n "$other" ] && [ -z "$code_green" ]; then
     *) part "the fast check, scripts/env.sh fast (CHECK_FAST in .claude/harness.conf)" code plain scripts/env.sh fast ;;
   esac
 fi
-part_input=$input
-for h in .claude/hooks/project/stop/*.sh; do
-  if [ -x "$h" ]; then
-    part "project Stop hook $h" both project "$h"
-  else
-    bad+=" both"
-    failures+=$(printf '\n== project Stop hook %s is not executable; run chmod +x and commit it.' "$h")
-    failed=${failed:+$failed, }project Stop hook $h
-  fi
-done
 
-case "$bad" in *code*|*both*) ;; *) stamp_write fast code "$code_stamp" ;; esac
-case "$bad" in *docs*|*both*) ;; *) stamp_write fast docs "$docs_stamp" ;; esac
+case "$bad" in *code*) ;; *) stamp_write fast code "$code_stamp" ;; esac
+case "$bad" in *docs*) ;; *) stamp_write fast docs "$docs_stamp" ;; esac
 if [ -n "$failures" ]; then
   ralph_block "$key" "$(printf 'Stop checks failed; fix them before finishing:%s%s' "$failures" "$warnings")" "$failed" \
     "$code_stamp $docs_stamp"

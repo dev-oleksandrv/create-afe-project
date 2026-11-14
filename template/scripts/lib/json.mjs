@@ -5,8 +5,6 @@
 //   fields <path>...         read JSON from stdin; print the value at each dotted path, each
 //                            followed by a NUL byte, an empty string when missing
 //   get <path> [default]     read JSON from stdin; print the value at the path, or the default
-//   ask <reason>             print the PreToolUse decision that asks the owner, with the reason
-//   deny <reason>            print the PreToolUse decision that denies the action, with the reason
 //   message <text>           print {"systemMessage": text}, a message that the user sees
 //   settings [--check]       merge .claude/settings.template.json and .claude/settings.project.json
 //                            into .claude/settings.json (scripts/gen-settings.sh); with --check,
@@ -86,11 +84,6 @@ function settings(check) {
 const [command, ...args] = process.argv.slice(2);
 switch (command) {
   case 'fields': {
-    // @secret moved into .claude/hooks/guard.sh; fail rather than print an empty match.
-    if (args.some((p) => p.startsWith('@'))) {
-      console.error(`json.mjs: unknown field ${args.find((p) => p.startsWith('@'))}`);
-      process.exit(2);
-    }
     const data = parse(stdin());
     process.stdout.write(args.map((p) => `${text(at(data, p))}\0`).join(''));
     break;
@@ -100,12 +93,6 @@ switch (command) {
     process.stdout.write(v == null || v === '' ? (args[1] ?? '') : text(v));
     break;
   }
-  case 'ask':
-  case 'deny':
-    process.stdout.write(
-      `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: command, permissionDecisionReason: args[0] } })}\n`,
-    );
-    break;
   case 'message':
     process.stdout.write(`${JSON.stringify({ systemMessage: args[0] ?? '' })}\n`);
     break;
