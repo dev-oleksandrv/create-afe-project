@@ -14,7 +14,7 @@ gd=$(git -C "$a" rev-parse --absolute-git-dir)
 grep -qx 'RALPH_MAX_ITERATIONS=2' "$a/.claude/harness.conf" || fail "harness.conf: RALPH_MAX_ITERATIONS is not 2 by default"
 grep -qx 'REVIEW_MAX_ROUNDS=2' "$a/.claude/harness.conf" || fail "harness.conf: REVIEW_MAX_ROUNDS is not 2 by default"
 gitc "$a" switch -q -c ralph
-printf '#Bad heading\n' > "$a/docs/bad.md"
+printf '# Bad\n\nSee [x](nope.md).\n' > "$a/docs/bad.md"
 # A failing fast check that counts its runs.
 sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=echo run >> $work/ralph.runs; exit 1#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
 gitc "$a" add -A && gitc "$a" commit -q -m bad

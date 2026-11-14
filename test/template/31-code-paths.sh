@@ -36,26 +36,15 @@ expect_pass "a path that differs from a tracked file only in case fails" bash -c
   ! node scripts/check-links.mjs > out.log && grep -qxF "FAIL: docs/note.md:3: \`scripts/Check.sh\`: no such file or directory" out.log'
 
 echo "== scripts/check-docs.sh with file arguments on variant A"
-# docs/bad.md fails markdownlint (no space after the heading mark), docs/dead.md the link check;
-# docs/good.md passes both.
-bad() { printf '# Bad\n\n#Not a heading\n' > docs/bad.md; printf '# Dead\n\nSee [x](nope.md).\n' > docs/dead.md; note docs/good.md 'Fine.'; }
+# docs/bad.md fails the link check; docs/good.md passes it.
+bad() { printf '# Bad\n\nSee [x](nope.md).\n' > docs/bad.md; note docs/good.md 'Fine.'; }
 export -f bad
 expect_fail "without arguments, every Markdown file is checked" bash -c 'bad && scripts/check-docs.sh'
-expect_pass "with a file argument, only that file is linted and link-checked" bash -c 'bad && scripts/check-docs.sh docs/good.md'
-expect_fail "a file argument that fails markdownlint" bash -c 'bad && scripts/check-docs.sh docs/good.md docs/bad.md'
-expect_pass "a file argument that fails the link check, named in the output" bash -c 'bad && out=$(scripts/check-docs.sh docs/dead.md 2>&1); [ $? -ne 0 ] && printf "%s\n" "$out" | grep -q "FAIL: docs/dead.md:3: nope.md"'
-expect_pass "a file that fails markdownlint and the link check reports both" bash -c 'printf "#Bad\n\nSee [x](nope.md).\n" > docs/both.md &&
-  out=$(scripts/check-docs.sh docs/both.md 2>&1); [ $? -eq 1 ] && printf "%s\n" "$out" | grep -q "docs/both.md:1.*MD018" &&
-  printf "%s\n" "$out" | grep -q "FAIL: docs/both.md:3: nope.md"'
+expect_pass "with a file argument, only that file is checked" bash -c 'bad && scripts/check-docs.sh docs/good.md'
+expect_pass "a file argument that fails the link check, named in the output" bash -c 'bad && out=$(scripts/check-docs.sh docs/good.md docs/bad.md 2>&1); [ $? -eq 1 ] && printf "%s\n" "$out" | grep -q "FAIL: docs/bad.md:3: nope.md"'
+expect_pass "Markdown that only a linter would reject passes" bash -c 'printf "#Not a heading\n\n*   item\n" > docs/style.md && scripts/check-docs.sh docs/style.md'
 expect_fail "a file argument relative to the current directory" bash -c 'bad && cd docs && ../scripts/check-docs.sh bad.md'
 expect_pass "arguments without an existing Markdown file check nothing" bash -c 'bad && scripts/check-docs.sh scripts/check.sh docs/gone.md | grep -q "no Markdown file among the arguments"'
 mkdir -p "$work/nonode" && ln -sf "$(command -v bash)" "$work/nonode/bash" && ln -sf "$(command -v dirname)" "$work/nonode/dirname"
 (cd "$a" && PATH="$work/nonode" scripts/check-docs.sh docs/decisions/adr-template.md > "$work/nonode.log" 2>&1); [ $? -eq 3 ] && grep -q 'MISSING TOOL: node' "$work/nonode.log" ||
   { cat "$work/nonode.log"; fail "check-docs.sh with file arguments: a missing tool does not exit 3"; }
-# Without npx the link check still runs: exit 3 when it passes, its failure when it fails.
-mkdir -p "$work/nonpx" && for t in bash dirname basename node git; do ln -sf "$(command -v "$t")" "$work/nonpx/$t"; done
-(cd "$a" && printf '# Dead\n\nSee [x](nope.md).\n' > docs/dead.md && PATH="$work/nonpx" scripts/check-docs.sh docs/decisions/adr-template.md > "$work/nonpx.log" 2>&1
-  [ $? -eq 3 ] && grep -q 'MISSING TOOL: npx' "$work/nonpx.log" && grep -q '^== links: 1 Markdown files, 0 broken' "$work/nonpx.log" &&
-  { PATH="$work/nonpx" scripts/check-docs.sh docs/dead.md > "$work/nonpx.log" 2>&1; [ $? -eq 1 ]; }) ||
-  { cat "$work/nonpx.log"; fail "check-docs.sh without npx: does not run the link check, or a missing tool hides a failure"; }
-rm -f "$a/docs/dead.md"

@@ -16,8 +16,8 @@ scripts/check.sh
 ```
 
 The full check runs, in this order, the project's code checks (`scripts/checks.d/`, through
-`scripts/check-project.sh`), the Markdown lint and the link check with its check of backticked
-code paths (`scripts/check-docs.sh`), the decision records (`scripts/check-decisions.sh`), and
+`scripts/check-project.sh`), the link check with its check of backticked code paths
+(`scripts/check-docs.sh`), the decision records (`scripts/check-decisions.sh`), and
 the template integrity (`scripts/check-template.sh`). It runs every part even when an earlier one
 fails; a passing part prints one line, a failing part the end of its output, and `--verbose`
 prints everything. `scripts/check.sh --if-changed` returns at once when nothing changed since the
