@@ -21,37 +21,15 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
   template-owned files come from the working tree of `template/` through `scripts/sync-self.sh`,
   which runs the `update` command of this working tree, not from a release.
 - A project extends the template only at its extension points: `scripts/checks.d/`,
-  `.claude/hooks/project/stop/*.sh`, `.claude/path-classes`, `.claude/harness.conf`,
-  `.claude/settings.project.json`, the project block of `AGENTS.md`, and its own documents. A
-  need that the extension points do not cover is a change of the template, not a local edit.
+  `.claude/path-classes`, `.claude/harness.conf`, `.claude/settings.project.json` (its own
+  hooks and permission rules), the project block of `AGENTS.md`, and its own documents. A need
+  that the extension points do not cover is a change of the template, not a local edit.
 - Optional parts are modules behind a question of `src/config.js` (today: `code_review`,
   `secret_scan`, `acceptance_check`, and `fail_without_change`). A module's files use a
   conditional file name, and the documents mention the module only inside the same condition.
-- What a generated project runs. The checks: `scripts/check.sh` runs `scripts/check-project.sh`
-  (the project's `scripts/checks.d/`), `scripts/check-docs.sh` (the links and the code paths of
-  `scripts/check-links.mjs`, judged by the files git knows), `scripts/check-decisions.sh`, and
-  `scripts/check-template.sh`, with a green stamp (`scripts/lib/stamp.sh`) for `--if-changed`. The stamp has two kinds, `docs` (Markdown) and
-  `code` (every other path), each over the content of its files in a temporary index, not over
-  `HEAD` or the real index, so neither `git add` nor `git commit` of the same content changes it;
-  the blobs it hashes go to a temporary object directory, so it adds nothing to `.git`;
-  `--if-changed` skips only when the `full` stamps of both kinds match.
-  The hooks of `.claude/hooks/`: `guard.sh` asks before an edit of `AGENTS.md`, a known token
-  format, and the irreversible commands it names, and denies a push to the default branch;
-  `stop-dispatch.sh` checks what changed at each Stop and SubagentStop, running the checks of a
-  kind only when its stamp does not match, up to the Ralph cap, counted per session, agent, and
-  worktree; it tells the user at the cap and then lets the same key stop on the same tree without
-  running anything until the tree changes. Its failure message gives each failing part the last
-  40 lines of its output, except `scripts/check-docs.sh`: the first 10 lines, how many lines
-  remain, and the command for the full output (a missing tool: the first 10 lines). A sub-agent
-  that stops in the main session's tree (the root of `CLAUDE_PROJECT_DIR`) runs nothing: the main
-  agent's Stop checks it. `post-edit-check.sh`
-  runs `CHECK_EDIT`; `session-start.sh` prints the local state. The last three resolve the
-  generated project, the nearest git repository with `.template/owned.txt`, from the input's
-  `cwd` (`scripts/lib/root.sh`), so they work in any git worktree and for sub-agents and pass
-  over a nested repository without the harness; the guard hook judges a path in any worktree
-  too. The skills: `create-pr` (with the `review` skill and its rubric), `afe-init`,
-  `update-template`, and, with its module, `review-code`. There is no documentation co-change
-  engine, no document status or verification metadata, and no metrics of pull requests.
+- What a generated project runs is described in one place, the header of each file: the checks
+  in `template/scripts/`, the hooks in `template/.claude/hooks/`, the permission rules in
+  `template/.claude/settings.template.json`, and the skills in `template/.claude/skills/`.
 - The path classes are `high` and `gate` in the seeded `.claude/path-classes`, which names no
   ecosystem: the `afe-init` skill adds the gate lines of the chosen stack. A path nothing matches
   is normal, or low when it is Markdown or generated (`scripts/lib/classes.sh`).
@@ -79,8 +57,7 @@ updates projects is [`bin/create-afe-project.js`](../bin/create-afe-project.js) 
 `scripts/checks.d/05-cli.sh` runs the unit tests of the command line in `test/*.test.js`: the
 questions, their validators and defaults, that a given answer to a removed question is ignored,
 the Jinja rendering and conditional names, that every rendered file is template-owned or seeded,
-the reading of a Copier answers file, and the warning for a Copier `docs_language` other than
-English, none for English.
+and the reading of the answers file, which a Copier answers file is not.
 
 `scripts/checks.d/15-release.sh` runs `scripts/tag-release.sh` against a local origin: it tags
 without a changeset and with only an empty one, and not while a changeset with a release is
@@ -102,8 +79,8 @@ header of each file names what it needs. The groups, by number:
   stale index, a dead link or code path); merge readiness, the path classes and review level of
   `--classes`, the readiness step of the `decisions` workflow on a pull request that a workflow
   opened, and the generated "Gate files" section.
-- `60`-`69`: the hooks and the green stamp: what the guard hook asks for, denies, and lets
-  through, in sibling and inner worktrees too; the Stop dispatcher (the Ralph cap and its record
+- `60`-`69`: the hooks and the green stamp: what the guard hook asks for, denies, and leaves to
+  the permission rules of the settings; the Stop dispatcher (the Ralph cap and its record
   of the capped tree, the fast check, a committed broken document, one combined message, no
   second run on an unchanged green tree, a stamp per kind, a sub-agent in the main session's
   tree, the worktree of the input's `cwd`, a nested repository without the harness); the check
@@ -117,11 +94,9 @@ header of each file names what it needs. The groups, by number:
   fail-without-change driver run (it needs `uvx` and says SKIP without it).
 - `90`-`93`: `update` keeps project content (the project block, seeded files, project checks),
   creates a missing seeded file, removes a file the template no longer owns, refuses a dirty
-  working tree and a downgrade, reports and replaces a local edit of a template-owned file,
-  converts a Copier answers file, and runs the migrations: 0.5.0; 2.0.1, which moves the
-  `.harness/` files of a Copier 0.7.0 project into `.claude/`; and 3.0.0 on a project created by
-  the 2.1.0 package (the release commit `761f382`, so the suite needs the history of this
-  repository).
+  working tree, a downgrade, and a project with only a Copier answers file, replaces a local
+  edit of a template-owned file, and runs the 3.0.0 migration on a project created by the 2.1.0
+  package (the release commit `761f382`, so the suite needs the history of this repository).
 - `99`: this repository's template-owned files match `template/`.
 
 CI runs both through the `check` workflow, which checks out the full history and sets up
@@ -142,9 +117,11 @@ highest.
 
 A release that needs a mechanical change in projects ships a `MIGRATIONS` entry in
 `src/config.js` that performs it, and its changeset says what the project must check by hand.
-The version part follows the table, not the migration: a migration may ship in any release, such
-as the `2.0.1` entry, which restores the harness settings and path classes that the 2.0.0
-conversion of a Copier project left in `.harness/`. The `3.0.0` entry replaces a seeded
+The version part follows the table, not the migration: a migration may ship in any release. The
+package keeps the migrations from 3.0.0 on: a project below 2.0.1 that still has a Copier answers
+file, `.harness/` files, or the protected-paths file of a release before 0.5.0 updates with
+`create-afe-project@3` first.
+The `3.0.0` entry replaces a seeded
 `.claude/path-classes` that is still a 2.x default (by Git blob hash) with the 3.0.0 default and
 warns about a changed one; replaces a `.claude/harness.conf` that is still the 2.x default (by
 Git blob hash) with the 3.0.0 default and, in a changed one, sets the caps that still hold the 2.x
