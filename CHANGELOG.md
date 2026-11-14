@@ -1,5 +1,14 @@
 # create-afe-project
 
+## 3.1.0
+
+### Minor Changes
+
+- [#44](https://github.com/dev-oleksandrv/create-afe-project/pull/44) [`655a6ee`](https://github.com/dev-oleksandrv/create-afe-project/commit/655a6ee0dc653e221069f2415cb8eae5ee61254d) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The Markdown lint is gone: `scripts/check-docs.sh` runs only the link check with its check of
+  backticked code paths, and needs Node.js but no longer `npx`. `update` removes the template-owned
+  `.markdownlint-cli2.jsonc`. A failing documentation check in the Stop dispatcher is reported as its
+  first 10 lines, how many lines remain, and the command for the full output.
+
 ## 3.0.0
 
 ### Major Changes
