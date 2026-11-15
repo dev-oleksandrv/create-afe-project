@@ -146,7 +146,10 @@ const REMOVED_IN_3_0_0 = [
 // with AFE_TEMPLATE set to the template directory of this package and AFE_NOTES to a file whose
 // lines the update reports as things to do by hand.
 // A migration runs when its version is above the project's recorded version and at most the
-// package's.
+// package's. It runs with `set -euo pipefail`, so a failing command fails it, and the update with
+// it; a part that may fail says so with `|| true`. The update records the new version only after
+// every migration succeeded, so a migration runs again on the next update after a failure: each
+// one leaves the project as it is when it runs a second time, apart from its notes.
 export const MIGRATIONS = [
   // 3.0.0 has two configurable path classes, high and gate, and a fix-loop cap of 2. A seeded
   // .claude/path-classes that is still a 2.x default is replaced with the 3.0.0 default; one the
@@ -158,38 +161,68 @@ export const MIGRATIONS = [
   // docs/README.md: an existing one stays, as a project file, and the update says so. The files
   // the template no longer owns, such as the removed rule documents, Stop hooks, and skills, go
   // the usual way: they are not in the new .template/owned.txt. Last, each tracked file that is
-  // not template-owned, not generated, and not warned about above, and that names a removed file,
-  // gets a warning; nothing is changed.
+  // not template-owned, not generated (as the answers file, which the update writes after the
+  // migrations), and not warned about above, and that names a removed file, gets a warning;
+  // nothing is changed. Best effort: a hash that Git cannot compute (the file
+  // then counts as changed by the project), the list of tracked files outside a Git repository
+  // (none), and a file that grep cannot read (not scanned).
   {
     version: '3.0.0',
     after: [
+      `set -euo pipefail`,
       `f=.claude/path-classes`,
       `if [ -f $f ] && ! cmp -s $f "$AFE_TEMPLATE/$f"; then`,
-      `  case "$(git hash-object --no-filters $f 2> /dev/null)" in`,
+      `  case "$(git hash-object --no-filters $f 2> /dev/null || true)" in`,
       `    ${PATH_CLASSES_2_X.join('|')}) cat "$AFE_TEMPLATE/$f" > $f ;;`,
       `    *) echo "$f is not a default of the template, so it stays as it is: remove its approval lines by hand (3.0.0 ignores class approval and has only high and gate), and you may trim the ecosystem gate blocks to the files of your stack" >> "$AFE_NOTES" ;;`,
       `  esac`,
       `fi`,
       `f=.claude/harness.conf`,
       `if [ -f $f ]; then`,
-      `  case "$(git hash-object --no-filters $f 2> /dev/null)" in`,
+      `  case "$(git hash-object --no-filters $f 2> /dev/null || true)" in`,
       `    ${HARNESS_CONF_2_X.join('|')}) cat "$AFE_TEMPLATE/$f" > $f ;;`,
       `    *) if grep -q -E '^(RALPH_MAX_ITERATIONS=5|REVIEW_MAX_ROUNDS=3)[[:space:]]*$' $f; then`,
-      `      sed -E 's/^RALPH_MAX_ITERATIONS=5[[:space:]]*$/RALPH_MAX_ITERATIONS=2/; s/^REVIEW_MAX_ROUNDS=3[[:space:]]*$/REVIEW_MAX_ROUNDS=2/' $f > $f.tmp &&`,
-      `        cat $f.tmp > $f && rm $f.tmp || exit 1`,
+      `      sed -E 's/^RALPH_MAX_ITERATIONS=5[[:space:]]*$/RALPH_MAX_ITERATIONS=2/; s/^REVIEW_MAX_ROUNDS=3[[:space:]]*$/REVIEW_MAX_ROUNDS=2/' $f > $f.tmp`,
+      `      cat $f.tmp > $f`,
+      `      rm $f.tmp`,
       `    fi ;;`,
       `  esac`,
       `fi`,
-      `[ ! -f docs/README.md ] ||`,
+      `if [ -f docs/README.md ]; then`,
       `  echo "docs/README.md is no longer maintained by the template: it stays as a project file, and scripts/check.sh fails on its links and paths to files that do not exist, such as the removed docs/documentation-rules.md; update it, or delete it together with the links to it, such as those in README.md" >> "$AFE_NOTES"`,
-      `git -c core.quotepath=off ls-files 2> /dev/null | { [ -f .template/owned.txt ] && grep -v -x -F -f .template/owned.txt || cat; } |`,
+      `fi`,
+      `{ git -c core.quotepath=off ls-files 2> /dev/null || true; } | { if [ -f .template/owned.txt ]; then grep -v -x -F -f .template/owned.txt || true; else cat; fi; } |`,
       `  while IFS= read -r p; do`,
-      `    case $p in .claude/settings.json|.template/*|docs/decisions/README.md|node_modules/*|*/node_modules/*) continue ;; esac`,
-      `    [ -f "$p" ] && ! { cut -d ' ' -f 1 "$AFE_NOTES" 2> /dev/null | grep -q -x -F -e "$p"; } || continue`,
-      `    hit=$(grep -o -I -F ${REMOVED_IN_3_0_0.map((n) => `-e '${n}'`).join(' ')} -- "$p" 2> /dev/null | awk '!s[$0]++' | paste -s -d , - | sed 's/,/, /g')`,
-      `    [ -z "$hit" ] || echo "$p names removed files ($hit); update or remove those references" >> "$AFE_NOTES"`,
+      `    case $p in .afe-answers.json|.claude/settings.json|.template/*|docs/decisions/README.md|node_modules/*|*/node_modules/*) continue ;; esac`,
+      `    [ -f "$p" ] || continue`,
+      `    if [ -f "$AFE_NOTES" ] && grep -q -x -F -e "$p" <(cut -d ' ' -f 1 "$AFE_NOTES"); then continue; fi`,
+      `    hit=$({ grep -o -I -F ${REMOVED_IN_3_0_0.map((n) => `-e '${n}'`).join(' ')} -- "$p" 2> /dev/null || true; } | awk '!s[$0]++' | paste -s -d , - | sed 's/,/, /g')`,
+      `    if [ -n "$hit" ]; then echo "$p names removed files ($hit); update or remove those references" >> "$AFE_NOTES"; fi`,
       `  done`,
-      `exit 0`,
+    ].join('\n'),
+  },
+  // 4.0.0 leaves two steps to the project (CHANGELOG.md, 4.0.0), and the update reports each one
+  // that applies; it changes nothing. A Stop hook of the project, .claude/hooks/project/stop/*.sh,
+  // that .claude/settings.project.json does not name: the Stop dispatcher no longer runs it, so it
+  // goes under hooks.Stop there. FWC_INSTALL and FWC_CLASSIFIER in .claude/harness.conf: nothing
+  // reads them, since the fail-without-change driver installs with SETUP.
+  {
+    version: '4.0.0',
+    after: [
+      `set -euo pipefail`,
+      `f=.claude/harness.conf`,
+      `keys=`,
+      `for k in FWC_INSTALL FWC_CLASSIFIER; do`,
+      `  if [ -f $f ] && grep -q -E "^[[:space:]]*$k=" $f; then keys=\${keys:+$keys, }$k; fi`,
+      `done`,
+      `if [ -n "$keys" ]; then`,
+      `  echo "$f sets $keys, which 4.0.0 no longer reads: delete them; the fail-without-change driver installs with SETUP" >> "$AFE_NOTES"`,
+      `fi`,
+      `for h in .claude/hooks/project/stop/*.sh; do`,
+      `  [ -f "$h" ] || continue`,
+      `  if [ -f .claude/settings.project.json ] && grep -q -F -e "$h" .claude/settings.project.json; then continue; fi`,
+      `  echo "$h no longer runs: since 4.0.0 the Stop dispatcher does not run .claude/hooks/project/stop/, so register it under hooks.Stop in .claude/settings.project.json" >> "$AFE_NOTES"`,
+      `done`,
     ].join('\n'),
   },
 ];

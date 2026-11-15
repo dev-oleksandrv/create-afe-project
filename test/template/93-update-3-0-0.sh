@@ -1,4 +1,5 @@
-# The 3.0.0 migration of an update from 2.1.0. Needs pkg and $sample from 90-update.sh.
+# The 3.0.0 migration of an update from 2.1.0, also when a failing migration interrupts the update
+# once. Needs pkg, failing_pkg, and $sample from 90-update.sh.
 # The 2.1.0 fixture is created by the package of the release commit, 761f382, which needs the full
 # history of this repository (CI checks out with fetch-depth 0).
 echo "== update from 2.1.0 applies the 3.0.0 migration"
@@ -27,8 +28,21 @@ cp -R "$m" "$ms" && sed -i.bak 's/^SETUP=$/SETUP=make setup/' "$ms/.claude/harne
   for f in README.md .gitignore .claude/harness.conf; do
     sed -i.bak -E '/docs\/(documentation-rules|contributing|testing-rules|README)[.]md|stop-check-|dual-review/d' "$ms/$f" && rm "$ms/$f.bak"
   done && gitc "$ms" rm -q docs/README.md && gitc "$ms" commit -q -am "own setup, no references to removed files"
+mi="$work/mi210"
+cp -R "$m" "$mi"
 (cd "$m" && node "$p300/bin/create-afe-project.js" update --defaults > "$work/m300.log" 2>&1) ||
   { cat "$work/m300.log"; fail "3.0.0 migration test: the update from 2.1.0 fails"; }
+# A migration after 3.0.0's fails once: the version stays 2.1.0, and the second run runs the 3.0.0
+# migration again and ends where the update without a failure ended.
+failing_pkg "$work/p300f" 3.0.0 "$work/fail-once-300" && touch "$work/fail-once-300"
+(cd "$mi" && node "$work/p300f/bin/create-afe-project.js" update --defaults > "$work/mi1.log" 2>&1) &&
+  fail "3.0.0 migration test: the update with a failing migration succeeds"
+grep -q '"_version": "2.1.0"' "$mi/.afe-answers.json" && grep -q 'run the same update again with --allow-dirty' "$work/mi1.log" ||
+  { cat "$work/mi1.log" "$mi/.afe-answers.json"; fail "3.0.0 migration test: a failed migration records the new version, or the message does not say how to resume"; }
+(cd "$mi" && node "$work/p300f/bin/create-afe-project.js" update --defaults --allow-dirty > "$work/mi2.log" 2>&1) ||
+  { cat "$work/mi2.log"; fail "3.0.0 migration test: the second run after a failed migration fails"; }
+grep -q 'Migrations run: 3.0.0' "$work/mi2.log" && diff -r -x .git "$m" "$mi" > "$work/mi.diff" ||
+  { cat "$work/mi2.log" "$work/mi.diff"; fail "3.0.0 migration test: the second run does not run the 3.0.0 migration again, or ends elsewhere than an update without a failure"; }
 # A 2.x answers file as --data-file names the removed questions; they are ignored.
 (cd "$mc" && node "$p300/bin/create-afe-project.js" update --defaults --data-file .afe-answers.json > "$work/mc300.log" 2>&1) ||
   { cat "$work/mc300.log"; fail "3.0.0 migration test: the update from 2.1.0 with the 2.x answers file as --data-file fails"; }
