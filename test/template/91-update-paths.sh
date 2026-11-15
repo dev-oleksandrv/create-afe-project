@@ -1,6 +1,6 @@
 # update stays inside the project: it refuses an entry of .template/owned.txt that leaves the
-# project, and a symbolic link on the way to a file it would read, write, or remove, before it
-# changes anything. Needs $sample from 90-update.sh.
+# project, and a symbolic link on the way to a file it, or a task after it, would read, write, or
+# remove, before it changes anything. Needs $sample from 90-update.sh.
 echo "== update stays inside the project"
 pc="$work/pc"
 mkdir -p "$pc"
@@ -46,3 +46,13 @@ refused target 'scripts/lib/stamp.sh'
 cp -R "$pc/base" "$pc/seed" && ln -s -f AGENTS.md "$pc/seed/CLAUDE.md" && gitc "$pc/seed" commit -q -am "CLAUDE.md as a link"
 (cd "$pc/seed" && cli update --defaults > "$work/pc-seed.log" 2>&1) || { cat "$work/pc-seed.log"; fail "update path test: a seeded file as a symbolic link stops the update"; }
 [ -L "$pc/seed/CLAUDE.md" ] || fail "update path test: the update replaces a seeded symbolic link"
+
+# A symbolic link at a file that a task of the update writes: the generated settings and the
+# decision index.
+for g in .claude/settings.json docs/decisions/README.md; do
+  c="gen-${g//[\/.]/-}"
+  cp -R "$pc/base" "$pc/$c" && echo keep > "$pc/out-$c.txt" &&
+    ln -s -f "$pc/out-$c.txt" "$pc/$c/$g" && gitc "$pc/$c" commit -q -am "$g as a link"
+  refused "$c" "$g"
+  [ "$(cat "$pc/out-$c.txt")" = keep ] || fail "update path test: a task of the update writes through the symbolic link $g"
+done

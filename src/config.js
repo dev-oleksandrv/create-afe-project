@@ -27,6 +27,10 @@ export const TASKS = [
   'scripts/gen-decisions-index.sh > docs/decisions/README.md',
 ];
 
+// The files that TASKS write, each through a plain write that follows a symbolic link: create and
+// update check them as they check the files they write themselves, before they change anything.
+export const GENERATED = ['.claude/settings.json', '.template/owned.sha256', 'docs/decisions/README.md'];
+
 // Questions of earlier versions that 3.0.0 removed: a recorded answer to one is dropped, and a
 // --data or --data-file value for one, such as from a 2.x answers file, is ignored.
 export const REMOVED_QUESTIONS = ['docs_review', 'dual_review'];
@@ -149,8 +153,11 @@ const REMOVED_IN_3_0_0 = [
 
 // Migrations of an update, by the version that introduces them. `before` runs before the template
 // files are written, `after` after them; both run in the project directory, as bash commands,
-// with AFE_TEMPLATE set to the template directory of this package and AFE_NOTES to a file whose
-// lines the update reports as things to do by hand.
+// with AFE_TEMPLATE set to the template directory of this package, AFE_NOTES to a file whose
+// lines the update reports as things to do by hand, and AFE_TMP to an empty directory of the
+// update's own for temporary files. A migration writes through no symbolic link: a seeded file
+// that is one is left as it is, with a note, and a temporary file goes to AFE_TMP, never next to
+// its target.
 // A migration runs when its version is above the project's recorded version and at most the
 // package's. It runs with `set -euo pipefail`, so a failing command fails it, and the update with
 // it; a part that may fail says so with `|| true`. The update records the new version only after
@@ -163,34 +170,38 @@ export const MIGRATIONS = [
   // ecosystem gate blocks of 2.1.0 (now added by afe-init for the chosen stack) for a change by
   // hand. A .claude/harness.conf that is still a 2.x default is replaced with the 3.0.0 default;
   // in one the project changed, RALPH_MAX_ITERATIONS and REVIEW_MAX_ROUNDS go to 2 only where they
-  // still hold the 2.x defaults, 5 and 3. The template stops seeding the documentation map
+  // still hold the 2.x defaults, 5 and 3. Either file as a symbolic link stays as it is, and the
+  // update reports the change by hand. The template stops seeding the documentation map
   // docs/README.md: an existing one stays, as a project file, and the update says so. The files
   // the template no longer owns, such as the removed rule documents, Stop hooks, and skills, go
   // the usual way: they are not in the new .template/owned.txt. Last, each tracked file that is
-  // not template-owned, not generated (as the answers file, which the update writes after the
-  // migrations), and not warned about above, and that names a removed file, gets a warning;
-  // nothing is changed. Best effort: a hash that Git cannot compute (the file
-  // then counts as changed by the project), the list of tracked files outside a Git repository
-  // (none), and a file that grep cannot read (not scanned).
+  // not a symbolic link, not template-owned, not generated (as the answers file, which the update
+  // writes after the migrations), and not warned about above, and that names a removed file, gets
+  // a warning; nothing is changed. Best effort: a hash that Git cannot compute (the file then
+  // counts as changed by the project), the list of tracked files outside a Git repository (none),
+  // and a file that grep cannot read (not scanned).
   {
     version: '3.0.0',
     after: [
       `set -euo pipefail`,
       `f=.claude/path-classes`,
-      `if [ -f $f ] && ! cmp -s $f "$AFE_TEMPLATE/$f"; then`,
+      `if [ -L $f ]; then`,
+      `  echo "$f is a symbolic link, so the update does not migrate it: by hand, replace a 2.x default with the template's default, or remove its approval lines (3.0.0 ignores class approval and has only high and gate)" >> "$AFE_NOTES"`,
+      `elif [ -f $f ] && ! cmp -s $f "$AFE_TEMPLATE/$f"; then`,
       `  case "$(git hash-object --no-filters $f 2> /dev/null || true)" in`,
       `    ${PATH_CLASSES_2_X.join('|')}) cat "$AFE_TEMPLATE/$f" > $f ;;`,
       `    *) echo "$f is not a default of the template, so it stays as it is: remove its approval lines by hand (3.0.0 ignores class approval and has only high and gate), and you may trim the ecosystem gate blocks to the files of your stack" >> "$AFE_NOTES" ;;`,
       `  esac`,
       `fi`,
       `f=.claude/harness.conf`,
-      `if [ -f $f ]; then`,
+      `if [ -L $f ]; then`,
+      `  echo "$f is a symbolic link, so the update does not migrate it: by hand, replace a 2.x default with the template's default, or set RALPH_MAX_ITERATIONS and REVIEW_MAX_ROUNDS to 2 where they still hold 5 and 3" >> "$AFE_NOTES"`,
+      `elif [ -f $f ]; then`,
       `  case "$(git hash-object --no-filters $f 2> /dev/null || true)" in`,
       `    ${HARNESS_CONF_2_X.join('|')}) cat "$AFE_TEMPLATE/$f" > $f ;;`,
       `    *) if grep -q -E '^(RALPH_MAX_ITERATIONS=5|REVIEW_MAX_ROUNDS=3)[[:space:]]*$' $f; then`,
-      `      sed -E 's/^RALPH_MAX_ITERATIONS=5[[:space:]]*$/RALPH_MAX_ITERATIONS=2/; s/^REVIEW_MAX_ROUNDS=3[[:space:]]*$/REVIEW_MAX_ROUNDS=2/' $f > $f.tmp`,
-      `      cat $f.tmp > $f`,
-      `      rm $f.tmp`,
+      `      sed -E 's/^RALPH_MAX_ITERATIONS=5[[:space:]]*$/RALPH_MAX_ITERATIONS=2/; s/^REVIEW_MAX_ROUNDS=3[[:space:]]*$/REVIEW_MAX_ROUNDS=2/' $f > "$AFE_TMP/harness.conf"`,
+      `      cat "$AFE_TMP/harness.conf" > $f`,
       `    fi ;;`,
       `  esac`,
       `fi`,
@@ -200,7 +211,7 @@ export const MIGRATIONS = [
       `{ git -c core.quotepath=off ls-files 2> /dev/null || true; } | { if [ -f .template/owned.txt ]; then grep -v -x -F -f .template/owned.txt || true; else cat; fi; } |`,
       `  while IFS= read -r p; do`,
       `    case $p in .afe-answers.json|.claude/settings.json|.template/*|docs/decisions/README.md|node_modules/*|*/node_modules/*) continue ;; esac`,
-      `    [ -f "$p" ] || continue`,
+      `    [ -f "$p" ] && [ ! -L "$p" ] || continue`,
       `    if [ -f "$AFE_NOTES" ] && grep -q -x -F -e "$p" <(cut -d ' ' -f 1 "$AFE_NOTES"); then continue; fi`,
       `    hit=$({ grep -o -I -F ${REMOVED_IN_3_0_0.map((n) => `-e '${n}'`).join(' ')} -- "$p" 2> /dev/null || true; } | awk '!s[$0]++' | paste -s -d , - | sed 's/,/, /g')`,
       `    if [ -n "$hit" ]; then echo "$p names removed files ($hit); update or remove those references" >> "$AFE_NOTES"; fi`,

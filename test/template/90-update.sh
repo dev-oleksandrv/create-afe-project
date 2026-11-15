@@ -62,3 +62,10 @@ rm "$v/.afe-answers.json" && printf '_commit: v0.6.0\nproject_name: sample\n' > 
 (cd "$v" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/v.log" 2>&1) &&
   fail "update test: a project with only a Copier answers file is updated"
 grep -q 'has no answers file' "$work/v.log" || { cat "$work/v.log"; fail "update test: the update of a Copier project fails for another reason"; }
+# Without .template/owned.sha256 the update cannot tell local edits, says so, and goes on.
+w="$work/w"
+cli "$w" "${sample[@]}" > /dev/null 2>&1 || fail "update test: create fails"
+gitc "$w" rm -q .template/owned.sha256 && gitc "$w" commit -q -m "no manifest"
+(cd "$w" && cli update --defaults > "$work/w.log" 2>&1) && [ -f "$w/.template/owned.sha256" ] &&
+  grep -q -x 'Warning: .template/owned.sha256 is missing, so the update cannot tell the local edits of template-owned files, and replaces them all.' "$work/w.log" ||
+  { cat "$work/w.log"; fail "update test: an update without .template/owned.sha256 fails, or does not warn that it cannot tell local edits"; }

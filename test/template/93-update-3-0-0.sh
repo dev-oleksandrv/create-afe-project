@@ -30,6 +30,19 @@ cp -R "$m" "$ms" && sed -i.bak 's/^SETUP=$/SETUP=make setup/' "$ms/.claude/harne
   done && gitc "$ms" rm -q docs/README.md && gitc "$ms" commit -q -am "own setup, no references to removed files"
 mi="$work/mi210"
 cp -R "$m" "$mi"
+# The same project with both seeded files, still 2.1.0 defaults, as symbolic links to files outside
+# it: the migration writes neither, and says so for each.
+ml="$work/ml210"
+cp -R "$m" "$ml" && mkdir -p "$work/ml-out" && for f in path-classes harness.conf; do
+  mv "$ml/.claude/$f" "$work/ml-out/$f" && cp "$work/ml-out/$f" "$work/ml-out/$f.orig" && ln -s "$work/ml-out/$f" "$ml/.claude/$f"
+done && gitc "$ml" add -A && gitc "$ml" commit -q -m "seeded files as links"
+(cd "$ml" && node "$p300/bin/create-afe-project.js" update --defaults > "$work/ml300.log" 2>&1) ||
+  { cat "$work/ml300.log"; fail "3.0.0 migration test: the update with seeded files as symbolic links fails"; }
+for f in path-classes harness.conf; do
+  cmp -s "$work/ml-out/$f" "$work/ml-out/$f.orig" && [ -L "$ml/.claude/$f" ] &&
+    grep -q "^Warning: .claude/$f is a symbolic link, so the update does not migrate it: " "$work/ml300.log" ||
+    { cat "$work/ml300.log"; fail "3.0.0 migration test: the migration writes through the symbolic link .claude/$f, or does not say that it left it"; }
+done
 (cd "$m" && node "$p300/bin/create-afe-project.js" update --defaults > "$work/m300.log" 2>&1) ||
   { cat "$work/m300.log"; fail "3.0.0 migration test: the update from 2.1.0 fails"; }
 # A migration after 3.0.0's fails once: the version stays 2.1.0, and the second run runs the 3.0.0

@@ -2,7 +2,7 @@
 // test/template/, run by scripts/checks.d/10-template.sh (docs/maintaining.md, section 3).
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -147,9 +147,41 @@ function migrate(version, dir, notes) {
   const m = MIGRATIONS.find((x) => x.version === version);
   assert.ok(m?.after, `MIGRATIONS has no after command for ${version}`);
   return spawnSync('bash', ['-c', m.after], {
-    cwd: dir, encoding: 'utf8', env: { ...process.env, AFE_TEMPLATE: TEMPLATE_DIR, AFE_NOTES: notes },
+    cwd: dir, encoding: 'utf8',
+    env: { ...process.env, AFE_TEMPLATE: TEMPLATE_DIR, AFE_NOTES: notes, AFE_TMP: mkdtempSync(join(tmpdir(), 'afe-')) },
   });
 }
+
+test('the 3.0.0 migration writes through no symbolic link: not a seeded file that is one, nor a temporary file', () => {
+  const outer = mkdtempSync(join(tmpdir(), 'afe-'));
+  const notes = join(outer, 'notes');
+  // .claude/harness.conf of the project links to a file outside it that holds a 2.x cap.
+  const linked = join(outer, 'p');
+  mkdirSync(join(linked, '.claude'), { recursive: true });
+  writeFileSync(join(outer, 'outside.conf'), 'RALPH_MAX_ITERATIONS=5\n');
+  symlinkSync(join(outer, 'outside.conf'), join(linked, '.claude', 'harness.conf'));
+  assert.equal(migrate('3.0.0', linked, notes).status, 0);
+  assert.equal(readFileSync(join(outer, 'outside.conf'), 'utf8'), 'RALPH_MAX_ITERATIONS=5\n');
+  assert.match(readFileSync(notes, 'utf8'), /^\.claude\/harness\.conf is a symbolic link, so the update does not migrate it: /m);
+  // A regular .claude/harness.conf is migrated; a link where a temporary file next to it would go is not followed.
+  const plain = join(outer, 'q');
+  mkdirSync(join(plain, '.claude'), { recursive: true });
+  writeFileSync(join(plain, '.claude', 'harness.conf'), 'RALPH_MAX_ITERATIONS=5\n');
+  writeFileSync(join(outer, 'outside.tmp'), 'keep\n');
+  symlinkSync(join(outer, 'outside.tmp'), join(plain, '.claude', 'harness.conf.tmp'));
+  assert.equal(migrate('3.0.0', plain, notes).status, 0);
+  assert.equal(readFileSync(join(plain, '.claude', 'harness.conf'), 'utf8'), 'RALPH_MAX_ITERATIONS=2\n');
+  assert.equal(readFileSync(join(outer, 'outside.tmp'), 'utf8'), 'keep\n');
+});
+
+test('update without .template/owned.sha256 says that it cannot tell the local edits', async () => {
+  const dir = join(mkdtempSync(join(tmpdir(), 'afe-')), 'p');
+  await project.create(dir, { given: base, useDefaults: true, interactive: false, quiet: true, git: false });
+  rmSync(join(dir, '.template', 'owned.sha256'));
+  const seen = [];
+  await project.update(dir, { useDefaults: true, interactive: false, quiet: true, confirm: async (preview) => (seen.push(preview), true) });
+  assert.deepEqual(seen, [{ edited: [], removed: [], manifest: 'missing' }]);
+});
 
 test('a path the update acts on is relative, plain, and has no symbolic link on the way', () => {
   const dir = mkdtempSync(join(tmpdir(), 'afe-'));

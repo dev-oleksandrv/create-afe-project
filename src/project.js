@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { UsageError, collectAnswers, compareVersions, readAnswers, writeAnswers } from './answers.js';
-import { ANSWERS_FILE, MIGRATIONS, QUESTIONS, SEEDED, TASKS, messageAfterCreate } from './config.js';
+import { ANSWERS_FILE, GENERATED, MIGRATIONS, QUESTIONS, SEEDED, TASKS, messageAfterCreate } from './config.js';
 import { renderTemplate } from './render.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -111,7 +111,12 @@ function run(dir, command, quiet, env) {
   }
 }
 
+// Checks the files the tasks write once more, right before them: a migration ran in the project since.
 function runTasks(dir, quiet) {
+  for (const rel of GENERATED) {
+    const stat = checkPath(dir, rel);
+    if (stat && !stat.isFile()) throw new Error(`${rel}, which a task writes, is not a regular file`);
+  }
   for (const task of TASKS) run(dir, task, quiet);
 }
 
@@ -188,7 +193,7 @@ export async function create(dir, { given, useDefaults, interactive, force = fal
   }
   const { answers, context } = await collectAnswers({ given, useDefaults, interactive });
   const rendered = renderTemplate(TEMPLATE_DIR, context);
-  for (const rel of [...rendered.keys(), ANSWERS_FILE]) checkFile(dir, rel, 'the template writes');
+  for (const rel of [...rendered.keys(), ANSWERS_FILE, ...GENERATED]) checkFile(dir, rel, 'the template writes');
   mkdirSync(dir, { recursive: true });
   for (const [rel, file] of rendered) writeFile(dir, rel, file);
   writeAnswers(dir, VERSION, answers);
@@ -236,7 +241,8 @@ export function initialCommit(dir) {
  * recorded answers that are dropped, since no question takes them, and notes: what is left to do by
  * hand.
  *
- * Before it changes anything, it checks every path it reads, writes, or removes (checkPath): a bad
+ * Before it changes anything, it checks every path it, or a task after it, reads, writes, or
+ * removes (checkPath, GENERATED): a bad
  * entry of .template/owned.txt or .template/owned.sha256 stops it with a UsageError that names the
  * entry. Then it passes `confirm` the template-owned files with local edits that it replaces or
  * removes (by .template/owned.sha256) and the files it removes; when `confirm` resolves false, it
@@ -277,6 +283,7 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
   const newOwned = listed(String(rendered.get(OWNED_LIST).content));
   const content = (rel) => (rel === 'AGENTS.md' && block ? withBlock(String(rendered.get(rel).content), block) : rendered.get(rel).content);
   for (const rel of newOwned) stats.set(rel, checkFile(dir, rel, 'the template writes'));
+  for (const rel of GENERATED) checkFile(dir, rel, 'a task of the update writes');
   // A seeded file is written only when it is missing; an existing one, a symbolic link too, stays.
   for (const rel of rendered.keys()) if (!stats.has(rel)) stats.set(rel, checkFile(dir, rel, 'the template writes', { kept: true }));
 
@@ -300,7 +307,7 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
   );
   // A migration appends what is left to do by hand, one line each, to the file AFE_NOTES.
   const scratch = mkdtempSync(join(tmpdir(), 'afe-update-'));
-  const env = { AFE_TEMPLATE: TEMPLATE_DIR, AFE_NOTES: join(scratch, 'notes') };
+  const env = { AFE_TEMPLATE: TEMPLATE_DIR, AFE_NOTES: join(scratch, 'notes'), AFE_TMP: mkdtempSync(join(scratch, 'tmp-')) };
   const seeded = [];
   const unowned = [];
   try {
