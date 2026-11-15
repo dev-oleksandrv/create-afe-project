@@ -48,8 +48,8 @@ excludes, which run with full access; Docker does not run inside it, and command
 The answers in `.afe-answers.json` turn these on or off:
 
 - `code_review` (default off): Claude also reviews each pull request that changes code in CI,
-  when it opens or leaves draft, and again on its latest commit when the label `code-review` is
-  added; it needs the Claude GitHub App and the `CLAUDE_CODE_OAUTH_TOKEN` secret.
+  when it opens or leaves draft; `/create-pr` turns it into a draft and back once to have the
+  last commit reviewed. It needs the Claude GitHub App and the `CLAUDE_CODE_OAUTH_TOKEN` secret.
 - `licence_check` (default off): the review and `/afe-init` also check the licence of each new
   dependency.
 - `secret_scan` (default on): the `secret-scan` workflow scans pull requests and pushes to `main`

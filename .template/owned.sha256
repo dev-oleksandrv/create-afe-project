@@ -24,7 +24,7 @@ f02c823406ee9806e55c06440cbd41be7195b388eda76f83c84211ae45fc2e3a  .claude/hooks/
 016af67dc103912d3c1f5064e1f8ebc3ef4c74a08422d383b918ca0a25712a7e  .claude/hooks/post-edit-check.sh
 a76590ed73fc59d32b724bf131890addc628aa2c27fb74da64d6c3dd43aa3339  .claude/hooks/session-start.sh
 51fb89a9fb13e5115a78f169047af5be9b9173ce7b45a6477f4fd681af580b69  .claude/hooks/stop-dispatch.sh
-0471a7688f7901c8552b084922250beb20a40daad585d04f662848ef6e8daa86  .claude/skills/create-pr/SKILL.md
+b582339754ab4e19b8684d37753c54a693d80631ed814fe554d63202f9daf361  .claude/skills/create-pr/SKILL.md
 e3f5edfaa123be3dc43e6cd8991d358e4ff24b31f52ba41899005e56988179e2  .claude/skills/review/SKILL.md
 f37e13bbbc4f3718b00b5fb729e876933f6d165d8b0621f8e1a24301c13951cc  .claude/skills/review/rubric.md
 18f9f9862aa295ba356ac325a1e7b3580e8d7ccc097568eabc0c7e73a5acf238  .claude/skills/afe-init/SKILL.md
@@ -32,5 +32,5 @@ fe4a21fad18a8203c00b22474d25f330e69fd34b257ef3a381b4c3a914bda2d4  .claude/skills
 bb5b8b9a2f0478b06ea6e17b95bbf5096802d3fd7fb7cf946322c89eb9c24503  .claude/skills/review-code/SKILL.md
 dbe2bca457fa37b57f104517a1209f9ed31d36cca22915fb7c5e1b00e8c80c96  .github/workflows/check.yml
 44c8d72ac68b948c17347e40ecdc7995a6b28aae3a48480b78ef4527b28f1ee7  .github/workflows/decisions.yml
-64bf330f571cea6b57bc684597ce362bea65caaad3fce27f7606fd1cdac2b7ae  .github/workflows/code-review.yml
+5dff665e7e6fbb012fe8d6a14e7d84ee40191ee0d99fd208e2c59757ce47a6c6  .github/workflows/code-review.yml
 36987f254ce8c88ad12aba451d30b03bee1832744736589ec622b3d55ecd7f67  .github/workflows/secret-scan.yml
