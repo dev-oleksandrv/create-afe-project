@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Documentation checks, run by scripts/check.sh and by the Stop dispatcher: scripts/check-links.mjs
+# Documentation checks, run by scripts/check.sh: scripts/check-links.mjs
 # (links, and the backticked code paths of docs/ outside docs/decisions/ and of AGENTS.md).
 # Requires Node.js. The exit code is that of the link check, or 3 when node is missing.
 #
@@ -11,7 +11,7 @@ caller=$PWD
 cd "$(dirname "$0")/.."
 root=$PWD
 
-# A missing tool is not a failed check: exit 3, which the Stop dispatcher reports without blocking.
+# A missing tool is reported as such: exit 3.
 command -v node >/dev/null || { echo "MISSING TOOL: node (see README.md, Checks)"; exit 3; }
 
 files=()

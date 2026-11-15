@@ -9,10 +9,13 @@ expect_pass "a backticked path that does not exist fails in docs/, with the file
 expect_pass "a backticked path that does not exist, in AGENTS.md" bash -c 'awk -v l="See \`scripts/nope.sh\`." "{print} /<!-- project:start -->/ {print l}" AGENTS.md > t && mv t AGENTS.md &&
   ! node scripts/check-links.mjs > out.log && grep -q "^FAIL: AGENTS.md:[0-9]*: .scripts/nope.sh.: no such file or directory$" out.log'
 expect_pass "a missing directory" bash -c 'note docs/x/note.md "See \`docs/nope/\`." && ! node scripts/check-links.mjs > out.log && grep -q "^FAIL: docs/x/note.md:3: .docs/nope/.: no such" out.log'
-expect_pass "a trailing :line, #anchor, or ::name is stripped before the path is checked" bash -c 'note docs/note.md "See \`scripts/check.sh:12\`, \`scripts/check.sh:3:5\`, \`scripts/check-docs.sh#L4\`, \`scripts/env.sh::usage\`, \`scripts/lib/\`, and \`.claude/path-classes\`." &&
+expect_pass "a trailing :line, :line-line, #anchor, or ::name is stripped before the path is checked" bash -c 'note docs/note.md "See \`scripts/check.sh:12\`, \`scripts/check.sh:3:5\`, \`scripts/check.sh:3-12\`, \`scripts/check-docs.sh#L4\`, \`scripts/env.sh::usage\`, \`scripts/lib/\`, and \`.claude/risky-paths\`." &&
   node scripts/check-links.mjs'
 expect_pass "the stripped path is named when it does not exist" bash -c 'note docs/note.md "See \`scripts/nope.sh:12\`." &&
   node scripts/check-links.mjs | grep -qxF "FAIL: docs/note.md:3: \`scripts/nope.sh\`: no such file or directory"'
+# A line range is no exemption for a path that does not exist.
+expect_pass "a line range on a path that does not exist still fails" bash -c 'note docs/note.md "See \`scripts/nope.sh:3-12\`." &&
+  out=$(node scripts/check-links.mjs); [ $? -eq 1 ] && printf "%s\n" "$out" | grep -qxF "FAIL: docs/note.md:3: \`scripts/nope.sh\`: no such file or directory"'
 expect_pass "tokens that are not path candidates are ignored" bash -c 'note docs/note.md "Push \`origin/main\` to \`owner/name\`; \`a/b\` and \`x/y.sh\` name no root entry; \`docs/*.md\` is a glob, \`docs/<name>.md\` and \`scripts/{x}.sh\` and \`\$HOME/scripts/x\` are placeholders, \`https://example.com/scripts/x\` has a scheme, \`scripts/nope.sh --flag\` has whitespace, \`/scripts/x\` starts at no root entry, \`scripts/a|b\` is a pipe." &&
   node scripts/check-links.mjs'
 expect_pass "a path in a fenced code block is not checked" bash -c 'printf "# Note\n\n\x60\x60\x60sh\nscripts/nope.sh \x60scripts/nope.sh\x60\n\x60\x60\x60\n" > docs/note.md && node scripts/check-links.mjs'

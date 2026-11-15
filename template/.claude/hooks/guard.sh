@@ -5,8 +5,8 @@
 # release, a change of repository settings, or publishing, are permission rules of
 # .claude/settings.template.json, not this hook. DOCS_GUARD=off in the Claude Code environment
 # disables the guard for scripted owner-driven runs.
-# This is a guard against unreviewed changes, not a security boundary: a push split across lines
-# with a backslash, or behind a prefix such as env, time, or nohup, is not detected.
+# This is a guard against unreviewed changes, not a security boundary: a push behind a prefix such
+# as env, time, or nohup, or in a script file that a command runs, is not detected.
 # It stays on in GitHub Actions, unlike the other hooks: claude-code-action restores .claude/
 # from the base branch there, and this hook runs no file of the working tree, which a pull request
 # supplies. It reads its input and writes its answer with `node -e` code of its own, not
@@ -16,9 +16,19 @@ set -uo pipefail
 
 # Without Node.js the hook cannot read the tool call; block it rather than allow everything.
 command -v node >/dev/null || { echo "guard: Node.js is required (README.md, Checks)" >&2; exit 2; }
-# Prints the tool, the cwd, the command, and the kind of the first known token format in what the
-# call writes (content, new_string, edits, command), each followed by a NUL byte, an empty string
-# when missing. A match asks the owner; it does not prove a live secret.
+# Prints the tool, the cwd, the command, the kind of the first known token format in what the call
+# writes (content, new_string, edits, command), and the push words of the command (below), each
+# followed by a NUL byte, an empty string when missing. A token match asks the owner; it does not
+# prove a live secret.
+# The push words: one line for each `git push` in the command, at any depth, with the words of
+# that push that are not options, the remote and the refspecs, separated by the byte 0x1f, or "-"
+# alone when there are none; nothing without a `git push`. The command is read as words: a quoted part is part of its word, so adjacent quotes
+# around a word are that word and quoted data (a commit message, the text of echo or printf) is no
+# command; a backslash takes the next character, and one before a line end joins the lines. The
+# commands are the parts between ; & | ( ) ` and line ends, a command substitution inside double
+# quotes, and the command string of bash, sh, zsh, dash, or ksh -c and of eval, each scanned in
+# turn. A push may follow assignments, sudo, command, and git's global options, such as -C DIR.
+# This is a word scan, not a shell parser.
 read_input='
 const SECRETS = [
   ["AWS access key", /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
@@ -39,42 +49,70 @@ const s = (v) => (v == null ? "" : typeof v === "string" ? v : JSON.stringify(v)
 const edits = Array.isArray(t.edits) ? t.edits.map((e) => e && e.new_string) : [];
 const text = [t.content, t.new_string, t.command, ...edits].filter((x) => typeof x === "string").join("\n");
 const hit = SECRETS.find(([, re]) => re.test(text));
-process.stdout.write([s(d && d.tool_name), s(d && d.cwd), s(t.command), hit ? hit[0] : ""].map((x) => x + "\0").join(""));
+const Q = String.fromCharCode(39);
+// Each command it scans in turn is shorter than the text it comes from, so the scan ends.
+function pushWords(line, all) {
+  const segs = [], subs = [];
+  let words = [], word = null;
+  const end = () => { if (word !== null) words.push(word); word = null; };
+  const cut = () => { end(); if (words.length) segs.push(words); words = []; };
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === "\\") {
+      if (line[i + 1] !== "\n") word = (word ?? "") + (line[i + 1] ?? "");
+      i++;
+    } else if (c === Q) {
+      const j = line.indexOf(Q, i + 1);
+      word = (word ?? "") + line.slice(i + 1, j < 0 ? line.length : j);
+      i = j < 0 ? line.length : j;
+    } else if (c === "\"") {
+      let q = "", j = i + 1;
+      for (; j < line.length && line[j] !== "\""; j++) q += line[j] === "\\" && j + 1 < line.length ? line[++j] : line[j];
+      for (const m of q.matchAll(/\$\(([^)]*)\)|`([^`]*)`/g)) subs.push(m[1] ?? m[2]);
+      word = (word ?? "") + q;
+      i = j;
+    } else if (c === " " || c === "\t") end();
+    else if (";&|()`\n".includes(c)) cut();
+    else word = (word ?? "") + c;
+  }
+  cut();
+  for (const w of segs) {
+    let k = 0;
+    while (k < w.length && (/^[A-Za-z_][A-Za-z0-9_]*=/.test(w[k]) || w[k] === "sudo" || w[k] === "command")) k++;
+    const name = (w[k] ?? "").replace(/.*\//, "");
+    let inner = null;
+    if (/^(bash|sh|zsh|dash|ksh)$/.test(name)) {
+      for (let j = k + 1; j < w.length && w[j].startsWith("-"); j++) if (/^-[A-Za-z]*c[A-Za-z]*$/.test(w[j])) { inner = w[j + 1] ?? ""; break; }
+    } else if (name === "eval") inner = w.slice(k + 1).join(" ");
+    if (inner !== null) {
+      pushWords(inner, all);
+      continue;
+    }
+    if (name !== "git") continue;
+    let j = k + 1;
+    while (j < w.length && w[j].startsWith("-")) j += w[j] === "-C" || w[j] === "-c" ? 2 : 1;
+    if (w[j] !== "push") continue;
+    const out = w.slice(j + 1).filter((a) => a !== "" && !a.startsWith("-")).map((a) => a.replace(/[\n\x1f]/g, " "));
+    all.push(out.length ? out : ["-"]);
+  }
+  for (const sub of subs) pushWords(sub, all);
+  return all;
+}
+const push = typeof t.command === "string" ? pushWords(t.command, []) : [];
+process.stdout.write([s(d && d.tool_name), s(d && d.cwd), s(t.command), hit ? hit[0] : "", push.map((p) => p.join("\x1f")).join("\n")].map((x) => x + "\0").join(""));
 '
-{ IFS= read -r -d '' tool; IFS= read -r -d '' cwd; IFS= read -r -d '' cmd; IFS= read -r -d '' secret; } < <(node -e "$read_input")
+{ IFS= read -r -d '' tool; IFS= read -r -d '' cwd; IFS= read -r -d '' cmd; IFS= read -r -d '' secret; IFS= read -r -d '' push; } < <(node -e "$read_input")
 # Prints the PreToolUse answer: $1 the decision (ask or deny), $2 the reason.
 answer() {
   node -e 'const [, decision, reason] = process.argv;
 process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: decision, permissionDecisionReason: reason } }) + "\n");' "$1" "$2"
 }
 [ -n "$cwd" ] && [ -d "$cwd" ] || cwd=$PWD
-# Prints the words of the first `git push` in a shell command that are not options: the remote and
-# the refspecs, one per line, or "-" alone when there are none; nothing without a `git push`. The
-# push may follow git's global options, such as -C DIR, in any segment of the command.
-push_words() {
-  printf '%s\n' "$1" | awk '{
-    n = split($0, segs, /[|;&]+/)
-    for (i = 1; i <= n; i++) {
-      m = split(segs[i], w, /[ \t]+/); k = 1
-      while (k <= m && (w[k] == "" || w[k] ~ /^[A-Za-z_][A-Za-z0-9_]*=/ || w[k] == "sudo" || w[k] == "command")) k++
-      cmd = w[k]; sub(/.*\//, "", cmd)
-      if (cmd != "git") continue
-      s = k + 1
-      while (s <= m && w[s] ~ /^-/) s += (w[s] == "-C" || w[s] == "-c") ? 2 : 1
-      if (w[s] != "push") continue
-      out = ""
-      for (j = s + 1; j <= m; j++) { a = w[j]; gsub(/^["\047]+|["\047]+$/, "", a); if (a != "" && a !~ /^-/) out = out a "\n" }
-      printf "%s", (out == "" ? "-\n" : out); exit
-    }
-  }'
-}
-
-# Prints the default branch when the shell command pushes to it, or nothing. Without a refspec,
+# Prints the default branch when the push words $1 push to it, or nothing. Without a refspec,
 # `git push` pushes the current branch. A default branch that the remote does not have yet (the
 # first push of a new repository) is left to the owner's prompt, not denied.
 pushes_default() {
-  local words remote refs r dst def cur
-  words=$(push_words "$1")
+  local words=$1 remote refs r dst def cur
   [ -n "$words" ] || return 0
   def=$(git -C "$cwd" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null) && def=${def#origin/} || def=main
   if [ "$words" = - ]; then refs=; remote=origin; else remote=$(printf '%s\n' "$words" | head -n 1); refs=$(printf '%s\n' "$words" | tail -n +2); fi
@@ -99,9 +137,12 @@ deny_push() {
 
 # A push to the default branch is denied before anything asks: an approved prompt must never let
 # it through.
-if [ "$tool" = Bash ] && [ -n "$cmd" ]; then
-  branch=$(pushes_default "$cmd")
-  [ -n "$branch" ] && deny_push "$branch"
+# Every push of the command is checked; one to the default branch denies the call.
+if [ "$tool" = Bash ] && [ -n "$cmd" ] && [ -n "$push" ]; then
+  while IFS= read -r p; do
+    branch=$(pushes_default "$(printf '%s' "$p" | tr '\037' '\n')")
+    [ -n "$branch" ] && deny_push "$branch"
+  done <<< "$push"
 fi
 
 # A known token format in what the call writes: secrets never go into the repository.

@@ -1,5 +1,5 @@
 # Negative tests: the checks of variant A catch violations. Needs $a from 10-variant-a.sh; defines
-# expect_fail, expect_pass, and record, which later files use.
+# expect_fail and expect_pass, which later files use.
 echo "== negative tests on variant A"
 expect_fail() { # description, command...
   local what="$1"; shift
@@ -19,10 +19,8 @@ expect_pass "a hook command whose script exists" bash -c 'cp "$work/hook-setting
   printf "#!/bin/sh\nexit 0\n" > .claude/hooks/project/stop/10-x.sh && chmod +x .claude/hooks/project/stop/10-x.sh && scripts/gen-settings.sh && scripts/check-template.sh'
 expect_pass "protect-branch prints the settings and the ruleset of the default branch" bash -c 'scripts/protect-branch.sh --dry-run | node -e "const p=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")), r=p.ruleset, pr=r.rules.find(x=>x.type===\"pull_request\"), sc=r.rules.find(x=>x.type===\"required_status_checks\");
   process.exit(r.conditions.ref_name.include[0]===\"~DEFAULT_BRANCH\" && r.rules.some(x=>x.type===\"non_fast_forward\") && r.rules.some(x=>x.type===\"deletion\") && pr.parameters.allowed_merge_methods.join()===\"merge\" &&
-  sc.parameters.required_status_checks.map(c=>c.context).join()===\"check,integrity\" && p.repository.allow_merge_commit===true && p.repository.allow_squash_merge===false && p.repository.allow_rebase_merge===false &&
+  sc.parameters.required_status_checks.map(c=>c.context).join()===\"check\" && p.repository.allow_merge_commit===true && p.repository.allow_squash_merge===false && p.repository.allow_rebase_merge===false &&
   p.repository.delete_branch_on_merge===true && p.security.security_and_analysis.secret_scanning_push_protection.status===\"enabled\" ? 0 : 1)"'
-expect_pass "protect-branch --require-base refuses without the fail-without-change workflow" bash -c '! scripts/protect-branch.sh --dry-run --require-base 2> err.log &&
-  grep -q "needs the fail-without-change workflow" err.log'
 # A live run against a stand-in for gh: the repository settings, then secret scanning, then the
 # ruleset. On an HTTP error the stand-in answers as gh does: the response body on stdout,
 # "gh: <message> (HTTP <status>)" on stderr, and exit code 1.
@@ -46,13 +44,6 @@ case "$*" in *"repos/example/sample/rulesets --jq"*|*"repos/example/sample/rules
   case "$*" in *includes_parents=false*) ;; *) [ -z "${GHPB_PARENT:-}" ] || echo 9 ;; esac
   case "${GHPB_RULESET:-}:$*" in :*) ;; page2:*--paginate*) echo 7 ;; page2:*) ;; *) echo 7 ;; esac
   exit 0 ;;
-esac
-# Reading ruleset 7: it requires check and integrity, with GHPB_RULESET=base also base; with
-# "fail", reading it fails.
-case "$*:${GHPB_RULESET:-}" in
-  "api repos/example/sample/rulesets/7 --jq"*:fail) err 502 "Bad Gateway" ;;
-  "api repos/example/sample/rulesets/7 --jq"*:base) printf 'check\nintegrity\nbase\n'; exit 0 ;;
-  "api repos/example/sample/rulesets/7 --jq"*) printf 'check\nintegrity\n'; exit 0 ;;
 esac
 # Secret scanning: refused by the plan by default, with HTTP 422, or with GHPB_SECRET=upgrade with
 # HTTP 403; GHPB_SECRET=admin refuses it for a missing permission, =invalid rejects the payload,
@@ -100,20 +91,6 @@ expect_pass "protect-branch finds its ruleset on a later page of the list" bash 
 expect_pass "protect-branch updates the repository ruleset, not one of the same name inherited from the organisation" bash -c 'rm -f "$work/ghpb.log";
   out=$(GHPB_PARENT=1 GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) &&
   grep -q "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" && ! grep -q "rulesets/9" "$work/ghpb.log" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
-expect_pass "protect-branch keeps a required base check when it updates the ruleset" bash -c 'rm -f "$work/ghpb.log"; touch .github/workflows/fail-without-change.yml;
-  out=$(GHPB_RULESET=base PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "requires \`base\`: kept" &&
-  grep -q "^api --method PUT repos/example/sample/rulesets/7 --input - | .*{\"context\":\"base\"}" "$work/ghpb.log" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
-expect_pass "protect-branch drops a required base check that no workflow reports" bash -c 'rm -f "$work/ghpb.log";
-  out=$(GHPB_RULESET=base PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && printf "%s\n" "$out" | grep -q "which no workflow of this project reports: dropped" &&
-  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"integrity\"}" &&
-  ! grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"base\"}" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
-expect_pass "protect-branch adds no base check to a ruleset without one" bash -c 'rm -f "$work/ghpb.log"; touch .github/workflows/fail-without-change.yml;
-  out=$(GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) && ! printf "%s\n" "$out" | grep -q "requires \`base\`" &&
-  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"integrity\"}" &&
-  ! grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "{\"context\":\"base\"}" || { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'
-expect_pass "protect-branch stops, changing no ruleset, when it cannot read the existing one" bash -c 'rm -f "$work/ghpb.log";
-  ! GHPB_RULESET=fail PATH="$work/ghpb:$PATH" scripts/protect-branch.sh > out.log 2>&1 && grep -q "cannot read the ruleset" out.log &&
-  ! grep -q "rulesets/7 --input" "$work/ghpb.log" || { cat out.log; cat "$work/ghpb.log"; exit 1; }'
 expect_fail "a link to a missing file" bash -c 'printf "# Note\n\nSee [x](docs/nope.md).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of another document" bash -c 'printf "# Note\n\nSee [x](AGENTS.md#no-such-heading).\n" > note.md && node scripts/check-links.mjs'
 expect_fail "a link to a missing heading of the same document" bash -c 'printf "# Note\n\n## Part\n\nSee [x](#parts).\n" > note.md && node scripts/check-links.mjs'
@@ -123,14 +100,14 @@ expect_fail "edited template-owned script" bash -c 'echo "# x" >> scripts/check.
 expect_pass "edited project block" bash -c 'sed -i.bak "s/The project is/This project is/" AGENTS.md && rm AGENTS.md.bak && scripts/check-template.sh'
 expect_fail "edited AGENTS.md outside the block" bash -c 'echo x >> AGENTS.md && scripts/check-template.sh'
 expect_fail "removed project block end" bash -c 'grep -v "project:end" AGENTS.md > t && mv t AGENTS.md && scripts/check-template.sh'
-expect_pass "a project block over its line budget is named" bash -c 'awk "{print} /<!-- project:start -->/ {for (i = 0; i < 11; i++) print \"x\"}" AGENTS.md > t && mv t AGENTS.md;
-  scripts/check-template.sh | grep -q "AGENTS.md: the project block has 1[0-9] lines; at most 10"'
+expect_pass "a project block over its line budget is named" bash -c 'awk "{print} /<!-- project:start -->/ {for (i = 0; i < 21; i++) print \"x\"}" AGENTS.md > t && mv t AGENTS.md;
+  scripts/check-template.sh | grep -q "AGENTS.md: the project block has 2[0-9] lines; at most 20"'
 expect_pass "no line budget for any other document" bash -c 'for f in $(git ls-files "docs/*.md"); do seq 1 300 >> "$f"; done; ! scripts/check-template.sh | grep -q " lines; at most [0-9]* (a template defect)"'
 expect_fail "settings.project.json changed, settings.json not regenerated" bash -c 'printf "{\"permissions\":{\"deny\":[\"Bash(rm -rf:*)\"]}}\n" > .claude/settings.project.json && scripts/check-template.sh'
 expect_pass "settings.json regenerated with the project's deny rule" bash -c 'printf "{\"permissions\":{\"deny\":[\"Bash(rm -rf:*)\"]}}\n" > .claude/settings.project.json && scripts/gen-settings.sh && scripts/check-template.sh &&
   "$work/sj" "s.permissions.deny.includes(\"Bash(rm -rf:*)\") && s.permissions.deny.includes(\"Bash(git push --force*)\") && s.hooks.PreToolUse.length === 1"'
-record() { printf -- '---\nstatus: %s\ndate: 2026-01-01\ndecision-makers: test\nscope: stack\nsummary: "Test."\nsupersedes: []\n---\n\n# Test\n' "${2:-proposed}" > "docs/decisions/$1-test.md"; }
-export -f record
-expect_fail "record that skips a number" bash -c 'record 0002; scripts/gen-decisions-index.sh > docs/decisions/README.md; scripts/check-decisions.sh --base main'
-expect_pass "record with the next number" bash -c 'record 0001; scripts/gen-decisions-index.sh > docs/decisions/README.md; scripts/check-decisions.sh --base main'
-expect_fail "stale decision index" bash -c 'record 0001; scripts/check-decisions.sh --base main'
+# The ruleset of an update from 4.x: the required checks become `check` alone.
+expect_pass "protect-branch replaces the required checks of an existing ruleset" bash -c 'rm -f "$work/ghpb.log";
+  out=$(GHPB_RULESET=1 PATH="$work/ghpb:$PATH" scripts/protect-branch.sh 2>&1) &&
+  grep "^api --method PUT repos/example/sample/rulesets/7 " "$work/ghpb.log" | grep -q "\"required_status_checks\":\[{\"context\":\"check\"}\]" ||
+  { printf "%s\n" "$out"; cat "$work/ghpb.log"; exit 1; }'

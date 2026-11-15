@@ -2,7 +2,9 @@
 # Tags the version main is at once the Version PR is merged and no changesets are pending, then
 # starts the release workflow on the tag (docs/maintaining.md, section 5). The version workflow
 # runs it after changesets/action. A tag pushed with GITHUB_TOKEN starts no workflow, so the
-# release is started with workflow_dispatch, the one event that token may trigger.
+# release is started with workflow_dispatch, the one event that token may trigger. When the tag
+# already exists, the release is started again unless its last run on the tag is in progress or
+# succeeded, so a rerun after a failed start or a failed release finishes the job.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -36,7 +38,15 @@ fi
 version=$(git show "$ref:package.json" | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).version')
 tag="v$version"
 if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null 2>&1; then
-  echo "$tag already exists."
+  last=$(gh run list --workflow release.yml --branch "$tag" --limit 1 --json status,conclusion \
+    --jq '.[] | .status + " " + (.conclusion // "")')
+  case "$last" in
+    'completed success') echo "$tag already exists and its release succeeded."; exit 0 ;;
+    completed*|'') ;;
+    *) echo "$tag already exists and its release is running ($last)."; exit 0 ;;
+  esac
+  gh workflow run release.yml --ref "$tag"
+  echo "$tag already exists; started its release again (last run: ${last:-none})."
   exit 0
 fi
 

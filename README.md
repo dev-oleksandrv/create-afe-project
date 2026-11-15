@@ -1,9 +1,10 @@
 # create-afe-project
 
-An npm package that creates agent-friendly repositories and keeps them up to date. It gives a new
-project its documentation rules, short decision records with a generated index, contribution and
-pull request rules, checks that run the same way locally, in Claude Code hooks, and in CI, and the
-Claude Code skills that apply them. It implements the pillars of
+An npm package that creates agent-friendly repositories and keeps them up to date. A generated
+project holds what is true in it and what an agent may not do: one check command that runs the
+same way locally and in CI, a fast check after every edit, hooks and permission rules that hold
+the limits, short rules for tests and documents, and a place for how to run the product. How an
+agent works on a task comes from the developer's own setup. It implements the pillars of
 [Agent-Friendly Engineering](https://github.com/dev-oleksandrv/afe/blob/main/GUIDE.md). Repository:
 `dev-oleksandrv/create-afe-project`; it started as a fork of the Copier template
 `xandronak/agent-docs-template`.
@@ -12,12 +13,13 @@ Claude Code skills that apply them. It implements the pillars of
 
 | Part | Files |
 | --- | --- |
-| Agent rules | `AGENTS.md` with one project block, `CLAUDE.md` |
+| Agent rules | `AGENTS.md` with one project block (what the project is, how to run it and see a change), `CLAUDE.md` |
 | Testing and documentation rules, loaded when a matching file is touched | `.claude/rules/testing.md`, `.claude/rules/docs.md` |
-| Decision records | `docs/decisions/adr-template.md`, a generated `docs/decisions/README.md` |
-| Checks and environment | `scripts/check.sh` and the scripts it runs, the link check `scripts/check-links.mjs` included; `scripts/env.sh` for the environment commands; `scripts/protect-branch.sh` for the repository settings and the GitHub ruleset of `main`; optional `scripts/check-acceptance.sh` and `scripts/fail-without-change.sh` |
-| Claude Code hooks, permissions, and skills | `.claude/settings.json` (generated) with deny and ask rules; `.claude/hooks/`: the guard hook, the SessionStart hook, the check after every edit, and the Stop dispatcher; `.claude/skills/`: `afe-init`, `create-pr`, `review`, `update-template`, optional `review-code` |
-| CI | `.github/workflows/` (`check`, `decisions`, optional `secret-scan`, `code-review`, and `fail-without-change`) |
+| Decision records | `docs/decisions/adr-template.md`; a record is accepted when written |
+| Checks and environment | `scripts/check.sh` and the scripts it runs, the link check `scripts/check-links.mjs` included; `scripts/env.sh` for the environment commands; `scripts/protect-branch.sh` for the repository settings and the GitHub ruleset of `main` |
+| Limits | `.claude/settings.json` (generated) with deny and ask rules; `.claude/hooks/`: the guard hook (no push to the default branch, a prompt before a known secret format), the SessionStart hook, the check after every edit; `.claude/risky-paths` |
+| Skills | `.claude/skills/`: `afe-init`, `update-template`, optional `review-code` |
+| CI | `.github/workflows/` (`check`, optional `secret-scan` and `code-review`) |
 
 Every file has one owner: the template (the files that `.template/owned.txt` lists), the
 project (seeded files, created once), or a generator; [`src/config.js`](src/config.js) lists the

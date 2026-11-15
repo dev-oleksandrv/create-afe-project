@@ -35,3 +35,5 @@ done
 # DOCS_GUARD=off passes a secret format too.
 out=$(cd "$a" && printf '%s' '{"tool_name":"Write","tool_input":{"file_path":"'"$a"'/src/x.py","content":"'"$aws"'"}}' | DOCS_GUARD=off CLAUDE_PROJECT_DIR="$a" .claude/hooks/guard.sh 2>&1) &&
   [ -z "$out" ] || fail "guard hook: DOCS_GUARD=off does not pass a secret format: '${out:0:120}'"
+hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
+hook allow '{"tool_name":"Bash","tool_input":{"command":"gh pr view 3 --json state"}}'

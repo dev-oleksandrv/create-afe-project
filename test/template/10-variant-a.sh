@@ -1,6 +1,6 @@
 # Variant A: renders the GitHub-hosted default project into $a, which later files reuse, and runs
 # its checks. Needs lib.sh only.
-echo "== variant A: GitHub-hosted runner, the default modules (code-review off, acceptance check on)"
+echo "== variant A: GitHub-hosted runner, the default modules (code-review off, secret scan on)"
 a="$work/a"
 render "$a" || fail "variant A does not render"
 (cd "$a" && scripts/check.sh > "$work/a.log" 2>&1) || { cat "$work/a.log"; fail "variant A: scripts/check.sh fails"; }
@@ -22,10 +22,17 @@ grep -q 'GITLEAKS_VERSION: [0-9]' "$a/.github/workflows/secret-scan.yml" && grep
   fail "variant A: the secret-scan workflow is missing or not rendered"
 [ ! -e "$a/.github/workflows/code-review.yml" ] && [ ! -e "$a/.claude/skills/review-code" ] ||
   fail "variant A: code-review files exist although the module is off by default"
-[ -x "$a/scripts/check-acceptance.sh" ] && grep -qx 'scripts/check-acceptance.sh' "$a/.template/owned.txt" ||
-  fail "variant A: the acceptance check is missing although it is on by default"
-grep -q '"code_review": false' "$a/.afe-answers.json" && grep -q '"acceptance_check": true' "$a/.afe-answers.json" &&
-  ! grep -q 'docs_review\|dual_review' "$a/.afe-answers.json" || { cat "$a/.afe-answers.json"; fail "variant A: the answers file does not record the 3.0.0 defaults"; }
+grep -q '"code_review": false' "$a/.afe-answers.json" && grep -q '"secret_scan": true' "$a/.afe-answers.json" &&
+  ! grep -q 'docs_review\|dual_review\|acceptance_check\|fail_without_change' "$a/.afe-answers.json" ||
+  { cat "$a/.afe-answers.json"; fail "variant A: the answers file does not record the defaults, or records a removed question"; }
+# The process parts of 4.x are gone: the template holds checks, limits, and facts.
+for f in .claude/skills/create-pr .claude/skills/review .claude/hooks/stop-dispatch.sh .claude/path-classes scripts/check-decisions.sh \
+  scripts/gen-decisions-index.sh scripts/lib/classes.sh scripts/lib/stamp.sh scripts/check-acceptance.sh scripts/fail-without-change.sh \
+  .github/workflows/decisions.yml docs/decisions/README.md; do
+  [ ! -e "$a/$f" ] || fail "variant A: $f exists, which 5.0.0 removed"
+done
+[ -f "$a/.claude/risky-paths" ] && grep -qx '\*auth/\*' "$a/.claude/risky-paths" || fail "variant A: .claude/risky-paths is missing or lacks its defaults"
+(cd "$a" && scripts/check.sh --if-changed > /dev/null 2>&1); [ $? -eq 2 ] || fail "variant A: scripts/check.sh still takes --if-changed"
 # Each document is joined into one line, so that a statement wrapped across lines is caught too.
 : > "$work/a-grep.log"
 for f in "$a/AGENTS.md" "$a/README.md" $(find "$a/docs" "$a/.claude" -name '*.md'); do

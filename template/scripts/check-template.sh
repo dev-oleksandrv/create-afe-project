@@ -15,7 +15,7 @@ start='<!-- project:start -->'
 end='<!-- project:end -->'
 # The line budgets of AGENTS.md: the template part and the project block.
 agents_max=70
-block_max=10
+block_max=20
 
 if command -v sha256sum >/dev/null; then sha() { sha256sum | cut -d' ' -f1; }
 else sha() { shasum -a 256 | cut -d' ' -f1; }; fi

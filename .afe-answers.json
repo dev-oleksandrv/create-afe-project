@@ -6,7 +6,5 @@
   "github_repo": "dev-oleksandrv/create-afe-project",
   "ci_runner": "github-hosted",
   "code_review": true,
-  "secret_scan": true,
-  "acceptance_check": false,
-  "fail_without_change": false
+  "secret_scan": true
 }
