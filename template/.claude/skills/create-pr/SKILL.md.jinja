@@ -43,10 +43,6 @@ document. Nothing here merges: the owner does that.
   of a review in CI counts toward one cap, `RALPH_MAX_ITERATIONS` (`.claude/harness.conf`). At
   the cap no more fixes are made: the pull request stays a draft, or goes back to one, and the
   report lists what is open.
-- Long checks: when `CHECK_LOCK` is set in `.claude/harness.conf`, `scripts/check.sh` may wait
-  up to `CHECK_LOCK_WAIT` seconds for another check. Then start it with `run_in_background` and
-  a `timeout` above that wait plus the check's own time, and wait for its completion
-  notification.
 
 ## Procedure
 

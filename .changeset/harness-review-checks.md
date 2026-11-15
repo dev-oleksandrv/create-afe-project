@@ -21,14 +21,6 @@ failing; what a project notices:
   a green Stop stayed green after a link target was deleted.
 - `scripts/check.sh --if-changed` also compares the base of the change, so a moved base re-runs
   the checks on the same tree.
-- Lock (new `scripts/lib/lock.sh`, opt-in): `CHECK_LOCK` names a lock that every checkout of the
-  user on the machine with the same name shares; `scripts/check-project.sh` and
-  `scripts/env.sh fast|e2e` run under it and wait up to `CHECK_LOCK_WAIT` seconds (900), and a
-  sub-agent's Stop skips `CHECK_FAST` while another process holds it. It addresses test timeouts
-  when parallel sessions ran Docker-backed checks at once, in six pull requests of one generated
-  project; added on the owner's decision of 2026-11-15. `.claude/harness.conf` is seeded: an
-  existing project that wants the lock adds `CHECK_LOCK=<name>` and `CHECK_LOCK_WAIT=900` by
-  hand.
 - Guard hook (`.claude/hooks/guard.sh`): the command is read as words, so a push named inside
   quoted data, such as a commit message, is no longer denied; the command string of `bash -c`,
   `sh -c`, `zsh -c`, and `eval`, a command substitution in double quotes, and a subshell are
@@ -48,4 +40,4 @@ failing; what a project notices:
 
 Evidence: the review findings on instruction Markdown as class low, the update exemption, and the
 green stamps (one of them a reproduced green Stop after a deleted link target), and the history
-of the generated project for the lock and the size warning.
+of the generated project for the size warning.

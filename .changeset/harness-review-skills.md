@@ -22,8 +22,7 @@ existing project starts failing.
   draft with nothing waiting is marked ready, unless `--keep-draft`. A review skipped by
   `--skip-review` is the caller's: the verdict reads "Ready to merge, review skipped by flag".
   Fixes of checks and of CI review findings count toward one cap, `RALPH_MAX_ITERATIONS`; at the
-  cap the pull request stays a draft and the report lists what is open. With `CHECK_LOCK` set,
-  `/create-pr` and the `review` skill run the full and the fast check in the background. With
+  cap the pull request stays a draft and the report lists what is open. With
   `fail_without_change` on, a pull request whose plan names a test that passes on the base gets
   the label `tests-pass-on-base`, with the reason in the plan. A file of sections from a tool
   that ran the review joins the description, with its `Closes #<n>` lines last, before the

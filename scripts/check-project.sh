@@ -1,22 +1,15 @@
 #!/usr/bin/env bash
 # Project checks: runs every scripts/checks.d/*.sh in name order. A project adds its own checks
-# there; the template never writes to that directory. With CHECK_LOCK of .claude/harness.conf set,
-# they run under that lock of the machine (scripts/lib/lock.sh), and the run fails when it cannot
-# take the lock within CHECK_LOCK_WAIT seconds.
+# there; the template never writes to that directory.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 shopt -s nullglob
-# shellcheck source=scripts/lib/harness-conf.sh
-. scripts/lib/harness-conf.sh
-# shellcheck source=scripts/lib/lock.sh
-. scripts/lib/lock.sh
 
 checks=(scripts/checks.d/*.sh)
 if [ "${#checks[@]}" -eq 0 ]; then
   echo "SKIP: no project checks in scripts/checks.d/"
   exit 0
 fi
-check_lock scripts/check-project.sh || exit 1
 failures=0
 for c in "${checks[@]}"; do
   echo "== project check: $c"

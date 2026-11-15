@@ -18,7 +18,6 @@ scripts/lib/git-base.sh
 scripts/lib/classes.sh
 scripts/lib/harness-conf.sh
 scripts/lib/json.mjs
-scripts/lib/lock.sh
 scripts/lib/root.sh
 scripts/lib/stamp.sh
 .claude/settings.template.json

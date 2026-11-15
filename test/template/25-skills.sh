@@ -71,7 +71,7 @@ for v in a b; do
   ! grep -n -E 'Bash\(sleep|30 seconds|fail-without-change|blocking:|Owner decisions|tests-pass-on-base' "$pr" > "$work/$v-pr-grep.log" ||
     { cat "$work/$v-pr-grep.log"; fail "variant $v: create-pr keeps polling, the local fail-without-change step, the old labels, or the base label without its check"; }
   # Only an open pull request is updated; drafts, the plan without drafts, the review that was not
-  # needed or was skipped, --keep-draft, the evidence level, one cap for fix rounds, and the lock.
+  # needed or was skipped, --keep-draft, the evidence level, and one cap for fix rounds.
   flat=$(tr '\n' ' ' < "$pr" | tr -s ' ')
   for s in '(`state` is `OPEN`): this run updates it' 'A merged or closed one is not reused: step 6 creates a new one.' \
     'the level is the last line of `scripts/check-decisions.sh --classes --base main`, `review<TAB><level>`. For `none` no evidence is needed' \
@@ -84,9 +84,7 @@ for v in a b; do
     'or the findings of a review in CI counts toward one cap, `RALPH_MAX_ITERATIONS`' \
     'At the cap no more fixes are made: the pull request stays a draft, or goes back to one, and the report lists what is open.' \
     'each fix is a fix round' 'each such round is a fix round' \
-    'when it is ready and an item waits, `gh pr ready <number> --undo`' \
-    'when `CHECK_LOCK` is set in `.claude/harness.conf`, `scripts/check.sh` may wait up to `CHECK_LOCK_WAIT` seconds' \
-    'start it with `run_in_background` and a `timeout` above that wait'; do
+    'when it is ready and an item waits, `gh pr ready <number> --undo`'; do
     printf '%s' "$flat" | grep -qF -- "$s" || fail "variant $v: create-pr lacks '$s'"
   done
 done
@@ -100,11 +98,6 @@ for s in 'Bash(gh label create tests-pass-on-base:*)' \
   '`gh pr edit <number> --add-label tests-pass-on-base`); the bullet gives the reason'; do
   printf '%s' "$fwcp" | grep -qF -- "$s" || fail "fail_without_change on: create-pr lacks '$s'"
 done
-# The review skill runs its checks in the background when a check may wait for the lock.
-rvf=$(tr '\n' ' ' < "$review" | tr -s ' ')
-printf '%s' "$rvf" | grep -qF 'When `CHECK_LOCK` is set in `.claude/harness.conf`, `scripts/check.sh` and the fast check below' &&
-  printf '%s' "$rvf" | grep -qF 'start them with `run_in_background` and a `timeout` above that wait' ||
-  fail "review/SKILL.md does not run its checks in the background under CHECK_LOCK"
 # With code-review on, create-pr reads the findings of the run that posted them, answers each
 # once, and starts the review once more for the last commit.
 pr="$b/.claude/skills/create-pr/SKILL.md"
