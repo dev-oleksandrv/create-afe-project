@@ -7,7 +7,9 @@
 # file as its last argument, and reads pass or fail from the exit code, per file: a file that
 # passes on the base fails the check, unless --allow-pass-on-base is given (the pull request label
 # `tests-pass-on-base`). It skips when TEST_GLOBS or FWC_TEST is empty, or when no test file
-# changed. It runs the project's own commands, locally before the pull request and in the
+# changed. A non-zero exit on the base does not say why the test failed there, so for each file
+# that fails on the base it prints the last 20 lines of that run, which the pull request quotes as
+# the reason. It runs the project's own commands, locally before the pull request and in the
 # module's workflow (.github/workflows/fail-without-change.yml).
 #
 # Usage: scripts/fail-without-change.sh [--base <ref>] [--allow-pass-on-base]
@@ -74,7 +76,8 @@ while IFS= read -r t; do
       failures=$((failures + 1))
     fi
   else
-    echo "ok: $t passes with the change and fails on the base"
+    echo "ok: $t passes with the change and fails on the base, where its run ends with:"
+    tail -n 20 "$work/test.log" | sed 's/^/    /'
   fi
 done <<< "$tests"
 [ "$failures" -eq 0 ] || { echo "== fail-without-change failed: $failures"; exit 1; }
