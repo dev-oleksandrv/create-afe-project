@@ -17,7 +17,7 @@ test('questions take their defaults and skip the runner labels on a GitHub-hoste
   const { answers, context } = await answer({});
   assert.deepEqual(Object.keys(answers), [
     'project_name', 'project_description', 'github_repo', 'ci_runner', 'code_review', 'secret_scan',
-    'acceptance_check', 'fail_without_change',
+    'acceptance_check', 'fail_without_change', 'licence_check',
   ]);
   assert.equal(context.ci_runs_on_default, '["ubuntu-latest"]');
 });
@@ -28,6 +28,7 @@ test('code review in CI is off and the acceptance check on by default; the remov
   assert.equal(answers.acceptance_check, true);
   assert.equal(answers.secret_scan, true);
   assert.equal(answers.fail_without_change, false);
+  assert.equal(answers.licence_check, false);
   for (const name of ['docs_review', 'dual_review']) assert.throws(() => coerce(name, 'true'), new RegExp(`unknown question: ${name}`));
 });
 
@@ -108,7 +109,7 @@ test('conditional names drop files and directories, .jinja is stripped, _gitigno
 
 test('every rendered file is template-owned or seeded, with every module on and off', async () => {
   for (const on of [true, false]) {
-    const flags = Object.fromEntries(['code_review', 'secret_scan', 'acceptance_check', 'fail_without_change'].map((k) => [k, on]));
+    const flags = Object.fromEntries(['code_review', 'secret_scan', 'acceptance_check', 'fail_without_change', 'licence_check'].map((k) => [k, on]));
     const { context } = await answer(flags);
     const out = renderTemplate(TEMPLATE_DIR, context);
     const owned = String(out.get('.template/owned.txt').content).split('\n').filter((l) => l && !l.startsWith('#'));

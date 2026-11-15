@@ -8,5 +8,6 @@
   "code_review": true,
   "secret_scan": true,
   "acceptance_check": false,
-  "fail_without_change": false
+  "fail_without_change": false,
+  "licence_check": false
 }
