@@ -94,6 +94,17 @@ for k in code docs; do
   (cd "$a" && scripts/check.sh --if-changed > "$work/check2.log" 2>&1) && grep -qx '#### all checks passed' "$work/check2.log" ||
     { cat "$work/check2.log"; fail "check.sh --if-changed: skips with a stale $k stamp"; }
 done
+# The base of the change counts too (scripts/check-decisions.sh depends on it): the same tree
+# with a moved base runs the checks.
+m0=$(git -C "$a" rev-parse main)
+gitc "$a" switch -q -c moved && gitc "$a" commit -q --allow-empty -m moved
+(cd "$a" && scripts/check.sh > "$work/check2.log" 2>&1 && scripts/check.sh --if-changed > "$work/check2.log" 2>&1) &&
+  [ "$(cat "$work/check2.log")" = "#### unchanged since the last passing run" ] ||
+  { cat "$work/check2.log"; fail "check.sh --if-changed: runs on an unchanged tree and base"; }
+gitc "$a" branch -q -f main moved
+(cd "$a" && scripts/check.sh --if-changed > "$work/check2.log" 2>&1) && grep -qx '#### all checks passed' "$work/check2.log" ||
+  { cat "$work/check2.log"; fail "check.sh --if-changed: skips the same tree with a moved base"; }
+gitc "$a" branch -q -f main "$m0" && gitc "$a" switch -q main && gitc "$a" branch -q -D moved
 # In GitHub Actions the stamp is neither read nor written.
 (cd "$a" && GITHUB_ACTIONS=true scripts/check.sh --if-changed > "$work/check3.log" 2>&1) && grep -qx '#### all checks passed' "$work/check3.log" ||
   { cat "$work/check3.log"; fail "check.sh --if-changed: reads the stamp in GitHub Actions"; }

@@ -14,7 +14,8 @@
 # tree_stamp <kind>: prints the stamp of one kind, code or docs.
 # stamp_read <scope> <kind>: prints the stored stamp of the scope, fast or full, or nothing.
 # stamp_write <scope> <kind> [stamp]: stores the stamp, by default the tree's; the files are
-#   afe-green-<scope>-<kind> in the worktree's own git directory.
+#   afe-green-<scope>-<kind> in the worktree's own git directory. Another kind, such as the base
+#   that scripts/check.sh stores, needs its stamp given.
 # stamp_matches <scope> <kind> [stamp]: true when the stored stamp of the scope equals the stamp,
 #   by default the tree's; for fast, a stored full stamp counts too.
 stamp_sha256() {
