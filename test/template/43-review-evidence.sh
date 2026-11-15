@@ -53,6 +53,11 @@ ev 1 "a confirm from another commit" "$(evl review $B $C)
 $(evl confirm $X $H)"
 ev 1 "a dirty confirm" "$(evl review $B $C)
 $(evl confirm $C $H true full)"
+# Only a confirm of the diff moves the chain: one of a plan or a question reviewed no change.
+ev 1 "a confirm of a plan" "$(evl review $B $C)
+$(evl confirm $C $H false full codex gpt-5 general plan)"
+ev 1 "a confirm of a question" "$(evl review $B $C)
+$(evl confirm $C $H false full codex gpt-5 general question)"
 ev 1 "a confirm before the review it confirms" "$(evl confirm $C $H)
 $(evl review $B $C)"
 ev 1 "a later full review restarts the chain" "$(evl review $B $C)
