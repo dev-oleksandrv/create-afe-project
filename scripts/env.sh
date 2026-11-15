@@ -3,13 +3,17 @@
 # end to end, and reset the project. `check` is scripts/check.sh; the others are the project's
 # commands in .claude/harness.conf (SETUP, CHECK_FAST, E2E, RESET), run from the repository root
 # with no stdin. A command that is not set prints SKIP and exits 0; otherwise the exit code is the
-# command's, so a failure is machine-readable.
+# command's, so a failure is machine-readable. With CHECK_LOCK set, fast and e2e run under that
+# lock of the machine (scripts/lib/lock.sh) and exit 1 when they cannot take it within
+# CHECK_LOCK_WAIT seconds.
 #
 # Usage: scripts/env.sh setup|check|fast|e2e|reset
 set -uo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/lib/harness-conf.sh
 . scripts/lib/harness-conf.sh
+# shellcheck source=scripts/lib/lock.sh
+. scripts/lib/lock.sh
 
 case "${1:-}" in
   setup) key=SETUP ;;
@@ -24,5 +28,6 @@ if [ -z "$cmd" ]; then
   echo "SKIP: $key is not set in .claude/harness.conf"
   exit 0
 fi
+case "$1" in fast|e2e) check_lock "scripts/env.sh $1" || exit 1 ;; esac
 echo "== env $1: $cmd"
 bash -c "$cmd" < /dev/null
