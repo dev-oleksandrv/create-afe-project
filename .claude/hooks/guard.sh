@@ -5,8 +5,9 @@
 # release, a change of repository settings, or publishing, are permission rules of
 # .claude/settings.template.json, not this hook. DOCS_GUARD=off in the Claude Code environment
 # disables the guard for scripted owner-driven runs.
-# This is a guard against unreviewed changes, not a security boundary: a push split across lines
-# with a backslash, or behind a prefix such as env, time, or nohup, is not detected.
+# This is a guard against unreviewed changes, not a security boundary: a push behind a prefix such
+# as env, time, or nohup, or in quoted text that another command runs (bash -c, eval), is not
+# detected.
 # It stays on in GitHub Actions, unlike the other hooks: claude-code-action restores .claude/
 # from the base branch there, and this hook runs no file of the working tree, which a pull request
 # supplies. It reads its input and writes its answer with `node -e` code of its own, not
@@ -50,10 +51,39 @@ process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreT
 [ -n "$cwd" ] && [ -d "$cwd" ] || cwd=$PWD
 # Prints the words of the first `git push` in a shell command that are not options: the remote and
 # the refspecs, one per line, or "-" alone when there are none; nothing without a `git push`. The
-# push may follow git's global options, such as -C DIR, in any segment of the command.
+# push may follow git's global options, such as -C DIR, in any segment of the command: the parts
+# between ; & | ( ) ` and line ends. Quoted text is data, such as a commit message or test data:
+# scanned from the left, single-quoted text and double-quoted text without $ or a backtick become
+# one word, or "_" when they hold whitespace or a shell operator, before the command is split, and
+# a backslash drops the character after it. Double-quoted text with $ or a backtick stays, so a
+# command substitution in it is still seen. This is a quote scan, not a shell parser.
 push_words() {
-  printf '%s\n' "$1" | awk '{
-    n = split($0, segs, /[|;&]+/)
+  printf '%s' "$1" | tr '\n' ';' | awk '
+  function word(t) { return (t != "" && t !~ /[ \t;&|()`<>]/) ? t : "_" }
+  function unquote(s,   out, i, j, n, c, t) {
+    out = ""; n = length(s); i = 1
+    while (i <= n) {
+      c = substr(s, i, 1)
+      if (c == "\\") { i += 2; continue }
+      if (c == "\047") {
+        j = index(substr(s, i + 1), "\047")
+        if (!j) return out substr(s, i)
+        out = out word(substr(s, i + 1, j - 1)); i += j + 1; continue
+      }
+      if (c == "\"") {
+        t = ""
+        for (j = i + 1; j <= n && substr(s, j, 1) != "\""; j++) {
+          if (substr(s, j, 1) == "\\") { t = t substr(s, j, 2); j++ } else t = t substr(s, j, 1)
+        }
+        if (j > n) return out substr(s, i)
+        out = out (t ~ /[$`]/ ? "\"" t "\"" : word(t)); i = j + 1; continue
+      }
+      out = out c; i++
+    }
+    return out
+  }
+  {
+    n = split(unquote($0), segs, /[|;&()`]+/)
     for (i = 1; i <= n; i++) {
       m = split(segs[i], w, /[ \t]+/); k = 1
       while (k <= m && (w[k] == "" || w[k] ~ /^[A-Za-z_][A-Za-z0-9_]*=/ || w[k] == "sudo" || w[k] == "command")) k++
