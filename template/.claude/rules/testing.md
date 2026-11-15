@@ -53,17 +53,20 @@ checks in scripts/checks.d/.
 
 ## 3. Tests and the change they cover
 
-- Tests come first: they are written before the implementation and run once to see them fail for
-  the expected reason. A test that passes before the implementation exists tests nothing.
-- The acceptance tests of a requirement's criteria are written or reviewed by someone other than
-  the author of the implementation, before it exists; the author changes them only with the
-  owner's agreement.
+- For a change that touches a path of class high (`.claude/path-classes`), tests come first:
+  they are written before the implementation and run once to see them fail for the expected
+  reason, and the acceptance tests of a requirement's criteria are written or reviewed by
+  someone other than the author of the implementation, before it exists; the author changes
+  them only with the owner's agreement. Elsewhere, tests are written with the change.
+- A defect is fixed only after a regression test that reproduces it fails, whatever the class.
 - The agent derives the test plan from the identifiers the change serves: their cases, failure
   paths, and edge cases (section 2). It is a report under "Acceptance and test plan"
   (`.claude/skills/create-pr/SKILL.md`), never approved per pull request and not maintained
   afterwards.
-  Each new or changed test fails on the base and passes with the change.
-- A defect is fixed only after a regression test that reproduces it fails.
+- A test of new behaviour or of a fix fails on the base for the intended reason and passes with
+  the change, and the pull request says how that was seen. A test of an invariant that already
+  held, or a characterization test written before a refactoring, may pass on the base; the
+  pull request names it as such.
 - A refactoring keeps the tests as they are. A change of behaviour first changes the requirement
   or the acceptance criterion, then the test that carries the same identifier; the pull request
   names both.
@@ -76,8 +79,9 @@ checks in scripts/checks.d/.
 - The quality measures the project records (coverage, mutation score) never fall below those of
   the base branch.
 - The configuration of the test runner, coverage, mutation testing, and linters is class gate in
-  `.claude/path-classes`: it changes without a prompt, the pull request lists it under "Gate
-  files", which the readiness check enforces, and the owner reviews it after the merge.
+  `.claude/path-classes`: it changes without a prompt, and the pull request lists it under "Gate
+  files", which the readiness check enforces. That list is information for the owner, not a
+  control: nothing reviews or approves the gate change because it is listed.
 - An invariant that must hold everywhere (for example, a secret never appears in output) is an
   executable check, a test or a project check, and the register docs/invariants.md, when the
   project keeps one, names it with that check; its invariants are criteria of the review of
