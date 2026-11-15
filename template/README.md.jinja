@@ -28,15 +28,30 @@ checked; a project that wants it adds a check such as [lychee](https://lychee.cl
 
 `/create-pr` in Claude Code opens the pull request: it runs the full check, reviews the change by
 the class of its paths (`.claude/path-classes`), writes the description, and watches the CI
-checks. `--skip-review` skips the review, for a caller that reviewed the change itself;
-`--skip-watch` skips the watch of the CI checks.
+checks. On a branch that already has a pull request it updates that one. `--skip-review` skips
+the review, for a caller that reviewed the change itself; `--review-evidence <file>` uses the
+record of an external review instead, when `scripts/check-review-evidence.mjs` accepts it for the
+current commit; `--skip-watch` skips the watch of the CI checks.
+
+## Sandbox
+
+The [Claude Code sandbox](https://code.claude.com/docs/en/sandboxing) is off unless the owner
+turns it on in `/afe-init`, which writes its `sandbox` block into `.claude/settings.project.json`
+and regenerates `.claude/settings.json`. It confines the shell commands Claude runs to writes in
+the working and temporary directories and to allowed network hosts, on macOS, Linux, and WSL2.
+It does not cover Claude's file and web tools, the hooks, MCP servers, or the commands it
+excludes, which run with full access; Docker does not run inside it, and commands that write
+`.claude/`, such as a template update, run outside it.
 
 ## Modules
 
 The answers in `.afe-answers.json` turn these on or off:
 
-- `code_review` (default off): Claude also reviews each pull request that changes code in CI; it
-  needs the Claude GitHub App and the `CLAUDE_CODE_OAUTH_TOKEN` secret.
+- `code_review` (default off): Claude also reviews each pull request that changes code in CI,
+  when it opens or leaves draft, and again on its latest commit when the label `code-review` is
+  added; it needs the Claude GitHub App and the `CLAUDE_CODE_OAUTH_TOKEN` secret.
+- `licence_check` (default off): the review and `/afe-init` also check the licence of each new
+  dependency.
 - `secret_scan` (default on): the `secret-scan` workflow scans pull requests and pushes to `main`
   for leaked secrets.
 - `acceptance_check` (default on): readiness requires a test for every identifier a pull request
@@ -49,7 +64,9 @@ The answers in `.afe-answers.json` turn these on or off:
 Changes reach `main` only through pull requests with passing checks, merged with a merge
 commit. After the first push, a repository admin applies the repository settings and the GitHub
 ruleset once; `--dry-run` shows them first, and the header of the script says what they are.
-Rulesets need a public repository or, for a private one, a paid plan.
+Rulesets need a public repository or, for a private one, a paid plan. Without the ruleset,
+nothing on the server stops the merge of a commit whose checks failed or never ran: that the
+owner merges is then the only control.
 
 ```bash
 scripts/protect-branch.sh

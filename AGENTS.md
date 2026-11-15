@@ -30,13 +30,14 @@ generated copies. The `update-template` skill does not apply here. Maintainer ru
 
 - Each identifier the change serves (`ID_PATTERN` in `.claude/harness.conf`) has a test that
   carries it.
-- A new or changed test fails without the change.
+- A test of new behaviour or of a fix fails without the change for the intended reason; a test
+  that passes on the base is named as an invariant or characterization test.
 - `scripts/check.sh` passes.
 
 ## Documents
 
-- Change a document only when a check fails on it, or when the change needs an ADR (criterion
-  in `docs/decisions/adr-template.md`).
+- Change a document only when a check fails on it, when the change makes a statement in it
+  false, or when the change needs an ADR (criterion in `docs/decisions/adr-template.md`).
 - Do not create placeholder documents.
 
 ## Pull requests
@@ -45,7 +46,8 @@ generated copies. The `update-template` skill does not apply here. Maintainer ru
 
 ## Pointers
 
-- `.claude/rules/` loads the rules for tests and documents when matching files are touched.
+- Read `.claude/rules/testing.md` before changing a test and `.claude/rules/docs.md` before
+  changing a document; Claude Code loads them by itself when matching files are touched.
 - `.claude/harness.conf` holds commands and limits.
 - `.claude/path-classes` holds the high-risk and gate paths.
 - The project block names the project's own review criteria file, if it has one.

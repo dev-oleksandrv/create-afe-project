@@ -43,8 +43,10 @@ request. Suggestions never drive a loop; only blockers do, and only for `two`.
      "finding"}]}`, where a blocker means `FAIL`.
 4. Run each reviewer with the brief and nothing else: a Claude sub-agent with the Agent tool,
    its prompt the brief; Codex, with the model of the Codex configuration, as
-   `codex exec --sandbox read-only -C <repository root> - < <brief file>`. A run that fails,
-   times out, or returns no valid JSON is not a pass: stop and report it.
+   `codex exec --sandbox read-only --ephemeral --ignore-rules -C <repository root> - < <brief file>`:
+   no session files and no local exec-policy rules; the user's configuration and hooks still
+   apply, as the user's choice. A run that fails, times out, or returns no valid JSON is not a
+   pass: stop and report it.
 5. Answers, once per finding. A suggestion is fixed now or declined with a reason. A blocker is
    fixed in the working tree or declined with a reason.
    After each set of fixes run `scripts/env.sh fast` and fix what it reports; the caller relies

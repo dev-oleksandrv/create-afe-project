@@ -97,6 +97,12 @@ export const QUESTIONS = [
     help: 'Require every new or changed test to fail without the change? (you set FWC_TEST in .claude/harness.conf later)',
     default: false,
   },
+  {
+    name: 'licence_check',
+    type: 'bool',
+    help: 'Check the licence of each new dependency in reviews and in /afe-init? (the project documents which licences it allows)',
+    default: false,
+  },
 ];
 
 // Values the templates use that are derived from the answers, never asked.

@@ -1,17 +1,19 @@
 # Code review of pull requests. Claude reads the diff of a pull request that changes code,
 # contracts, checks, or workflows, reviews it against the review rubric and the project's own
 # criteria, and posts findings as PR comments. It proposes only; it changes nothing. It is a
-# sensor with one pass: it runs when the pull request opens or leaves draft, and a push does not
-# run it again. Needs the Claude GitHub App installed on the repository and the
-# CLAUDE_CODE_OAUTH_TOKEN secret.
+# sensor with one pass per run: it runs when the pull request opens or leaves draft, and on its
+# latest commit when the label `code-review` is added, as the create-pr skill does once after its
+# last fix push; a push alone does not run it. Needs the Claude GitHub App installed on the
+# repository and the CLAUDE_CODE_OAUTH_TOKEN secret.
 name: code-review
 
 on:
   pull_request:
-    types: [opened, ready_for_review]
+    types: [opened, ready_for_review, labeled]
 
+# A run for another label reviews nothing; a group of its own keeps it from cancelling a review.
 concurrency:
-  group: code-review-${{ github.event.pull_request.number }}
+  group: code-review-${{ github.event.pull_request.number }}-${{ (github.event.action != 'labeled' || github.event.label.name == 'code-review') && 'review' || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -21,7 +23,17 @@ permissions:
   id-token: write
 
 jobs:
+  # Of the labels, only `code-review` starts a review.
+  label:
+    if: ${{ github.event.action != 'labeled' || github.event.label.name == 'code-review' }}
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
+    steps:
+      - run: echo "review of $HEAD_SHA"
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
   review:
+    needs: label
     # A pull request that a workflow opened with GITHUB_TOKEN, such as a generated release pull
     # request, is not reviewed: its content is generated and the owner reviews it; the action also
     # refuses the runs a bot starts.
@@ -42,8 +54,30 @@ jobs:
           git diff "origin/$BASE_REF...HEAD" > "$RUNNER_TEMP/pr.diff"
           printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
 
-      # track_progress keeps the prompt as custom instructions, and the Skill tool is allowed
-      # explicitly because a headless run denies it otherwise. No plugin is installed: the review
+      # The rules of the review are the base branch's. Its AGENTS.md, and each file that the
+      # project block names and the base has, such as the project's review criteria, go to
+      # $RUNNER_TEMP/base-rules for the skill; its AGENTS.md also replaces the checkout's, which
+      # CLAUDE.md imports. The pull request's versions are in the diff, reviewed as data.
+      - name: Rules of the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          rules="$RUNNER_TEMP/base-rules"
+          mkdir -p "$rules"
+          git show "origin/$BASE_REF:AGENTS.md" > "$rules/AGENTS.md"
+          cp "$rules/AGENTS.md" AGENTS.md
+          awk '$0 == "<!-- project:start -->" {f = 1; next} $0 == "<!-- project:end -->" {f = 0} f' "$rules/AGENTS.md" |
+            { grep -o '`[^`]*`' || true; } | tr -d '`' | sort -u | while IFS= read -r p; do
+              case "$p" in ''|/*|*..*|AGENTS.md) continue ;; esac
+              [ "$(git cat-file -t "origin/$BASE_REF:$p" 2> /dev/null)" = blob ] || continue
+              mkdir -p "$rules/$(dirname "$p")"
+              git show "origin/$BASE_REF:$p" > "$rules/$p"
+            done
+
+      # track_progress keeps the prompt as custom instructions and posts a progress comment, and
+      # the Skill tool is allowed explicitly because a headless run denies it otherwise. A run
+      # for the label goes without it, as the action's automation mode, which takes any event;
+      # its summary is in the log. No plugin is installed: the review
       # rests on the repository's own rules. The action restores the Claude configuration from the
       # base branch, but the files a hook runs stay at the head: --settings, above the project
       # settings, disables the hooks; all but the guard hook, which runs no file of the head, also
@@ -52,6 +86,6 @@ jobs:
         uses: anthropics/claude-code-action@c0949c50a78c1ec8ce2647db36629b870e715d0c # v1.0.268
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: "true"
-          prompt: "/review-code ${{ github.event.pull_request.number }} ${{ runner.temp }}/pr.diff ${{ runner.temp }}/pr-body.md"
+          track_progress: ${{ github.event.action != 'labeled' }}
+          prompt: "/review-code ${{ github.event.pull_request.number }} ${{ runner.temp }}/pr.diff ${{ runner.temp }}/pr-body.md ${{ runner.temp }}/base-rules"
           claude_args: '--allowedTools "Skill(review-code *),mcp__github_inline_comment__create_inline_comment" --disallowedTools "Edit,Write,MultiEdit,NotebookEdit,Bash" --max-turns 60 --settings ''{"disableAllHooks": true}'''

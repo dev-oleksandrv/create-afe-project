@@ -28,8 +28,8 @@ own: a reviewer of any model family receives it in the brief, followed by the te
 | Authority | every behaviour serves a named requirement or criterion, or is an open question; nothing is invented (`AGENTS.md`) |
 | Co-change | contract, code, and tests change together; a breaking contract change is versioned; generated files are regenerated |
 | Correctness | the logic does what the requirement says, with the edge cases that apply |
-| Tests | the tests follow the testing rules, and every identifier of "Acceptance and test plan" has a test that carries it and fails without the change |
+| Tests | the tests follow the testing rules, and every identifier of "Acceptance and test plan" has a test that carries it, with the evidence section 3 of the testing rules asks for; a test that duplicates another (the same failure at the same level) is a suggestion to merge them, and a clause that a test at another level already covers needs no test of its own |
 | Errors | no error is swallowed, no failure hides behind a default |
 | Security | external input is validated where it enters; secrets never reach code, logs, or output |
-| Dependencies | a new dependency exists in its registry under the name used, is maintained, has a license the project allows (an open question while no document says which), and does no job an existing dependency already does; its version is pinned exactly, through the lock file where the stack has one |
+| Dependencies | a new dependency exists in its registry under the name used, is maintained, and does no job an existing dependency already does; its version is pinned exactly, through the lock file where the stack has one |
 | Claims | nothing is described as working without a test |

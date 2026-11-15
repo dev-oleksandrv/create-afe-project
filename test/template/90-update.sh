@@ -24,7 +24,7 @@ echo "Project note." >> "$u/README.md"
 mkdir -p "$u/scripts/checks.d" && printf '#!/usr/bin/env bash\necho project check\n' > "$u/scripts/checks.d/10-sample.sh" && chmod +x "$u/scripts/checks.d/10-sample.sh"
 rm "$u/.claude/harness.conf"
 gitc "$u" add -A && gitc "$u" commit -q -m init
-printf '\nA line added by the next template version.\n' >> "$tpl/template/.claude/skills/review/rubric.md"
+printf '\nA line added by the next template version.\n' >> "$tpl/template/.claude/skills/review/rubric.md.jinja"
 sed -i.bak '/^scripts\/protect-branch.sh$/d' "$tpl/template/.template/owned.txt.jinja" && rm "$tpl/template/scripts/protect-branch.sh" "$tpl/template/.template/owned.txt.jinja.bak"
 node -e 'const f=process.argv[1],fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version="0.0.2";fs.writeFileSync(f,JSON.stringify(p))' "$tpl/package.json"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up.log" 2>&1) || { cat "$work/up.log"; fail "update test: update fails"; }

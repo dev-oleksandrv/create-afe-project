@@ -3,6 +3,7 @@
     "deny": [
       "Read(**/.env)",
       "Read(**/.env.*)",
+      "Read(!.env.example)",
       "Read(**/*.pem)",
       "Read(**/*.key)",
       "Bash(git push --force*)",
