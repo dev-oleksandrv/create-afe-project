@@ -14,8 +14,11 @@ product is [`template/`](../template/).
   update. How names and `.jinja` files render is in the header of `src/render.js`.
 - This repository is generated from its own template: `scripts/sync-self.sh` runs the `update`
   command of the working tree, so its `.afe-answers.json` records the version of `package.json`.
+- The template holds what is true in a project and what an agent may not do: checks, limits,
+  and facts. It holds no process: how an agent works on a task comes from the developer's own
+  setup.
 - A project extends the template only at its extension points: `scripts/checks.d/`,
-  `.claude/path-classes`, `.claude/harness.conf`, `.claude/settings.project.json` (its own
+  `.claude/risky-paths`, `.claude/harness.conf`, `.claude/settings.project.json` (its own
   hooks and permission rules), the project block of `AGENTS.md`, and its own documents. A need
   that the extension points do not cover is a change of the template, not a local edit.
 - Optional parts are modules behind a question of `src/config.js`. A module's files use a
@@ -34,12 +37,11 @@ product is [`template/`](../template/).
    files a project sees change; it becomes the [`CHANGELOG.md`](../CHANGELOG.md) entry, with a
    link to the pull request. A change of `bin/`, `src/`, `template/`, or `package.json` needs one
    (the `changeset` workflow checks it); `npx changeset --empty` when nobody notices it. A
-   changeset that adds a rule or a check names the recurring failure it addresses, with the pull
-   requests where that failure occurred; a rule or check without one is added only on the owner's
-   decision, and the changeset says so (section 6).
+   changeset that adds a rule or a check names the real mistake it addresses, seen at least
+   twice, and what it costs per task (section 6).
 3. Run `scripts/check.sh`. Its project part, `scripts/checks.d/10-template.sh`, is the template
    test suite (section 3).
-4. Open the pull request with the `create-pr` skill, as in any generated project.
+4. Open the pull request.
 
 ## 3. Tests
 
@@ -51,9 +53,9 @@ The template suite sources [`test/template/lib.sh`](../test/template/lib.sh), th
 helpers of earlier ones. The header of each file says what it tests and what it needs; a new
 test goes into the file of its subject.
 
-CI runs them through the `check` workflow. The suite needs Node.js, Git, curl, and the full
-history of this repository: the 3.0.0 migration test builds the 2.1.0 package from its release
-commit, and the Python smoke test installs uv when `uvx` is missing.
+CI runs them through the `check` workflow. The suite needs Node.js, Git, and the full history
+of this repository: the update tests build the 2.1.0, the 3.0.0, and the 4.0.0 package from
+their release commits.
 
 ## 4. Versions
 
@@ -81,7 +83,7 @@ files updates with `create-afe-project@3` first.
    Version PR "Release: next version". It needs the repository setting "Allow GitHub Actions to
    create and approve pull requests".
 2. The owner approves the workflow runs of the Version PR on its page: the runs of a pull
-   request opened with `GITHUB_TOKEN` wait for that, the required check `integrity` among them.
+   request opened with `GITHUB_TOKEN` wait for that, the required check `check` among them.
 3. Before merging it, the review of section 6 runs, and its proposals go to the owner. Merging
    the Version PR is the owner's release decision.
 4. The push of that merge tags `vX.Y.Z` and starts the `release` workflow, which publishes the
@@ -91,21 +93,17 @@ files updates with `create-afe-project@3` first.
 
 The details are in the headers of `.github/workflows/version.yml`,
 `.github/workflows/release.yml`, and `scripts/tag-release.sh`. One thing they do not say: the
-workflows know the Version PR by its author, `github-actions[bot]`, and exempt it from the
-description sections and the reviews. With the repository setting above, anyone with write access
-can have a workflow open such a pull request; the owner, who merges every pull request, sees the
-author.
+workflows know the Version PR by its author, `github-actions[bot]`, and the CI review skips it.
+With the repository setting above, anyone with write access can have a workflow open such a pull
+request; the owner, who merges every pull request, sees the author.
 
 ## 6. Pruning
 
-Rules and checks are scaffolding that has to earn its keep: a failure is diagnosed, encoded as a
-rule or a check, and a rule or check that catches nothing is removed. There are no metrics of
-pull requests.
+Every rule and check encodes an assumption about what a model cannot do alone, and costs
+something on every task: words to read, a command to run, a wait. So:
 
-- At each release, the maintainer reads the "Checks" sections and the review findings of the pull
-  requests merged since the previous release, in this repository and in the generated projects
-  the maintainer can read.
-- A rule or a check that neither fired nor caught anything over the period is proposed for
-  removal to the owner, in its own pull request; the owner decides.
-- A new rule or check names the recurring failure it addresses (section 2), so that the next
-  review can tell whether it still occurs.
+- A rule or a check is added after the same real mistake happened twice, not because a reviewer
+  proposed it. Its changeset names the mistake and the cost per task.
+- At each release, the maintainer looks for rules and checks that caught nothing since the
+  previous one and proposes their removal to the owner, in a pull request of its own.
+- A change is judged by what a task costs afterwards, not by how thorough it looks.

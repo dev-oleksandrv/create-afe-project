@@ -1,7 +1,6 @@
 # The full check in CI: scripts/check.sh, the same entry point as locally, after the project's
 # setup command (scripts/env.sh setup, SETUP in .claude/harness.conf). The ruleset of
-# scripts/protect-branch.sh requires the job `check`; decision records and readiness are checked
-# by the `decisions` workflow.
+# scripts/protect-branch.sh requires the job `check`.
 name: check
 
 on:

@@ -1,0 +1,16 @@
+# Risky paths of this project: one shell glob per line, relative to the repository root, in
+# which * also matches /. A change to a matching path is in a risky zone: the agent says what
+# can break before it starts and has the change reviewed for security as well. This file
+# belongs to the project.
+
+# The update command writes and deletes files in other people's repositories.
+src/project.js
+src/config.js
+# What every generated project trusts: the guard hook and the permission rules.
+template/.claude/hooks/guard.sh
+template/.claude/settings.template.json
+template/scripts/protect-branch.sh
+# The release path: it holds the publishing credentials.
+.github/workflows/release.yml
+.github/workflows/version.yml
+scripts/tag-release.sh

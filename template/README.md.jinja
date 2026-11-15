@@ -7,7 +7,7 @@
 - People: this file.
 - AI agents: [AGENTS.md](AGENTS.md). `CLAUDE.md` imports it for Claude Code.
 - Setting up the code: run `/afe-init` in Claude Code. It asks the owner what to build and with
-  which stack, records the answers, scaffolds the code, and wires the checks into this template.
+  which stack, scaffolds the code, wires the checks, and writes down how to run the product.
 
 ## Checks
 
@@ -15,51 +15,57 @@
 scripts/check.sh
 ```
 
-The full check runs the project's code checks (`scripts/checks.d/`), the link check, the
-decision records, and the template integrity. `--verbose` prints everything, and `--if-changed`
-returns at once when nothing changed since the last passing run. CI runs the same check in the
-`check` workflow.
+The full check runs the project's code checks (`scripts/checks.d/`), the link check, and the
+template integrity. `--verbose` prints everything. CI runs the same check in the `check`
+workflow.
 
 Requires Git, bash, and Node.js 20 or later; nothing else to install. External links are not
 checked; a project that wants it adds a check such as [lychee](https://lychee.cli.rs/) in
 `scripts/checks.d/`.
 
-## Pull requests
+## What an agent may not do
 
-`/create-pr` in Claude Code opens the pull request: it runs the full check, reviews the change by
-the class of its paths (`.claude/path-classes`), writes the description, and watches the CI
-checks. `--skip-review` skips the review, for a caller that reviewed the change itself;
-`--skip-watch` skips the watch of the CI checks.
+Hooks and permission rules hold these whatever the agent decides: no push to the default
+branch, no forced push, no reading of `.env` files or keys (`.env.example` is readable), a
+prompt before a merge, a release, a publish, or a change of repository settings, and a prompt
+before a known secret format is written. `.claude/risky-paths` lists the paths where a mistake
+costs most; the project edits it.
+
+How an agent works on a task (questions, plan, review, pull request) is not part of this
+repository: it comes from the developer's own setup.
+
+## Sandbox
+
+The [Claude Code sandbox](https://code.claude.com/docs/en/sandboxing) is off unless the owner
+turns it on in `/afe-init`, which writes its `sandbox` block into `.claude/settings.project.json`
+and regenerates `.claude/settings.json`. It confines the shell commands Claude runs to writes in
+the working and temporary directories and to allowed network hosts, on macOS, Linux, and WSL2.
+It does not cover Claude's file and web tools, the hooks, MCP servers, or the commands it
+excludes, which run with full access; Docker does not run inside it, and commands that write
+`.claude/`, such as a template update, run outside it.
 
 ## Modules
 
 The answers in `.afe-answers.json` turn these on or off:
 
-- `code_review` (default off): Claude also reviews each pull request that changes code in CI; it
-  needs the Claude GitHub App and the `CLAUDE_CODE_OAUTH_TOKEN` secret.
+- `code_review` (default off): Claude reviews each pull request that changes code in CI, once,
+  when it opens or leaves draft. It needs the Claude GitHub App and the
+  `CLAUDE_CODE_OAUTH_TOKEN` secret.
 - `secret_scan` (default on): the `secret-scan` workflow scans pull requests and pushes to `main`
   for leaked secrets.
-- `acceptance_check` (default on): readiness requires a test for every identifier a pull request
-  lists under "Acceptance and test plan" (`TEST_GLOBS` in `.claude/harness.conf`).
-- `fail_without_change` (default off): in CI only, every new or changed test must fail on the
-  base branch (`FWC_TEST` in `.claude/harness.conf`).
 
 ## Protected main branch
 
-Changes reach `main` only through pull requests with passing checks, merged with a merge
+Changes reach `main` only through pull requests with a passing `check`, merged with a merge
 commit. After the first push, a repository admin applies the repository settings and the GitHub
 ruleset once; `--dry-run` shows them first, and the header of the script says what they are.
-Rulesets need a public repository or, for a private one, a paid plan.
+Rulesets need a public repository or, for a private one, a paid plan. Without the ruleset,
+nothing on the server stops the merge of a commit whose checks failed or never ran: that the
+owner merges is then the only control.
 
 ```bash
 scripts/protect-branch.sh
 ```
-{%- if fail_without_change %}
-
-Once the `base` job of the `fail-without-change` workflow passes in CI on a pull request that
-changes a test, not as a SKIP, run it again with `--require-base` to require that job too; the
-label `tests-pass-on-base` still lets a test that passes on the base through.
-{%- endif %}
 
 ## Project template
 

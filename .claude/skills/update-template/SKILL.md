@@ -1,7 +1,7 @@
 ---
 name: update-template
-description: Update this repository to a newer version of the project template with create-afe-project, review what the update replaced by file ownership, run the checks, and open the pull request. Use when asked to update, sync, or upgrade the template.
-allowed-tools: Read, Grep, Glob, Edit, Bash(git status:*), Bash(git switch:*), Bash(git fetch:*), Bash(git pull:*), Bash(git diff:*), Bash(npm view create-afe-project:*), Bash(npx --yes create-afe-project:*), Bash(scripts/check.sh), Bash(scripts/check-template.sh), Bash(scripts/gen-decisions-index.sh:*)
+description: Update this repository to a newer version of the project template with create-afe-project, look at what the update replaced, run the checks, and open the pull request. Use when asked to update, sync, or upgrade the template.
+allowed-tools: Read, Grep, Glob, Edit, Bash(git status:*), Bash(git switch:*), Bash(git fetch:*), Bash(git pull:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git push -u origin chore/template-update), Bash(gh pr create:*), Bash(npm view create-afe-project:*), Bash(npx --yes create-afe-project:*), Bash(scripts/check.sh), Bash(scripts/check-template.sh)
 ---
 
 # Update the project template
@@ -25,19 +25,17 @@ are regenerated, never edited.
    `v<target>`, or the `CHANGELOG.md` the package ships.
 4. Local edits: run `scripts/check-template.sh`. Each "differs from the template" line names a
    local edit of a template-owned file, which the update replaces: it is lost unless the change
-   goes to the template. When you cannot tell whether an edit was intended, stop and list it as
-   an open question.
+   goes to the template. List each one for the owner.
 5. Update: `npx --yes create-afe-project@<target> update --defaults`. It replaces the
    template-owned files, keeps the project block of `AGENTS.md`, creates missing seeded files,
-   runs the migrations the changelog names, the only way it changes an existing seeded file, and
-   regenerates `.template/owned.sha256`, the decision index, and `.claude/settings.json`.
-   Each `Warning:` line of its report goes under "Open questions".
-6. Checks: run `scripts/check.sh`. A failure caused by the new template version is listed in the
-   report with the template's changelog entry that explains it; do not edit a template-owned file
-   to make it pass.
-7. Commit and open the pull request with the `create-pr` skill, title
-   `Template: update to <target>`. Under "Summary" list the changelog entries from the previous
-   version to the target and every removed file of the report, and under "Open questions" every
-   replaced local edit.
-8. Report: the previous and the new version, the pull request, the checks, and the replaced
-   edits.
+   runs the migrations the changelog names, the only way it changes an existing seeded file,
+   and regenerates `.template/owned.sha256` and `.claude/settings.json`. Keep each `Warning:`
+   line of its report: they are steps for the owner.
+6. Checks: run `scripts/check.sh`. A failure caused by the new template version is reported
+   with the changelog entry that explains it; never edit a template-owned file to make it pass.
+7. Commit, push the branch, and open the pull request (`gh pr create`), title
+   `Template: update to <target>`. Its description lists the changelog entries from the previous
+   version to the target, every file the update removed, every replaced local edit, and the
+   steps for the owner from step 5.
+8. Report: the previous and the new version, the pull request, the checks, and what is left for
+   the owner.

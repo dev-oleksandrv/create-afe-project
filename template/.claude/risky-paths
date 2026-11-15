@@ -1,0 +1,13 @@
+# Risky paths of this project: one shell glob per line, relative to the repository root, in
+# which * also matches /. A change to a matching path is in a risky zone: the agent says what
+# can break before it starts and has the change reviewed for security as well. Add the paths
+# of your product where a mistake costs most. This file belongs to the project.
+
+# Security, access, data migrations, money, public contracts.
+*auth/*
+*security/*
+*secrets/*
+*migrations/*
+*billing/*
+*payments/*
+contracts/*
