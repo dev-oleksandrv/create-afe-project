@@ -57,23 +57,29 @@ answers_version() {
     node scripts/lib/json.mjs get _version 2> /dev/null
 }
 
+# project_block: prints the lines of the project block of the AGENTS.md read from stdin.
+project_block() { awk '$0 == "<!-- project:end -->" {f = 0} f; $0 == "<!-- project:start -->" {f = 1}'; }
+
 # review_level <base> <path>...: the review before the pull request that the paths, changed
 # against the base commit, need, by their highest class: two (high: two reviewers), one (gate,
 # normal: one reviewer), or none (nothing but class low). A template update needs none, because
 # the template repository reviewed it: the _version of .afe-answers.json differs from the base's,
-# no path is class high or gate, and every other path is template-owned, generated, or one of the
-# seeded README.md, CLAUDE.md, and .gitignore. The seeded configuration (.claude/path-classes,
-# .claude/harness.conf, .claude/settings.project.json) belongs to the project, so a change of it
-# gets the review its class asks for.
+# no path is class high or gate, and every other path is template-owned or generated; AGENTS.md
+# counts only when its project block is the one of the base. An update never changes an existing
+# seeded file (README.md, CLAUDE.md, .gitignore, .claude/path-classes, .claude/harness.conf,
+# .claude/settings.project.json) and keeps the project block, so a change of them is the
+# project's and gets the review its class asks for.
 review_level() {
   local base=${1:-} p c best=1 update=1 answers=0 old new
   [ "$#" -eq 0 ] || shift
   for p in "$@"; do
     case "$p" in
       .afe-answers.json) answers=1 ;;
-      AGENTS.md|.template/owned.sha256|.claude/settings.json|docs/decisions/README.md) ;;
-      README.md|CLAUDE.md|.gitignore) ;;
-      .claude/path-classes|.claude/harness.conf|.claude/settings.project.json) update=0 ;;
+      .template/owned.sha256|.claude/settings.json|docs/decisions/README.md) ;;
+      AGENTS.md)
+        [ -f AGENTS.md ] && [ "$(project_block < AGENTS.md)" = "$(git show "$base:AGENTS.md" 2> /dev/null | project_block)" ] ||
+          update=0 ;;
+      README.md|CLAUDE.md|.gitignore|.claude/path-classes|.claude/harness.conf|.claude/settings.project.json) update=0 ;;
       *) glob_listed "$p" .template/owned.txt || update=0 ;;
     esac
     c=$(class_rank "$(class_of "$p")")

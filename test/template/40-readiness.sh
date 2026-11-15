@@ -89,6 +89,13 @@ expect_pass "review: none for a template update" bash -c 'update && classes | gr
 expect_pass "review: one for template-owned edits without an update" bash -c 'echo x >> docs/decisions/adr-template.md && echo x >> scripts/check.sh && classes | grep -qx "review	one"'
 expect_pass "review: one for a whitespace edit of the answers file, which is no update" bash -c 'echo x >> docs/decisions/adr-template.md && echo x >> scripts/check.sh && echo " " >> .afe-answers.json && classes | grep -qx "review	one"'
 expect_pass "review: an update keeps the review of a gate path" bash -c 'update && echo x >> .github/workflows/check.yml && classes | grep -qx "review	one"'
+# A real update changes no seeded file and keeps the project block of AGENTS.md.
+for e in "echo x >> CLAUDE.md" "echo x >> README.md" "echo x >> .gitignore" \
+  "awk '{print} /<!-- project:start -->/ {print \"x\"}' AGENTS.md > t && mv t AGENTS.md"; do
+  (cd "$a" && update && eval "$e" && classes > "$work/upd.log" 2>&1) && grep -qx "review	one" "$work/upd.log" ||
+    { cat "$work/upd.log"; fail "review: an update with '$e' needs no review"; }
+  gitc "$a" checkout -q -- . && gitc "$a" clean -q -fd
+done
 expect_pass "review: an update with a seeded configuration file gets its review, even when it is not class gate" bash -c 'update && grep -v "^gate .claude/" .claude/path-classes > t && mv t .claude/path-classes &&
   echo x >> .claude/harness.conf && out=$(classes) && printf "%s\n" "$out" | grep -qx "normal	.claude/harness.conf" && printf "%s\n" "$out" | grep -qx "review	one"'
 # A high path that the template owns, by a path-classes line of the base: an update keeps its review.

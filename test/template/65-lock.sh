@@ -64,8 +64,28 @@ wait "$dead"; mkdir "$ldir" && printf '%s\n\nscripts/env.sh fast in /gone\n' "$d
 rm -f "$work/e2e.ran" && mkdir "$ldir" && conf CHECK_LOCK_WAIT 10
 (cd "$a" && scripts/env.sh e2e > "$work/lock.log" 2>&1) && [ -e "$work/e2e.ran" ] && [ ! -e "$ldir" ] ||
   { cat "$work/lock.log"; fail "lock: a lock without an owner file is not taken over"; }
+# A taker that died after its takeover marker, with or without the marker's owner file, does not
+# block the next waiter.
+rm -f "$work/e2e.ran" && mkdir -p "$ldir/takeover" && printf '%s\n\nscripts/env.sh fast in /gone\n' "$dead" > "$ldir/owner" &&
+  printf '%s\n\ntaking over\n' "$dead" > "$ldir/takeover/owner"
+(cd "$a" && scripts/env.sh e2e > "$work/lock.log" 2>&1) && [ -e "$work/e2e.ran" ] && [ ! -e "$ldir" ] ||
+  { cat "$work/lock.log"; fail "lock: the takeover marker of a taker that no longer runs blocks the lock"; }
+rm -f "$work/e2e.ran" && mkdir -p "$ldir/takeover" && printf '%s\n\nscripts/env.sh fast in /gone\n' "$dead" > "$ldir/owner"
+(cd "$a" && scripts/env.sh e2e > "$work/lock.log" 2>&1) && [ -e "$work/e2e.ran" ] && [ ! -e "$ldir" ] ||
+  { cat "$work/lock.log"; fail "lock: a takeover marker without an owner file blocks the lock"; }
+# A taker whose lock directory is taken over before its owner file is written does not hold the
+# lock: it tries again. The takeover is simulated by a ps that removes the directory once, when the
+# taker reads its own start time for the owner file.
+rm -rf "$ldir" && mkdir -p "$work/fakeps" && printf '#!/usr/bin/env bash
+[ -e "%s/ps.once" ] && rm -rf "%s" "%s/ps.once"
+exec /bin/ps "$@"
+' "$work" "$ldir" "$work" > "$work/fakeps/ps" &&
+  chmod +x "$work/fakeps/ps" && touch "$work/ps.once" && conf E2E "test -f $ldir/owner"
+(cd "$a" && PATH="$work/fakeps:$PATH" scripts/env.sh e2e > "$work/lock.log" 2>&1) && [ ! -e "$work/ps.once" ] && [ ! -e "$ldir" ] ||
+  { cat "$work/lock.log"; fail "lock: a taker that lost its directory before its owner file believes that it holds the lock"; }
+conf E2E "touch $work/e2e.ran"
 # A signal releases the lock once the command in the foreground ends.
-conf CHECK_FAST "sleep 1"
+rm -rf "$ldir" && conf CHECK_FAST "sleep 1"
 (cd "$a" && exec scripts/env.sh fast > "$work/holder.log" 2>&1) &
 holder=$!
 took "env.sh fast before the signal"
