@@ -91,5 +91,8 @@ cmp -s "$r/AGENTS.md" "$work/base-agents.md" && cmp -s "$pr/AGENTS.md" "$work/ba
   grep -qx 'Base criteria.' "$r/docs/review-criteria.md" 2> /dev/null && ! grep -r -q PLANTED "$r" &&
   [ "$(find "$r" -type f | wc -l | tr -d ' ')" = 2 ] ||
   { find "$r" -type f; fail "code-review.yml: the review's rules are not the base branch's, or the pull request's planted instructions reach them"; }
-grep -qF '${{ runner.temp }}/pr-body.md ${{ runner.temp }}/base-rules"' "$cr" ||
+grep -qF '${{ runner.temp }}/pr-body.md ${{ runner.temp }}/base-rules ' "$cr" ||
   fail "code-review.yml: the review skill does not get the directory of the base branch's rules"
+# The checkout is the merge commit; the review reports the head commit of the pull request.
+grep -qF '${{ runner.temp }}/base-rules ${{ github.event.pull_request.head.sha }}"' "$cr" ||
+  fail "code-review.yml: the review skill does not get the head commit of the pull request"

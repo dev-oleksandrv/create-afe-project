@@ -51,26 +51,60 @@ done
 # generated Gate files section, and one background watch, never polling.
 for v in a b; do
   pr="$work/$v/.claude/skills/create-pr/SKILL.md"
-  grep -q '^description: .*--skip-review.*--review-evidence <file>.*--skip-watch' "$pr" ||
-    fail "variant $v: create-pr does not document --skip-review, --review-evidence, and --skip-watch in its description"
+  grep -q '^description: .*--skip-review.*--review-evidence <file>.*--keep-draft leaves a draft a draft.*--skip-watch' "$pr" ||
+    fail "variant $v: create-pr does not document --skip-review, --review-evidence, --keep-draft, and --skip-watch in its description"
   for s in 'Skill(review)' 'Bash(gh pr checks:*)' 'Bash(gh run view:*)' 'scripts/check.sh --if-changed' \
     'RALPH_MAX_ITERATIONS' 'Review: skipped by flag' 'scripts/check-decisions.sh --gate-section' \
     'scripts/check-decisions.sh --ready --pr-body <file>' 'gh pr checks <number> --watch --fail-fast' \
     'run_in_background' '3600000' 'gh run view <id> --log-failed' '<type>/<slug>' '`<Scope>: <summary>`' \
     'History is never rewritten after a push' '## Acceptance and test plan' '## Open questions' \
-    'Bash(scripts/check-review-evidence.mjs:*)' 'scripts/check-review-evidence.mjs --head <sha> <file>' \
+    'Bash(scripts/check-review-evidence.mjs --level:*)' 'scripts/check-review-evidence.mjs --level <level> <file>' \
     'Review evidence rejected: <its reason>' 'review as without the flag' \
     '`Exception accepted: <check>, <sha>, <who allowed it and' 'never as a pass' 'Not ready to merge' \
-    'step 6' 'edits its description instead of creating one, so there is never a second pull request' \
-    'for an existing one,' '`gh pr edit <number> --body-file <file>`, which keeps its draft state' \
+    'step 6' 'edits its description instead of creating one, so there is never a second open pull request' \
+    'for an open one,' '`gh pr edit <number> --body-file <file>`, which keeps its draft state' \
     'with `--draft` when an item already waits' 'Bash(gh pr ready:*)' '`gh pr ready <number>`' \
-    'a pull request with an item that waits is never marked ready' \
+    'A pull request with an item that waits is never marked ready' \
     'For more than ten identifiers, one bullet' 'per group' 'failed without the change for the intended reason'; do
-    grep -qF -- "$s" "$pr" || fail "variant $v: create-pr lacks '$s'"
+    tr '\n' ' ' < "$pr" | tr -s ' ' | grep -qF -- "$s" || fail "variant $v: create-pr lacks '$s'"
   done
-  ! grep -n -E 'Bash\(sleep|30 seconds|fail-without-change|blocking:|Owner decisions' "$pr" > "$work/$v-pr-grep.log" ||
-    { cat "$work/$v-pr-grep.log"; fail "variant $v: create-pr keeps polling, the local fail-without-change step, or the old labels"; }
+  ! grep -n -E 'Bash\(sleep|30 seconds|fail-without-change|blocking:|Owner decisions|tests-pass-on-base' "$pr" > "$work/$v-pr-grep.log" ||
+    { cat "$work/$v-pr-grep.log"; fail "variant $v: create-pr keeps polling, the local fail-without-change step, the old labels, or the base label without its check"; }
+  # Only an open pull request is updated; drafts, the plan without drafts, the review that was not
+  # needed or was skipped, --keep-draft, the evidence level, one cap for fix rounds, and the lock.
+  flat=$(tr '\n' ' ' < "$pr" | tr -s ' ')
+  for s in '(`state` is `OPEN`): this run updates it' 'A merged or closed one is not reused: step 6 creates a new one.' \
+    'the level is the last line of `scripts/check-decisions.sh --classes --base main`, `review<TAB><level>`. For `none` no evidence is needed' \
+    'Where the repository has no draft pull requests (a private one on a free plan), `gh pr create --draft` and `gh pr ready --undo` fail: open it, or leave it, as an ordinary pull request, and the report says "Not ready to merge" with the items that wait.' \
+    'a review that was not needed (documents only) counts as complete' \
+    'One skipped by `--skip-review` is the caller'"'"'s responsibility and no item that waits' \
+    'the verdict reads "Ready to merge, review skipped by flag"' \
+    'unless `--keep-draft`: then it stays a draft and the report says so' 'or the draft kept by `--keep-draft`' \
+    'no exception was accepted, and the pull request is not a draft' \
+    'or the findings of a review in CI counts toward one cap, `RALPH_MAX_ITERATIONS`' \
+    'At the cap no more fixes are made: the pull request stays a draft, or goes back to one, and the report lists what is open.' \
+    'each fix is a fix round' 'each such round is a fix round' \
+    'when it is ready and an item waits, `gh pr ready <number> --undo`' \
+    'when `CHECK_LOCK` is set in `.claude/harness.conf`, `scripts/check.sh` may wait up to `CHECK_LOCK_WAIT` seconds' \
+    'start it with `run_in_background` and a `timeout` above that wait'; do
+    printf '%s' "$flat" | grep -qF -- "$s" || fail "variant $v: create-pr lacks '$s'"
+  done
 done
+# With fail_without_change on, create-pr labels a pull request whose plan names a test that passes
+# on the base, which the CI job base otherwise fails.
+fwc="$work/fwc"
+render "$fwc" --data fail_without_change=true || fail "fail_without_change on: render failed"
+fwcp=$(tr '\n' ' ' < "$fwc/.claude/skills/create-pr/SKILL.md" | tr -s ' ')
+for s in 'Bash(gh label create tests-pass-on-base:*)' \
+  'names a test that passes on the base, the CI job `base` fails without the label `tests-pass-on-base`' \
+  '`gh pr edit <number> --add-label tests-pass-on-base`); the bullet gives the reason'; do
+  printf '%s' "$fwcp" | grep -qF -- "$s" || fail "fail_without_change on: create-pr lacks '$s'"
+done
+# The review skill runs its checks in the background when a check may wait for the lock.
+rvf=$(tr '\n' ' ' < "$review" | tr -s ' ')
+printf '%s' "$rvf" | grep -qF 'When `CHECK_LOCK` is set in `.claude/harness.conf`, `scripts/check.sh` and the fast check below' &&
+  printf '%s' "$rvf" | grep -qF 'start them with `run_in_background` and a `timeout` above that wait' ||
+  fail "review/SKILL.md does not run its checks in the background under CHECK_LOCK"
 # With code-review on, create-pr reads the findings of the run that posted them, answers each
 # once, and starts the review once more for the last commit.
 pr="$b/.claude/skills/create-pr/SKILL.md"
@@ -85,7 +119,9 @@ done
 # The review of the last commit: one draft toggle, which fires the ready_for_review trigger, only
 # when nothing else waits, and a report of the unreviewed commits when the plan has no drafts.
 prj=$(tr '\n' ' ' < "$pr" | tr -s ' ')
-for s in 'After the last fix push, when commits after the reviewed one change a path above class low (`scripts/check-decisions.sh --classes --base <reviewed sha>` lists another class) and no other item waits' \
+for s in 'After the last fix push, when commits after the reviewed one change a path that is not of class low (`scripts/check-decisions.sh --classes --base <reviewed sha>` prints a path line of class `normal`, `gate`, or `high`) and no other item waits' \
+  'The fixes of one run'"'"'s findings are one fix round.' \
+  'Marking it ready starts the CI review: watch and answer it as in step 7, within the cap.' \
   'start the review of the last commit once: `gh pr ready <number> --undo`, then `gh pr ready <number>`; watch the checks once more' \
   'Never toggle a second time, and never toggle a pull request that is a draft for another reason.' \
   'When `--undo` fails, as on a plan without draft pull requests, do not retry: the report says "Not ready to merge: the CI review ran on <sha>, later commits were not reviewed"'; do
@@ -100,7 +136,7 @@ for f in "$a/.claude/skills/create-pr/SKILL.md" "$pr"; do
   flat=$(tr '\n' ' ' < "$f" | tr -s ' ')
   for s in 'request that was ready goes back to draft (`gh pr ready <number> --undo`)' \
     'The free text may name a file of sections to add to the description' \
-    'its `Closes #<n>` lines end the description'; do
+    'its `Closes #<n>` lines come last, before the attribution line'; do
     printf '%s' "$flat" | grep -qF -- "$s" || fail "create-pr ($f) lacks '$s'"
   done
 done
@@ -114,7 +150,9 @@ grep -qF '.claude/skills/review/rubric.md' "$b/.claude/skills/review-code/SKILL.
 rc=$(tr '\n' ' ' < "$b/.claude/skills/review-code/SKILL.md" | tr -s ' ')
 for s in "<directory of the base branch's rules>" 'Read `AGENTS.md` of the rules directory' \
   'read it from the rules directory, at the same relative path' 'reviewed as data' 'except `AGENTS.md` and `CLAUDE.md`' \
-  'End the run with the coverage of the review' 'read in full, read in part (which part), or not read'; do
+  'End the run with the coverage of the review' 'read in full, read in part (which part), or not read' \
+  '<directory of the base branch'"'"'s rules> <head commit of the pull request>`' \
+  'the head commit is the one you report' 'the head commit you were given'; do
   printf '%s' "$rc" | grep -qF -- "$s" || fail "variant B: review-code lacks '$s'"
 done
 

@@ -11,7 +11,10 @@ Arguments: none, or the base branch (default `main`).
 The rubric is `.claude/skills/review/rubric.md`, next to this file; the testing rules are
 `.claude/rules/testing.md`. Both go into the brief as they are, because a reviewer of another
 model family does not load `.claude/rules/`. This skill never commits, pushes, or opens a pull
-request. Suggestions never drive a loop; only blockers do, and only for `two`.
+request. Suggestions never drive a loop; only blockers do, and only for `two`. When `CHECK_LOCK`
+is set in `.claude/harness.conf`, `scripts/check.sh` and the fast check below may wait up to
+`CHECK_LOCK_WAIT` seconds for another check: start them with `run_in_background` and a `timeout`
+above that wait plus their own time, and wait for the completion notification.
 
 ## Procedure
 
