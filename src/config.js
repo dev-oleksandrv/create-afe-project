@@ -228,7 +228,7 @@ export const MIGRATIONS = [
       `  echo "$old or $new is a symbolic link, so the update does not migrate it: by hand, put the high globs of $old into $new, one per line, and delete $old" >> "$AFE_NOTES"`,
       `elif [ -f $old ]; then`,
       `  if [ -f $new ]; then`,
-      `    awk '$1 == "high" && $2 != "" {print $2}' $old | while IFS= read -r g; do`,
+      `    sed -n -E 's/^high[[:space:]]+(.*[^[:space:]])[[:space:]]*$/\\1/p' $old | while IFS= read -r g; do`,
       `      if ! grep -q -x -F -e "$g" $new; then printf '%s\\n' "$g" >> $new; fi`,
       `    done`,
       `  fi`,

@@ -1,14 +1,18 @@
-# The update of a project of the published 3.0.0 package to this working tree: the steps by hand
-# of 4.0.0 as warnings where they apply, a local edit as a warning before it is replaced, the
-# template check passing, an update interrupted by a failing migration that a second run
-# completes with the same result, and a second update that changes nothing. Needs pkg,
-# failing_pkg, and $sample from 90-update.sh. The 3.0.0 package is built from its release commit,
-# 0c470b1, which needs the full history of this repository, as in 93-update-3-0-0.sh.
-echo "== update from 3.0.0 reports the steps by hand of 4.0.0"
+# The update of a project of the published 3.0.0 package to 5.0.0, at a fixed version so that a
+# release bump of this package does not change it: the steps by hand of 4.0.0 and 5.0.0 as
+# warnings where they apply, a local edit as a warning before it is replaced, the template check
+# passing, an update interrupted by a failing migration that a second run completes with the
+# same result, and a second update that changes nothing. Needs pkg, failing_pkg, and $sample
+# from 90-update.sh. The 3.0.0 package is built from its release commit, 0c470b1, which needs the
+# full history of this repository, as in 93-update-3-0-0.sh.
+echo "== update from 3.0.0 reports the steps by hand of 4.0.0 and 5.0.0"
 p3="$work/p3"
 mkdir -p "$p3" && git -C "$root" archive 0c470b1 bin src template package.json | tar -x -C "$p3" &&
   ln -s "$root/node_modules" "$p3/node_modules" || fail "3.0.0 update test: commit 0c470b1 (3.0.0) is not in this repository"
-here=$(node -p 'require("./package.json").version')
+here=5.0.0
+p35="$work/p35"
+pkg "$p35" "$here"
+up5() { node "$p35/bin/create-afe-project.js" "$@"; }
 t="$work/t300"
 node "$p3/bin/create-afe-project.js" "$t" "${sample[@]}" > "$work/t300.log" 2>&1 || { cat "$work/t300.log"; fail "3.0.0 update test: create at 3.0.0 fails"; }
 # The project has a Stop hook of its own, which 3.x ran, and a local edit of a template-owned
@@ -24,19 +28,23 @@ cp -R "$t" "$tc" && gitc "$tc" rm -q -r .claude/hooks/project && gitc "$tc" chec
 ti="$work/ti300"
 cp -R "$t" "$ti"
 
-(cd "$t" && cli update --defaults > "$work/t-up.log" 2>&1) || { cat "$work/t-up.log"; fail "3.0.0 update test: the update fails"; }
-grep -q 'Migrations run: 4.0.0' "$work/t-up.log" && grep -q "\"_version\": \"$here\"" "$t/.afe-answers.json" ||
-  { cat "$work/t-up.log"; fail "3.0.0 update test: the 4.0.0 migration does not run, or the new version is not recorded"; }
+(cd "$t" && up5 update --defaults > "$work/t-up.log" 2>&1) || { cat "$work/t-up.log"; fail "3.0.0 update test: the update fails"; }
+grep -q 'Migrations run: 4.0.0, 5.0.0' "$work/t-up.log" && grep -q "\"_version\": \"$here\"" "$t/.afe-answers.json" ||
+  { cat "$work/t-up.log"; fail "3.0.0 update test: the migrations 4.0.0 and 5.0.0 do not run, or the new version is not recorded"; }
 warnings="Warning: .claude/rules/docs.md has a local edit, which the update replaces with the template version $here; the old content is in Git.
 Warning: .claude/harness.conf sets FWC_INSTALL, FWC_CLASSIFIER, which 4.0.0 no longer reads: delete them; the fail-without-change driver installs with SETUP.
 Warning: .claude/hooks/project/stop/10-own.sh no longer runs: since 4.0.0 the Stop dispatcher does not run .claude/hooks/project/stop/, so register it under hooks.Stop in .claude/settings.project.json."
-[ "$(grep '^Warning:' "$work/t-up.log")" = "$warnings" ] ||
-  { cat "$work/t-up.log"; fail "3.0.0 update test: the warnings are not the local edit and the two steps by hand of 4.0.0"; }
+# The local edit and the two steps by hand of 4.0.0 come first, in this order; the steps of
+# 5.0.0 follow.
+[ "$(grep '^Warning:' "$work/t-up.log" | head -n 3)" = "$warnings" ] &&
+  grep -q '^Warning: .claude/path-classes is replaced by .claude/risky-paths' "$work/t-up.log" &&
+  grep -q '^Warning: scripts/protect-branch.sh: the ruleset of 4.x requires the check integrity' "$work/t-up.log" ||
+  { cat "$work/t-up.log"; fail "3.0.0 update test: the warnings are not the local edit, the two steps by hand of 4.0.0, and the steps of 5.0.0"; }
 (cd "$t" && scripts/check-template.sh > "$work/t-ct.log" 2>&1) || { cat "$work/t-ct.log"; fail "3.0.0 update test: the template check fails after the update"; }
 
-(cd "$tc" && cli update --defaults > "$work/tc-up.log" 2>&1) || { cat "$work/tc-up.log"; fail "3.0.0 update test: the update of the project without leftovers fails"; }
-! grep -q '^Warning:' "$work/tc-up.log" && (cd "$tc" && scripts/check-template.sh > "$work/tc-ct.log" 2>&1) ||
-  { cat "$work/tc-up.log" "$work/tc-ct.log"; fail "3.0.0 update test: a project without 3.x leftovers gets a warning, or fails the template check"; }
+(cd "$tc" && up5 update --defaults > "$work/tc-up.log" 2>&1) || { cat "$work/tc-up.log"; fail "3.0.0 update test: the update of the project without leftovers fails"; }
+! grep '^Warning:' "$work/tc-up.log" | grep -q -e 'local edit' -e 'FWC_INSTALL' -e 'no longer runs' && (cd "$tc" && scripts/check-template.sh > "$work/tc-ct.log" 2>&1) ||
+  { cat "$work/tc-up.log" "$work/tc-ct.log"; fail "3.0.0 update test: a project without 3.x leftovers gets a warning about them, or fails the template check"; }
 
 # Interrupted: a migration after 4.0.0's fails once. The version stays 3.0.0; the second run runs
 # the migrations again, reports the steps by hand again, and ends where the update without a
@@ -49,11 +57,11 @@ grep -q '"_version": "3.0.0"' "$ti/.afe-answers.json" && grep -q 'injected failu
   { cat "$work/ti1.log"; fail "3.0.0 update test: a failed migration records the new version, or the message does not say why and how to resume"; }
 (cd "$ti" && node "$work/p4f/bin/create-afe-project.js" update --defaults --allow-dirty > "$work/ti2.log" 2>&1) ||
   { cat "$work/ti2.log"; fail "3.0.0 update test: the second run after a failed migration fails"; }
-grep -q 'Migrations run: 4.0.0' "$work/ti2.log" && [ "$(grep -c '^Warning: .claude/h' "$work/ti2.log")" = 2 ] &&
+grep -q 'Migrations run: 4.0.0, 5.0.0' "$work/ti2.log" && [ "$(grep -c '^Warning: .claude/h' "$work/ti2.log")" = 3 ] &&
   diff -r -x .git "$t" "$ti" > "$work/ti.diff" ||
   { cat "$work/ti2.log" "$work/ti.diff"; fail "3.0.0 update test: the second run does not run the migrations again, or ends elsewhere than an update without a failure"; }
 
 # Once updated, the same update again changes nothing.
 gitc "$t" add -A && gitc "$t" commit -q -m update
-(cd "$t" && cli update --defaults > "$work/t-again.log" 2>&1) && [ -z "$(git -C "$t" status --porcelain)" ] ||
+(cd "$t" && up5 update --defaults > "$work/t-again.log" 2>&1) && [ -z "$(git -C "$t" status --porcelain)" ] ||
   { cat "$work/t-again.log"; git -C "$t" status --short | head; fail "3.0.0 update test: a second update changes the project"; }

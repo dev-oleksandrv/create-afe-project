@@ -179,14 +179,15 @@ test('the 5.0.0 migration moves the high globs to the risky paths once and remov
   const notes = join(outer, 'notes');
   const dir = join(outer, 'p');
   mkdirSync(join(dir, '.claude'), { recursive: true });
-  writeFileSync(join(dir, '.claude', 'path-classes'), '# own\nhigh *auth/*\nhigh own/*\ngate package.json\n');
+  // A glob is the rest of its line, spaces included.
+  writeFileSync(join(dir, '.claude', 'path-classes'), '# own\nhigh *auth/*\nhigh own/*\nhigh sensitive directory/*  \ngate package.json\n');
   writeFileSync(join(dir, '.claude', 'risky-paths'), '*auth/*\n');
   assert.equal(migrate('5.0.0', dir, notes).status, 0);
-  assert.equal(readFileSync(join(dir, '.claude', 'risky-paths'), 'utf8'), '*auth/*\nown/*\n');
+  assert.equal(readFileSync(join(dir, '.claude', 'risky-paths'), 'utf8'), '*auth/*\nown/*\nsensitive directory/*\n');
   assert.ok(!existsSync(join(dir, '.claude', 'path-classes')));
   // A second run, as after an interrupted update, changes nothing more.
   assert.equal(migrate('5.0.0', dir, notes).status, 0);
-  assert.equal(readFileSync(join(dir, '.claude', 'risky-paths'), 'utf8'), '*auth/*\nown/*\n');
+  assert.equal(readFileSync(join(dir, '.claude', 'risky-paths'), 'utf8'), '*auth/*\nown/*\nsensitive directory/*\n');
 });
 
 test('update without .template/owned.sha256 says that it cannot tell the local edits', async () => {
