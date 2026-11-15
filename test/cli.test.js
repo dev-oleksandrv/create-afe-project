@@ -1,14 +1,17 @@
 // Unit tests of the CLI's parts; the end-to-end tests of create and update are in
 // test/template/, run by scripts/checks.d/10-template.sh (docs/maintaining.md, section 3).
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { appendFileSync, existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { UsageError, coerce, collectAnswers, compareVersions, readAnswers } from '../src/answers.js';
-import { SEEDED, messageAfterCreate } from '../src/config.js';
-import { TEMPLATE_DIR } from '../src/project.js';
+import { MIGRATIONS, SEEDED, messageAfterCreate } from '../src/config.js';
+import * as project from '../src/project.js';
 import { renderString, renderTemplate } from '../src/render.js';
+
+const { TEMPLATE_DIR } = project;
 
 const base = { project_name: 'sample', project_description: 'A sample.', github_repo: 'o/sample' };
 const answer = (given) => collectAnswers({ given: { ...base, ...given }, useDefaults: true, interactive: false });
@@ -136,4 +139,90 @@ test('the message after create numbers the next steps and says whether the initi
   assert.match(messageAfterCreate(a, { done: false, reason: 'skipped with --no-git' }), /1\. commit the generated files on main .*skipped with --no-git/);
   assert.doesNotMatch(done, /CLAUDE_CODE_OAUTH_TOKEN/);
   assert.match(messageAfterCreate({ ...a, code_review: true }, { done: true }), /\d+\. add the CLAUDE_CODE_OAUTH_TOKEN secret and install the Claude GitHub App/);
+});
+
+// Runs the `after` command of the migration of `version` in `dir`, as an update does.
+function migrate(version, dir, notes) {
+  const m = MIGRATIONS.find((x) => x.version === version);
+  assert.ok(m?.after, `MIGRATIONS has no after command for ${version}`);
+  return spawnSync('bash', ['-c', m.after], {
+    cwd: dir, encoding: 'utf8', env: { ...process.env, AFE_TEMPLATE: TEMPLATE_DIR, AFE_NOTES: notes },
+  });
+}
+
+test('a path the update acts on is relative, plain, and has no symbolic link on the way', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'afe-'));
+  mkdirSync(join(dir, 'a'));
+  writeFileSync(join(dir, 'f'), 'x');
+  assert.equal(project.checkPath(dir, 'a/new.txt'), null);
+  assert.ok(project.checkPath(dir, 'f').isFile());
+  for (const rel of ['', '/etc/passwd', 'a//b', './a', 'a/./b', 'a/../b', '../x', 'a/', 'a\\..\\x']) {
+    assert.throws(() => project.checkPath(dir, rel), /not a relative path inside the project/, rel);
+  }
+  assert.throws(() => project.checkPath(dir, 'f/g'), /f is not a directory/);
+  symlinkSync(join(dir, 'a'), join(dir, 'l'));
+  assert.throws(() => project.checkPath(dir, 'l/x'), /symbolic link l/);
+  assert.throws(() => project.checkPath(dir, 'l'), /symbolic link l/);
+});
+
+test('the directories a removed file leaves empty go, up to and without the project root', () => {
+  const outer = mkdtempSync(join(tmpdir(), 'afe-'));
+  const dir = join(outer, 'p');
+  mkdirSync(join(dir, 'a', 'b'), { recursive: true });
+  project.pruneEmptyDirs(dir, 'a/b/gone.txt');
+  assert.ok(existsSync(dir), 'the project root is removed');
+  assert.ok(!existsSync(join(dir, 'a')), 'an empty directory is kept');
+  mkdirSync(join(outer, 'x'));
+  project.pruneEmptyDirs(dir, '../x/gone.txt');
+  assert.ok(existsSync(join(outer, 'x')), 'a directory outside the project is removed');
+});
+
+test('a failing command fails the 3.0.0 migration', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'afe-'));
+  mkdirSync(join(dir, 'docs'));
+  writeFileSync(join(dir, 'docs', 'README.md'), '# Documentation map\n');
+  // The note about docs/README.md cannot be written: the directory of the notes file is missing.
+  const r = migrate('3.0.0', dir, join(dir, 'missing', 'notes'));
+  assert.notEqual(r.status, 0, 'the migration succeeds although writing its note failed');
+});
+
+test('update shows the local edits it replaces, in the order of the manifest, and the files it removes first; a refusal changes nothing', async () => {
+  const dir = join(mkdtempSync(join(tmpdir(), 'afe-')), 'p');
+  await project.create(dir, { given: base, useDefaults: true, interactive: false, quiet: true, git: false });
+  const docs = join(dir, '.claude', 'rules', 'docs.md');
+  appendFileSync(docs, 'A local edit.\n');
+  // An old manifest that lists a file this template does not own: the update removes it.
+  appendFileSync(join(dir, '.template', 'owned.txt'), 'extra.txt\n');
+  writeFileSync(join(dir, 'extra.txt'), 'extra\n');
+  // A line of the project block is no local edit.
+  const agents = join(dir, 'AGENTS.md');
+  writeFileSync(agents, readFileSync(agents, 'utf8').replace('<!-- project:start -->\n', '<!-- project:start -->\nOwn line.\n'));
+  const answers = readFileSync(join(dir, '.afe-answers.json'), 'utf8');
+  const seen = [];
+  const options = { useDefaults: true, interactive: false, quiet: true };
+  const refused = await project.update(dir, { ...options, confirm: async (preview) => (seen.push(preview), false) });
+  assert.deepEqual(seen, [{ edited: ['.template/owned.txt', '.claude/rules/docs.md'], removed: ['extra.txt'] }]);
+  assert.equal(refused.cancelled, true);
+  assert.match(readFileSync(docs, 'utf8'), /A local edit\.\n$/);
+  assert.ok(existsSync(join(dir, 'extra.txt')));
+  assert.equal(readFileSync(join(dir, '.afe-answers.json'), 'utf8'), answers);
+
+  const done = await project.update(dir, { ...options, confirm: async () => true });
+  assert.deepEqual([done.edited, done.removed], [['.template/owned.txt', '.claude/rules/docs.md'], ['extra.txt']]);
+  assert.doesNotMatch(readFileSync(docs, 'utf8'), /A local edit/);
+  assert.ok(!existsSync(join(dir, 'extra.txt')));
+  assert.match(readFileSync(agents, 'utf8'), /Own line\./);
+});
+
+test('create with --force writes nothing through a symbolic link in the directory', async () => {
+  const outer = mkdtempSync(join(tmpdir(), 'afe-'));
+  mkdirSync(join(outer, 'p'));
+  mkdirSync(join(outer, 'outside'));
+  symlinkSync(join(outer, 'outside'), join(outer, 'p', '.claude'));
+  await assert.rejects(
+    project.create(join(outer, 'p'), { given: base, useDefaults: true, interactive: false, quiet: true, git: false, force: true }),
+    /goes through the symbolic link \.claude; nothing was changed/,
+  );
+  assert.deepEqual(readdirSync(join(outer, 'outside')), []);
+  assert.deepEqual(readdirSync(join(outer, 'p')), ['.claude']);
 });

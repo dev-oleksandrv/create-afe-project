@@ -1,11 +1,15 @@
 // Creates a project from the template, and updates a project to the template of this package.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  closeSync, constants, existsSync, fchmodSync, lstatSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync,
+  rmSync, writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { UsageError, collectAnswers, compareVersions, readAnswers, writeAnswers } from './answers.js';
-import { MIGRATIONS, QUESTIONS, SEEDED, TASKS, messageAfterCreate } from './config.js';
+import { ANSWERS_FILE, MIGRATIONS, QUESTIONS, SEEDED, TASKS, messageAfterCreate } from './config.js';
 import { renderTemplate } from './render.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -13,14 +17,85 @@ export const TEMPLATE_DIR = join(ROOT, 'template');
 export const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
 
 const OWNED_LIST = '.template/owned.txt';
+const MANIFEST = '.template/owned.sha256';
 const START = '<!-- project:start -->';
 const END = '<!-- project:end -->';
 
+/**
+ * Checks a path that create or update reads, writes, or removes: relative, with no empty, `.`, or
+ * `..` component and no backslash, and with no symbolic link, and no file where a directory is
+ * expected, among its existing components, so that it stays inside `dir` and nothing follows a
+ * link. With `link`, the path itself may be a symbolic link, for a path that is left as it is.
+ * @param {string} dir
+ * @param {string} rel
+ * @param {{ link?: boolean }} [options]
+ * @returns {import('node:fs').Stats | null} the lstat of the path, or null when it does not exist
+ * @throws {Error} naming the reason
+ */
+export function checkPath(dir, rel, { link = false } = {}) {
+  const parts = rel.split('/');
+  if (isAbsolute(rel) || rel.includes('\\') || parts.some((c) => c === '' || c === '.' || c === '..')) {
+    throw new Error('is not a relative path inside the project');
+  }
+  for (let i = 0; i < parts.length; i += 1) {
+    const at = parts.slice(0, i + 1).join('/');
+    let stat;
+    try {
+      stat = lstatSync(join(dir, at));
+    } catch (error) {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    }
+    const last = i === parts.length - 1;
+    if (stat.isSymbolicLink() && !(last && link)) {
+      throw new Error(last ? `is the symbolic link ${at}` : `goes through the symbolic link ${at}`);
+    }
+    if (last) return stat;
+    if (!stat.isDirectory()) throw new Error(`needs a directory where ${at} is not a directory`);
+  }
+  return null;
+}
+
+/**
+ * Throws a UsageError unless `rel` passes checkPath and is a regular file or nothing; with `kept`,
+ * a path the update leaves as it is when it exists, anything there passes. `what` begins the
+ * message.
+ */
+function checkFile(dir, rel, what, { kept = false } = {}) {
+  let stat;
+  try {
+    stat = checkPath(dir, rel, { link: kept });
+  } catch (error) {
+    throw new UsageError(`${what} ${JSON.stringify(rel)}, which ${error.message}; nothing was changed`);
+  }
+  if (stat && !kept && !stat.isFile()) throw new UsageError(`${what} ${JSON.stringify(rel)}, which is not a regular file; nothing was changed`);
+  return stat;
+}
+
+/**
+ * Removes the directories of `rel` that are left empty, from its own directory up, and stops below
+ * the project root `dir`, whatever `rel` holds.
+ * @param {string} dir
+ * @param {string} rel
+ */
+export function pruneEmptyDirs(dir, rel) {
+  const root = resolve(dir);
+  for (let d = resolve(root, dirname(rel)); d.startsWith(root + sep) && readdirSync(d).length === 0; d = dirname(d)) {
+    rmSync(d, { recursive: true });
+  }
+}
+
+// Opens with O_NOFOLLOW, so that a symbolic link at the target is never written or changed in mode.
 function writeFile(dir, rel, { content, mode }) {
   const target = join(dir, rel);
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, content);
-  chmodSync(target, mode & 0o777);
+  const fd = openSync(target, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | (constants.O_NOFOLLOW ?? 0), 0o644);
+  try {
+    writeFileSync(fd, content);
+    fchmodSync(fd, mode & 0o777);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function run(dir, command, quiet, env) {
@@ -67,6 +142,29 @@ function withBlock(rendered, block) {
   return [...lines.slice(0, si + 1), ...block, ...lines.slice(ei)].join('\n');
 }
 
+/** The SHA-256 that scripts/check-template.sh records for a template-owned file of this content. */
+function ownedHash(rel, content) {
+  let data = content;
+  if (rel === 'AGENTS.md') {
+    // As its awk: AGENTS.md without the lines inside its project block, each line ending in a newline.
+    const lines = String(content).split('\n');
+    if (lines.at(-1) === '') lines.pop();
+    let skip = false;
+    const kept = [];
+    for (const line of lines) {
+      if (line === START) {
+        kept.push(line);
+        skip = true;
+        continue;
+      }
+      if (line === END) skip = false;
+      if (!skip) kept.push(line);
+    }
+    data = kept.map((l) => `${l}\n`).join('');
+  }
+  return createHash('sha256').update(data).digest('hex');
+}
+
 function isDirty(dir) {
   try {
     return execFileSync('git', ['status', '--porcelain'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() !== '';
@@ -76,7 +174,8 @@ function isDirty(dir) {
 }
 
 /**
- * Creates a project in `dir`.
+ * Creates a project in `dir`. Before it writes anything, it checks every path it writes
+ * (checkPath), so that a directory given with --force has no symbolic link on the way.
  * @param {string} dir
  * @param {{ given?: Record<string, unknown>, useDefaults?: boolean, interactive?: boolean,
  *   force?: boolean, quiet?: boolean, log?: (msg: string) => void }} options
@@ -88,8 +187,10 @@ export async function create(dir, { given, useDefaults, interactive, force = fal
     throw new UsageError(`${dir} is not empty; choose an empty directory, or pass --force to write into it`);
   }
   const { answers, context } = await collectAnswers({ given, useDefaults, interactive });
+  const rendered = renderTemplate(TEMPLATE_DIR, context);
+  for (const rel of [...rendered.keys(), ANSWERS_FILE]) checkFile(dir, rel, 'the template writes');
   mkdirSync(dir, { recursive: true });
-  for (const [rel, file] of renderTemplate(TEMPLATE_DIR, context)) writeFile(dir, rel, file);
+  for (const [rel, file] of rendered) writeFile(dir, rel, file);
   writeAnswers(dir, VERSION, answers);
   log('Writing generated files');
   runTasks(dir, quiet);
@@ -134,11 +235,21 @@ export function initialCommit(dir) {
  * versions run, and the generated files are rebuilt. The result names, besides the files, the
  * recorded answers that are dropped, since no question takes them, and notes: what is left to do by
  * hand.
+ *
+ * Before it changes anything, it checks every path it reads, writes, or removes (checkPath): a bad
+ * entry of .template/owned.txt or .template/owned.sha256 stops it with a UsageError that names the
+ * entry. Then it passes `confirm` the template-owned files with local edits that it replaces or
+ * removes (by .template/owned.sha256) and the files it removes; when `confirm` resolves false, it
+ * changes nothing and returns `{ cancelled: true }`. The new version is recorded last, after the
+ * migrations and the tasks: an update that fails part way keeps the recorded version, so the next
+ * run runs the same migrations again.
  * @param {string} dir
  * @param {{ given?: Record<string, unknown>, useDefaults?: boolean, interactive?: boolean,
- *   allowDirty?: boolean, quiet?: boolean }} options
+ *   allowDirty?: boolean, quiet?: boolean,
+ *   confirm?: (preview: { edited: string[], removed: string[], manifest?: 'missing' }) => Promise<boolean> }} options
  */
-export async function update(dir, { given, useDefaults, interactive, allowDirty = false, quiet = false }) {
+export async function update(dir, { given, useDefaults, interactive, allowDirty = false, quiet = false, confirm = async () => true }) {
+  checkFile(dir, ANSWERS_FILE, 'the update reads and writes');
   const recorded = readAnswers(dir);
   if (!recorded) throw new UsageError(`${dir} has no answers file; is it a project created by create-afe-project?`);
   if (compareVersions(recorded.version, VERSION) > 0) {
@@ -147,14 +258,39 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
   if (!allowDirty && isDirty(dir)) {
     throw new UsageError('the working tree has uncommitted changes; commit or stash them, or pass --allow-dirty');
   }
-  const agentsFile = join(dir, 'AGENTS.md');
-  const block = existsSync(agentsFile) ? projectBlock(readFileSync(agentsFile, 'utf8')) : null;
+  const read = (rel) => (checkFile(dir, rel, 'the update reads') ? readFileSync(join(dir, rel), 'utf8') : null);
+  const oldOwned = listed(read(OWNED_LIST) ?? '');
+  const stats = new Map(oldOwned.map((rel) => [rel, checkFile(dir, rel, `${OWNED_LIST} lists`)]));
+  const recordedHashes = new Map();
+  const manifest = read(MANIFEST);
+  for (const line of listed(manifest ?? '')) {
+    const [, hash, rel] = /^(\S+)\s+(.+)$/.exec(line) ?? [];
+    if (!rel) throw new UsageError(`${MANIFEST} has the line ${JSON.stringify(line)}, which is not a hash and a path; nothing was changed`);
+    stats.set(rel, checkFile(dir, rel, `${MANIFEST} lists`));
+    recordedHashes.set(rel, hash);
+  }
+  const agents = read('AGENTS.md');
+  const block = agents === null ? null : projectBlock(agents);
 
   const { answers, context } = await collectAnswers({ given, previous: recorded.answers, useDefaults, interactive });
   const rendered = renderTemplate(TEMPLATE_DIR, context);
   const newOwned = listed(String(rendered.get(OWNED_LIST).content));
-  const oldOwnedFile = join(dir, OWNED_LIST);
-  const oldOwned = existsSync(oldOwnedFile) ? listed(readFileSync(oldOwnedFile, 'utf8')) : [];
+  const content = (rel) => (rel === 'AGENTS.md' && block ? withBlock(String(rendered.get(rel).content), block) : rendered.get(rel).content);
+  for (const rel of newOwned) stats.set(rel, checkFile(dir, rel, 'the template writes'));
+  // A seeded file is written only when it is missing; an existing one, a symbolic link too, stays.
+  for (const rel of rendered.keys()) if (!stats.has(rel)) stats.set(rel, checkFile(dir, rel, 'the template writes', { kept: true }));
+
+  const removed = oldOwned.filter((rel) => !newOwned.includes(rel) && stats.get(rel));
+  // Local edits: a template-owned file whose hash is not the recorded one, which the update removes,
+  // or whose content it changes. An edit that a failed update already replaced is none.
+  const edited = [...recordedHashes].filter(([rel, hash]) => {
+    if (!stats.get(rel) || !(removed.includes(rel) || newOwned.includes(rel))) return false;
+    const current = readFileSync(join(dir, rel));
+    return ownedHash(rel, current) !== hash && (removed.includes(rel) || !current.equals(Buffer.from(content(rel))));
+  }).map(([rel]) => rel);
+  const preview = manifest === null && oldOwned.length ? { edited, removed, manifest: 'missing' } : { edited, removed };
+  if ((edited.length || removed.length || preview.manifest) && !(await confirm(preview))) return { cancelled: true };
+
   // Recorded answers without a question here are dropped: those of a question removed since, such
   // as docs_review in 3.0.0.
   const dropped = Object.keys(recorded.answers).filter((k) => !QUESTIONS.some((q) => q.name === k));
@@ -165,42 +301,46 @@ export async function update(dir, { given, useDefaults, interactive, allowDirty 
   // A migration appends what is left to do by hand, one line each, to the file AFE_NOTES.
   const scratch = mkdtempSync(join(tmpdir(), 'afe-update-'));
   const env = { AFE_TEMPLATE: TEMPLATE_DIR, AFE_NOTES: join(scratch, 'notes') };
-  let removed = [];
   const seeded = [];
   const unowned = [];
   try {
     for (const m of pending) if (m.before) run(dir, m.before, quiet, env);
 
-    removed = oldOwned.filter((rel) => !newOwned.includes(rel) && existsSync(join(dir, rel)));
     for (const rel of removed) {
+      checkPath(dir, rel);
       rmSync(join(dir, rel));
       // A directory left empty, such as the one of a removed skill, goes with its last file.
-      for (let d = dirname(rel); d !== '.' && readdirSync(join(dir, d)).length === 0; d = dirname(d)) {
-        rmSync(join(dir, d), { recursive: true });
-      }
+      pruneEmptyDirs(dir, rel);
     }
 
     for (const [rel, file] of rendered) {
-      const exists = existsSync(join(dir, rel));
+      // Checked again: a `before` migration ran in the project since.
       if (newOwned.includes(rel)) {
-        const content = rel === 'AGENTS.md' && block ? withBlock(String(file.content), block) : file.content;
-        writeFile(dir, rel, { ...file, content });
-      } else if (!exists) {
+        checkPath(dir, rel);
+        writeFile(dir, rel, { ...file, content: content(rel) });
+      } else {
+        if (checkPath(dir, rel, { link: true })) continue;
         writeFile(dir, rel, file);
         (SEEDED.includes(rel) ? seeded : unowned).push(rel);
       }
     }
-    writeAnswers(dir, VERSION, answers);
 
     for (const m of pending) if (m.after) run(dir, m.after, quiet, env);
     if (existsSync(env.AFE_NOTES)) notes.push(...listed(readFileSync(env.AFE_NOTES, 'utf8')));
+    runTasks(dir, quiet);
+    writeAnswers(dir, VERSION, answers);
+  } catch (error) {
+    throw new Error(
+      `${error.message}\nThe update stopped before it finished: the project still records template ${recorded.version ?? 'no version'}, ` +
+        'and the files changed so far are not committed. Fix the cause, then run the same update again with --allow-dirty, ' +
+        'which runs the migrations again; or discard the changes with Git.',
+    );
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
-  runTasks(dir, quiet);
 
   return {
-    from: recorded.version, to: VERSION, removed, seeded, unowned,
+    from: recorded.version, to: VERSION, removed, edited, seeded, unowned,
     migrations: pending.map((m) => m.version), dropped, notes,
   };
 }

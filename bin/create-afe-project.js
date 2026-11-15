@@ -36,6 +36,30 @@ function given(values) {
   return Object.fromEntries(Object.entries(data).filter(([k]) => !k.startsWith('_')));
 }
 
+// Shows, before the update changes anything, the local edits of template-owned files that it
+// replaces or removes, and the files that it removes. In a terminal it asks whether to go on;
+// otherwise it prints the local edits as Warning: lines, which the update-template skill lists
+// under "Open questions", and goes on (the removed files are in the report).
+async function confirmUpdate({ edited, removed, manifest }, interactive) {
+  const warnings = edited.map((rel) =>
+    removed.includes(rel)
+      ? `${rel} has a local edit, and the update removes it, since the template no longer owns it; the old content is in Git`
+      : `${rel} has a local edit, which the update replaces with the template version ${VERSION}; the old content is in Git`,
+  );
+  if (manifest === 'missing') {
+    warnings.push('.template/owned.sha256 is missing, so the update cannot tell the local edits of template-owned files, and replaces them all');
+  }
+  if (!interactive) {
+    for (const w of warnings) console.log(`Warning: ${w}.`);
+    return true;
+  }
+  const lines = warnings.map((w) => `${w}.`);
+  if (removed.length) lines.push(`Removed, no longer template-owned: ${removed.join(', ')}.`);
+  p.note(lines.join('\n'), 'Before the update');
+  const go = await p.confirm({ message: 'Go on with the update?', initialValue: warnings.length === 0 });
+  return !p.isCancel(go) && go;
+}
+
 async function main() {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
@@ -61,7 +85,11 @@ async function main() {
 
   if (positionals[0] === 'update') {
     if (positionals.length > 1) throw new UsageError('update takes no directory; run it in the project');
-    const r = await update(process.cwd(), { ...common, allowDirty: Boolean(values['allow-dirty']) });
+    const r = await update(process.cwd(), { ...common, allowDirty: Boolean(values['allow-dirty']), confirm: (preview) => confirmUpdate(preview, interactive) });
+    if (r.cancelled) {
+      p.cancel('Cancelled; nothing was changed.');
+      process.exit(130);
+    }
     const lines = [`Updated the template from ${r.from ?? 'an unrecorded version'} to ${r.to}.`];
     if (r.dropped.length) lines.push(`Answers not carried over (no question here): ${r.dropped.join(', ')}.`);
     if (r.migrations.length) lines.push(`Migrations run: ${r.migrations.join(', ')}.`);

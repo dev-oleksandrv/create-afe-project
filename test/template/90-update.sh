@@ -1,10 +1,17 @@
-# update keeps project content. Needs lib.sh only; defines pkg, $tpl, and $sample for the later
-# update files.
+# update keeps project content. Needs lib.sh only; defines pkg, failing_pkg, $tpl, and $sample for
+# the later update files.
 echo "== update keeps project content"
 # pkg <dir> <version>: a copy of this package at another version, sharing node_modules.
 pkg() {
   mkdir -p "$1" && cp -R bin src template package.json "$1/" && ln -s "$root/node_modules" "$1/node_modules"
   node -e 'const f=process.argv[1]+"/package.json",fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version=process.argv[2];fs.writeFileSync(f,JSON.stringify(p))' "$1" "$2"
+}
+# failing_pkg <dir> <version> <marker>: pkg with one more migration of <version>, the last one,
+# that fails while the file <marker> exists, and removes it: an update interrupted once.
+failing_pkg() {
+  pkg "$1" "$2" &&
+    printf "MIGRATIONS.push({ version: '%s', after: 'if [ -e \"%s\" ]; then rm \"%s\"; echo injected failure >&2; exit 1; fi' });\n" \
+      "$2" "$3" "$3" >> "$1/src/config.js"
 }
 sample=(--defaults --quiet --data project_name=sample --data 'project_description=A sample project.' --data github_repo=example/sample)
 tpl="$work/tpl"
@@ -21,6 +28,7 @@ printf '\nA line added by the next template version.\n' >> "$tpl/template/.claud
 sed -i.bak '/^scripts\/protect-branch.sh$/d' "$tpl/template/.template/owned.txt.jinja" && rm "$tpl/template/scripts/protect-branch.sh" "$tpl/template/.template/owned.txt.jinja.bak"
 node -e 'const f=process.argv[1],fs=require("fs"),p=JSON.parse(fs.readFileSync(f));p.version="0.0.2";fs.writeFileSync(f,JSON.stringify(p))' "$tpl/package.json"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up.log" 2>&1) || { cat "$work/up.log"; fail "update test: update fails"; }
+! grep -q '^Warning:' "$work/up.log" || { cat "$work/up.log"; fail "update test: a project without local edits of template-owned files gets a warning"; }
 grep -q 'Project line two.' "$u/AGENTS.md" || fail "update test: the project block was lost"
 grep -q 'Project note.' "$u/README.md" || fail "update test: the seeded README was overwritten"
 [ -f "$u/.claude/harness.conf" ] || fail "update test: a missing seeded file was not created"
@@ -37,6 +45,11 @@ rm "$u/scratch.txt" && gitc "$u" commit -q -am "edit a template-owned file"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults > "$work/up2.log" 2>&1) || { cat "$work/up2.log"; fail "update test: second update fails"; }
 ! grep -q 'A line of a local edit.' "$u/.claude/skills/update-template/SKILL.md" ||
   { cat "$work/up2.log"; fail "update test: a local edit of a template-owned file is not replaced"; }
+# With --defaults the local edit is a warning, printed before the update replaces it; the lines of
+# the project block of AGENTS.md are none.
+[ "$(grep -c '^Warning:' "$work/up2.log")" = 1 ] && head -n 1 "$work/up2.log" |
+  grep -q -x 'Warning: .claude/skills/update-template/SKILL.md has a local edit, which the update replaces with the template version 0.0.2; the old content is in Git.' ||
+  { cat "$work/up2.log"; fail "update test: the replaced local edit is not the one warning, before the report"; }
 pkg "$work/new" 0.0.3
 (cd "$u" && node "$work/new/bin/create-afe-project.js" update --defaults --allow-dirty > /dev/null 2>&1) || fail "update test: update to a newer version fails"
 (cd "$u" && node "$tpl/bin/create-afe-project.js" update --defaults --allow-dirty > "$work/down.log" 2>&1) &&
