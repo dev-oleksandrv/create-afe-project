@@ -93,13 +93,3 @@ cmp -s "$r/AGENTS.md" "$work/base-agents.md" && cmp -s "$pr/AGENTS.md" "$work/ba
   { find "$r" -type f; fail "code-review.yml: the review's rules are not the base branch's, or the pull request's planted instructions reach them"; }
 grep -qF '${{ runner.temp }}/pr-body.md ${{ runner.temp }}/base-rules"' "$cr" ||
   fail "code-review.yml: the review skill does not get the directory of the base branch's rules"
-
-# A push does not start the review; the label `code-review` starts it on the latest commit: a job
-# lets only that label through, a run for another label has a concurrency group of its own, so
-# it cancels no review, and a label run uses the action's automation mode.
-grep -qx '    types: \[opened, ready_for_review, labeled\]' "$cr" && ! grep -q synchronize "$cr" &&
-  grep -qF "if: \${{ github.event.action != 'labeled' || github.event.label.name == 'code-review' }}" "$cr" &&
-  awk '/^  review:$/ {f = 1} f && /^    needs: label$/ {ok = 1} END {exit !ok}' "$cr" &&
-  grep -qF -- "-\${{ (github.event.action != 'labeled' || github.event.label.name == 'code-review') && 'review' || github.run_id }}" "$cr" &&
-  grep -qF "track_progress: \${{ github.event.action != 'labeled' }}" "$cr" ||
-  fail "code-review.yml: the label code-review does not start a review of the latest commit, or another label cancels one"

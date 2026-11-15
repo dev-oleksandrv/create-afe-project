@@ -22,9 +22,9 @@ existing project starts failing.
   CI review only on an earlier commit (pull requests 42, 140, and 154 there), and the summaries of
   pull requests 159 and 160, shown as the login `claude`, fell outside the comment filter.
   `/create-pr` now names the commit the review ran on, says "Not ready to merge" when later
-  commits change more than documents, starts the review once more on the last commit with the
-  label `code-review` (`.github/workflows/code-review.yml` runs on it), and takes the findings of
-  the run that posted them. The workflow gives `review-code` the base
+  commits change more than documents, starts the review once more on the last commit by turning
+  the pull request into a draft and back (`gh pr ready --undo`, then `gh pr ready`, which fires
+  the existing `ready_for_review` trigger), and takes the findings of the run that posted them. The workflow gives `review-code` the base
   branch's `AGENTS.md` and the files its project block names, and puts the base `AGENTS.md` in
   the checkout, so a pull request's own `AGENTS.md` or criteria file is reviewed as data, not
   followed; `review-code` ends with which changed files it read.
@@ -47,6 +47,6 @@ existing project starts failing.
   request 160 rightly did against the literal rule. "Gate files" is information for the
   owner, not a control.
 - New projects only, since `README.md` is seeded: a "Sandbox" section, the `licence_check` module,
-  the label of the CI review, the `--review-evidence` flag, and the statement that without the
+  the second CI review of the last commit, the `--review-evidence` flag, and the statement that without the
   ruleset nothing on the server stops the merge of an unchecked commit. An existing project may
   copy them by hand.
