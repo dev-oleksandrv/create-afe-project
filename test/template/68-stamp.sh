@@ -3,7 +3,8 @@
 echo "== the green stamp and scripts/check.sh"
 st() { (cd "$a" && . scripts/lib/stamp.sh && "$@"); }
 gd=$(git -C "$a" rev-parse --absolute-git-dir)
-# Two kinds: docs (*.md) and code (every other path); each changes only with its own files.
+# Two kinds: docs (*.md, and the names of the other paths) and code (the content of every other
+# path); each changes only with its own files.
 c0=$(st tree_stamp code) d0=$(st tree_stamp docs)
 printf '%s\n%s' "$c0" "$d0" | grep -qvE '^[0-9a-f]{64}$' && fail "stamp: tree_stamp is not a SHA-256 ($c0, $d0)"
 [ "$(st tree_stamp code)" = "$c0" ] && [ "$(st tree_stamp docs)" = "$d0" ] && [ "$c0" != "$d0" ] ||
@@ -18,8 +19,11 @@ gitc "$a" checkout -q -- .claude/harness.conf
 [ "$(st tree_stamp code)" = "$c0" ] || fail "stamp: code differs after a tracked file is restored"
 echo a > "$a/new.txt"
 s2=$(st tree_stamp code); [ "$s2" != "$c0" ] || fail "stamp: unchanged when an untracked file is added"
+# The docs stamp covers the names of the other paths, which links may point at, not their content.
+dn=$(st tree_stamp docs); [ "$dn" != "$d0" ] || fail "stamp: a new path other than Markdown does not change the docs stamp"
 echo b > "$a/new.txt"
 s3=$(st tree_stamp code); [ "$s3" != "$s2" ] && [ "$s3" != "$c0" ] || fail "stamp: unchanged when an untracked file's content changes"
+[ "$(st tree_stamp docs)" = "$dn" ] || fail "stamp: the content of a path other than Markdown changes the docs stamp"
 rm "$a/new.txt"
 echo a > "$a/new.md"
 [ "$(st tree_stamp docs)" != "$d0" ] && [ "$(st tree_stamp code)" = "$c0" ] || fail "stamp: an untracked Markdown file does not change docs alone"
