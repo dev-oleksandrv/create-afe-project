@@ -1,5 +1,104 @@
 # create-afe-project
 
+## 5.0.0
+
+### Major Changes
+
+- [#50](https://github.com/dev-oleksandrv/create-afe-project/pull/50) [`8af5c6d`](https://github.com/dev-oleksandrv/create-afe-project/commit/8af5c6d64d58448c360c1735053ce0f2812e3791) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - The template keeps what is true in a project and what an agent may not do; how an agent works on
+  a task (questions, plan, review, pull request) now comes from the developer's own setup, not from
+  the project. On the owner's decision of 2026-11-15: the process parts cost more per task than
+  they caught.
+  
+  Removed, with the update removing the files:
+  
+  - The skills `create-pr` and `review` with its rubric. A pull request is opened with `gh pr
+    create`; `update-template` and `afe-init` do that themselves.
+  - Decision record statuses, their check `scripts/check-decisions.sh`, the generated index
+    `docs/decisions/README.md` (`scripts/gen-decisions-index.sh`), and the `decisions` workflow
+    with its jobs `integrity` and `readiness`. A record is accepted when it is written;
+    `docs/decisions/adr-template.md` has `date`, `decided-by`, `scope`, `summary`, `supersedes`.
+  - Path classes (`scripts/lib/classes.sh`, `.claude/path-classes`), the "Gate files" section,
+    the required sections of a pull request description, and the size warning.
+  - The Stop dispatcher `.claude/hooks/stop-dispatch.sh`, the green stamps
+    (`scripts/lib/stamp.sh`), and `scripts/check.sh --if-changed`.
+  - The modules `acceptance_check` and `fail_without_change` with their scripts and workflow;
+    their recorded answers are dropped.
+  - From `.claude/harness.conf`: `RALPH_MAX_ITERATIONS`, `REVIEW_MAX_ROUNDS`, `DIFF_WARN_LINES`,
+    `ID_PATTERN`, `TEST_GLOBS`, `FWC_TOOLCHAIN_GLOBS`, `FWC_TEST`.
+  
+  Changed:
+  
+  - `AGENTS.md`: commands, limits, and two lines each for tests and documents. Its project block
+    (now up to 20 lines) says how to run the product and see a change; `afe-init` writes that.
+  - `.claude/rules/testing.md` is eight rules; `.claude/rules/docs.md` says when a document
+    changes: when a change makes a statement in it false, once, at the end.
+  - `.claude/risky-paths` (seeded) replaces `.claude/path-classes`: one glob per line for the
+    paths where a mistake costs most. Nothing reads it but the agent.
+  - `scripts/check.sh` runs the project's checks, the link check, and the template integrity.
+  - `scripts/protect-branch.sh` requires the check `check` only; `--require-base` is gone.
+  - `review-code` (module `code_review`) holds its own criteria: errors of correctness and
+    security against what the description says.
+  
+  What a project must do:
+  
+  - **Before merging the update**, the owner runs `scripts/protect-branch.sh` from the update's
+    branch: the 4.x ruleset requires the check `integrity`, which no workflow reports any more,
+    so every pull request, the update's included, would wait for it.
+  - The update turns the `high` globs of `.claude/path-classes` into `.claude/risky-paths` and
+    removes the old file and a generated `docs/decisions/README.md`. It reports, as `Warning:`
+    lines, the removed keys still set in `.claude/harness.conf` and each project file that names
+    a removed file, such as a check that calls `scripts/check.sh --if-changed`.
+  - A Stop hook the project registered itself in `.claude/settings.project.json` keeps running;
+    the template runs none.
+  
+  Also in this release, from the audit of 2026-11-15:
+  
+  - `guard.sh`: quoted text is not a command (it denied a harmless command in a real session);
+    the command of `sh -c` and `eval` is; every push of a command is checked.
+  - `.env.example` is readable through the documented negation rule `Read(!.env.example)`; every
+    other `.env*` file stays denied.
+  - The link check accepts a line range on a path (`src/x.ts:10-20`).
+  - CI review: the rules come from the base branch, the pull request's versions are data.
+  - `afe-init` asks about the sandbox and adds one smoke test per deployable part.
+
+### Minor Changes
+
+- [#50](https://github.com/dev-oleksandrv/create-afe-project/pull/50) [`8af5c6d`](https://github.com/dev-oleksandrv/create-afe-project/commit/8af5c6d64d58448c360c1735053ce0f2812e3791) Thanks [@dev-oleksandrv](https://github.com/dev-oleksandrv)! - `update` stays inside the project, shows local edits before it replaces them, and can be run again
+  after a failure.
+  
+  - Paths: before it changes anything, `update` checks every path it reads, writes, or removes:
+    each entry of `.template/owned.txt` and `.template/owned.sha256`, each file the template
+    writes, and each file its tasks regenerate afterwards (`.claude/settings.json`,
+    `.template/owned.sha256`). An absolute path, a `..` or empty component, or a symbolic link on the way stops the
+    update with a message that names the entry, and nothing has been changed. Before, a `../` entry
+    of an old `.template/owned.txt` deleted a file outside the project and pruned its directory, and
+    a symbolic link at a template-owned file was written through and had its mode changed. The
+    pruning of empty directories stops below the project root. A seeded file that is a symbolic
+    link, such as `CLAUDE.md` pointing to `AGENTS.md`, stays as it is. `create --force` checks the
+    paths it writes in the same way.
+  - Local edits: before it changes anything, `update` lists the template-owned files whose content
+    differs from the hash in `.template/owned.sha256`, which the update replaces or removes, and the
+    files it removes. In a terminal it asks whether to go on; with `--defaults` it prints each local
+    edit as a `Warning:` line, which the `update-template` skill lists for the owner, and goes on.
+  - Failures: `update` records the new version in `.afe-answers.json` last, after the migrations and
+    the regeneration of the generated files succeeded. Before, it recorded the version before the
+    migrations, so a migration that failed was skipped by the next update. A failed update keeps the
+    recorded version and says how to resume: run the same update again with `--allow-dirty`, which
+    runs the migrations again. The migrations run with `set -euo pipefail`: a failing command of the
+    3.0.0 migration now fails the update instead of being ignored, and each migration is safe to run
+    a second time. No migration writes through a symbolic link: a seeded file that is one stays as
+    it is, with a `Warning:` line that names the change by hand, and temporary files go to the
+    update's own directory, never next to their target.
+  - 4.0.0: the update from 3.x reports, as `Warning:` lines, the two steps by hand of 4.0.0 where
+    they apply: a `.claude/hooks/project/stop/*.sh` that `.claude/settings.project.json` does not
+    register under `hooks.Stop`, and `FWC_INSTALL` or `FWC_CLASSIFIER` left in
+    `.claude/harness.conf`. It changes neither.
+  
+  The failures these fix were found by two independent reviews of the harness on 2026-11-15, not in
+  a pull request: an update that deletes or writes outside the project (reproduced with a `../`
+  entry), and a failed migration recorded as a success, so that the next update skips it. The
+  checks are added on the owner's decision of 2026-11-15.
+
 ## 4.0.0
 
 ### Major Changes
