@@ -181,16 +181,26 @@ check_acceptance() {
   [ "$n" -gt 0 ] || fail "pull request description: 'Acceptance' is empty; write 'None' with the reason"
 }
 
-# A small diff: a warning, never a failure, when the lines the change adds and deletes, generated
-# files left out, exceed DIFF_WARN_LINES of .claude/harness.conf.
+# A small diff: a warning, never a failure, when the reviewable lines that the change adds and
+# deletes exceed DIFF_WARN_LINES of .claude/harness.conf. Generated files, lock files, and test
+# files are left out: the test files of TEST_GLOBS, or while it is empty the common patterns of
+# test files, as in the paths of .claude/rules/testing.md.
 check_size() {
-  local limit n
+  local limit n g globs ex=()
   limit=$(conf_get DIFF_WARN_LINES)
   [ -n "$limit" ] || return 0
-  n=$(git diff --numstat "$mb" -- . ':(exclude).template/owned.sha256' ':(exclude).afe-answers.json' \
-        ':(exclude).claude/settings.json' ':(exclude)docs/decisions/README.md' | awk '{a += $1 + $2} END {print a + 0}')
-  n=$((n + $(git ls-files -z --others --exclude-standard | xargs -0 cat 2>/dev/null | wc -l | tr -d ' ')))
-  [ "$n" -le "$limit" ] || echo "WARNING: the change has $n changed lines, more than DIFF_WARN_LINES ($limit); split it, or say in the description why it is one change"
+  globs=$(conf_get TEST_GLOBS '*.test.* *.spec.* *_test.* test_*.py */test_*.py test/* */test/* tests/* */tests/* __tests__/* */__tests__/*')
+  set -f
+  # In a pathspec without the glob magic, * also matches /, as in TEST_GLOBS.
+  for g in .template/owned.sha256 .afe-answers.json .claude/settings.json docs/decisions/README.md \
+    '*.lock' '*.lockb' '*.lockfile' '*-lock.json' '*-lock.yaml' '*.lock.json' go.sum '*/go.sum' \
+    npm-shrinkwrap.json '*/npm-shrinkwrap.json' $globs; do
+    ex+=(":(exclude)$g")
+  done
+  set +f
+  n=$(git diff --numstat "$mb" -- . "${ex[@]}" | awk '{a += $1 + $2} END {print a + 0}')
+  n=$((n + $(git ls-files -z --others --exclude-standard -- . "${ex[@]}" | xargs -0 cat 2>/dev/null | wc -l | tr -d ' ')))
+  [ "$n" -le "$limit" ] || echo "WARNING: the change has $n changed lines, more than DIFF_WARN_LINES ($limit), generated files, lock files, and tests left out; split it, or say in the description why it is one change"
 }
 
 # "Gate files": names every path of class gate the change touches; prints them. The output of

@@ -35,6 +35,15 @@ expect_pass "a change at the limit, or in generated files, does not warn" bash -
 expect_pass "the project takes a template deny entry out" bash -c 'printf "{\"remove\":{\"permissions\":{\"deny\":[\"Read(**/.env.*)\"]}}}\n" > .claude/settings.project.json && scripts/gen-settings.sh &&
   "$work/sj" "!s.permissions.deny.includes(\"Read(**/.env.*)\") && s.permissions.deny.includes(\"Read(**/.env)\") && !(\"remove\" in s)"'
 expect_pass "a large change warns and still passes" bash -c 'seq 1 500 > big.txt && out=$(ready "$work/r-none.md") && printf "%s\n" "$out" | grep -q "WARNING: the change has 500 changed lines, more than DIFF_WARN_LINES (400)"'
+# Only reviewable lines count: test files (TEST_GLOBS, or the common patterns while it is empty)
+# and lock files are left out, untracked or not.
+expect_pass "test files and lock files do not count toward the size warning" bash -c 'mkdir -p tests src/__tests__ web &&
+  for f in tests/big.sh src/x.test.ts src/y_test.go test_z.py src/__tests__/a.js package-lock.json web/pnpm-lock.yaml Cargo.lock go.sum; do seq 1 500 > "$f"; done &&
+  git add package-lock.json src/x.test.ts && ! ready "$work/r-none.md" | grep -q WARNING; r=$?; git rm -q --cached package-lock.json src/x.test.ts; exit $r'
+body "$work/r-conf.md" '- None: x' $'## Gate files\n\n- `.claude/harness.conf`: TEST_GLOBS\n'
+expect_pass "with TEST_GLOBS set, its files are the test files" bash -c 'sed -i.bak "s#^TEST_GLOBS=.*#TEST_GLOBS=checks/*#" .claude/harness.conf && rm .claude/harness.conf.bak &&
+  mkdir -p checks && seq 1 500 > checks/a.sh && ! ready "$work/r-conf.md" | grep -q WARNING &&
+  mkdir -p tests && seq 1 500 > tests/big.sh && ready "$work/r-conf.md" | grep -q "WARNING: the change has 50[0-9] changed lines"'
 expect_pass "a public contract is class high" bash -c 'mkdir -p contracts && echo x > contracts/api.yaml && classes | grep -qx "high	contracts/api.yaml"'
 expect_pass "env.sh: an unset command is SKIP, a set one runs with its exit code" bash -c 'out=$(scripts/env.sh setup) && [ "$out" = "SKIP: SETUP is not set in .claude/harness.conf" ] &&
   scripts/env.sh fast > /dev/null && sed -i.bak "s/^E2E=.*/E2E=exit 3/" .claude/harness.conf && rm .claude/harness.conf.bak; scripts/env.sh e2e > /dev/null; [ $? -eq 3 ] && { scripts/env.sh nope 2> /dev/null; [ $? -eq 2 ]; }'
