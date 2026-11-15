@@ -14,8 +14,18 @@ bash_hook() { hook "$1" "$(node -e 'process.stdout.write(JSON.stringify({ tool_n
 # backtick, such as a commit message or test data, is no push.
 for c in 'git commit -m "docs; git push origin main"' "git commit -m 'a | git push origin main'" \
   "printf '%s\n' \"x && git push origin main\"" $'git commit -m "first line\ngit push origin main"' \
-  "echo 'it''s; git push origin main'"; do
+  "echo 'it''s; git push origin main'" "bash -c 'echo git push origin main'" "git push origin 'feature x'"; do
   bash_hook allow "$c"
+done
+# The forms that the guard before the quote scan denied stay denied: the command string of
+# bash -c, sh -c, zsh -c, and eval is a command, adjacent quotes around a word are that word, and
+# a push after an operator is seen.
+for c in "bash -c 'cd repo && git push origin main'" 'sh -c "git fetch && git push origin main"' "zsh -c 'git push origin main'" \
+  "bash -lc 'git push origin main'" "bash -e -c 'git push origin main'" 'eval "git push origin main"' 'eval git push origin main' \
+  "git push origin ''main" "git push 'ori'gin \"ma\"in" 'echo x | git push origin main' 'true && git push origin main' \
+  'git push origin main &' 'git fetch; git push origin main' 'git -c x=y push origin main' "sudo git push origin main" \
+  'X=1 git push origin main' 'command git push origin main' '/usr/bin/git push origin main'; do
+  bash_hook deny "$c"
 done
 # The real forms are still denied: a quoted remote or refspec is still a word, a command
 # substitution inside double quotes and a subshell are still seen, and a quote of one kind inside
