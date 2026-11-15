@@ -1,6 +1,6 @@
 ---
 name: review
-description: Review the current branch before its pull request opens, by the class of its changed paths - none for Markdown only, one reviewer and one round for normal and gate paths, two reviewers for high-risk paths for up to REVIEW_MAX_ROUNDS rounds - with the Codex CLI when it is installed, otherwise fresh Claude sub-agents, against the rubric in rubric.md; answer each finding and report the Checks line. Never commits, pushes, or opens a pull request. Use before opening a pull request.
+description: Review the current branch before its pull request opens, by the class of its changed paths - none for ordinary documents only, one reviewer and one round for normal and gate paths, two reviewers for high-risk paths for up to REVIEW_MAX_ROUNDS rounds - with the Codex CLI when it is installed, otherwise fresh Claude sub-agents, against the rubric in rubric.md; answer each finding and report the Checks line. Never commits, pushes, or opens a pull request. Use before opening a pull request.
 allowed-tools: Read, Grep, Glob, Edit, Write, Agent, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(command -v codex), Bash(codex exec:*), Bash(scripts/check.sh:*), Bash(scripts/env.sh fast), Bash(scripts/check-decisions.sh:*)
 ---
 
@@ -17,7 +17,7 @@ request. Suggestions never drive a loop; only blockers do, and only for `two`.
 
 1. Scope: `scripts/check-decisions.sh --classes --base <base>` prints the class of every changed
    path and, last, `review<TAB>none|one|two`. For `none`, stop and report
-   "Review: not run: Markdown only".
+   "Review: not run: documents only".
 2. Reviewers: `command -v codex` tells whether the Codex CLI is installed.
    - `one`: the Codex CLI when it is installed, otherwise one fresh Claude sub-agent.
    - `two`: a fresh Claude sub-agent and the Codex CLI. Without Codex, two fresh Claude

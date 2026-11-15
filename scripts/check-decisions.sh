@@ -210,7 +210,7 @@ check_gate_files() {
   sec=$(section_of "Gate files" "$1") || sec=
   while IFS= read -r p; do
     [ -n "$p" ] && [ "$(class_of "$p")" = gate ] || continue
-    echo "class gate, reviewed after the merge: $p"
+    echo "class gate, listed for the owner: $p"
     printf '%s\n' "$sec" | grep -q -F -- "$p" ||
       fail "$p: class gate; list it under 'Gate files' (scripts/check-decisions.sh --gate-section prints the section)"
   done < <(changed_paths)

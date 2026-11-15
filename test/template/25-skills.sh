@@ -40,7 +40,7 @@ grep -qF 'a test that duplicates another (the same failure at the same level) is
 # The review skill: the levels of the classes check, the Codex CLI or Claude sub-agents, the
 # brief with the rubric and the testing rules, the round cap, and no commit or push.
 review="$a/.claude/skills/review/SKILL.md"
-for s in 'review<TAB>none|one|two' 'Review: not run: Markdown only' 'command -v codex' \
+for s in 'review<TAB>none|one|two' 'Review: not run: documents only' 'command -v codex' \
   'codex exec --sandbox read-only --ephemeral --ignore-rules -C' 'Bash(codex exec:*)' 'REVIEW_MAX_ROUNDS' \
   '.claude/skills/review/rubric.md' '.claude/rules/testing.md' '{"verdict": "PASS" | "FAIL", "findings":' \
   'never commits, pushes, or opens a pull' 'scripts/env.sh fast'; do
@@ -92,8 +92,18 @@ for s in 'After the last fix push, when commits after the reviewed one change a 
   printf '%s' "$prj" | grep -qF -- "$s" || fail "variant B: create-pr lacks '$s'"
 done
 ! grep -n -F 'gh label' "$pr" || fail "variant B: create-pr still starts the CI review with a label"
-! grep -n -F -e 'claude[bot]' -e 'code-review' -e 'gh run list' -e '--undo' "$a/.claude/skills/create-pr/SKILL.md" ||
+! grep -n -F -e 'claude[bot]' -e 'code-review' -e 'gh run list' -e 'Never toggle' "$a/.claude/skills/create-pr/SKILL.md" ||
   fail "variant A: create-pr reads code-review findings or starts the CI review although the module is off"
+# Both variants: a pull request that was ready does not stay ready while an item waits, and a
+# file of sections from a tool that ran the review itself is added to the description.
+for f in "$a/.claude/skills/create-pr/SKILL.md" "$pr"; do
+  flat=$(tr '\n' ' ' < "$f" | tr -s ' ')
+  for s in 'request that was ready goes back to draft (`gh pr ready <number> --undo`)' \
+    'The free text may name a file of sections to add to the description' \
+    'its `Closes #<n>` lines end the description'; do
+    printf '%s' "$flat" | grep -qF -- "$s" || fail "create-pr ($f) lacks '$s'"
+  done
+done
 
 # review-code applies the rubric of the review skill.
 grep -qF '.claude/skills/review/rubric.md' "$b/.claude/skills/review-code/SKILL.md" &&

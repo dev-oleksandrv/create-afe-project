@@ -24,9 +24,10 @@ are regenerated, never edited.
    `npm view create-afe-project@<target> repository.url`, then its `CHANGELOG.md` at the tag
    `v<target>`, or the `CHANGELOG.md` the package ships.
 4. Local edits: run `scripts/check-template.sh`. Each "differs from the template" line names a
-   local edit of a template-owned file, which the update replaces: it is lost unless the change
-   goes to the template. When you cannot tell whether an edit was intended, stop and list it as
-   an open question.
+   local edit of a template-owned file, which the update replaces (it prints the same files as
+   `Warning:` lines before it changes anything): the edit is lost unless the change goes to the
+   template. When you cannot tell whether an edit was intended, stop and list it as an open
+   question.
 5. Update: `npx --yes create-afe-project@<target> update --defaults`. It replaces the
    template-owned files, keeps the project block of `AGENTS.md`, creates missing seeded files,
    runs the migrations the changelog names, the only way it changes an existing seeded file, and

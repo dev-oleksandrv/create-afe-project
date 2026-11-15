@@ -52,8 +52,8 @@ helpers of earlier ones. The header of each file says what it tests and what it 
 test goes into the file of its subject.
 
 CI runs them through the `check` workflow. The suite needs Node.js, Git, curl, and the full
-history of this repository: the 3.0.0 migration test builds the 2.1.0 package from its release
-commit, and the Python smoke test installs uv when `uvx` is missing.
+history of this repository: the update tests build the 2.1.0 and the 3.0.0 package from their
+release commits, and the Python smoke test installs uv when `uvx` is missing.
 
 ## 4. Versions
 

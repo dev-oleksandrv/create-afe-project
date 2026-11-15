@@ -7,7 +7,10 @@ allowed-tools: Read, Grep, Glob, Edit, Write, Skill(review), Bash(git status:*),
 # Create a pull request
 
 Arguments: none, or free text that seeds the title and the summary; and the flags
-`--skip-review`, `--review-evidence <file>`, and `--skip-watch`.
+`--skip-review`, `--review-evidence <file>`, and `--skip-watch`. The free text may name a file
+of sections to add to the description, as a tool that ran the review itself does: its
+`## Open questions` items join that section, its other sections follow "Open questions", and its
+`Closes #<n>` lines end the description.
 
 This skill holds the rules for branches, commits, and descriptions; it reads no other rule
 document. Nothing here merges: the owner does that.
@@ -25,8 +28,9 @@ document. Nothing here merges: the owner does that.
   the co-author trailer this session prescribes; the description ends with the attribution line
   this session prescribes, when there is one.
 - History is never rewritten after a push. The owner merges, with a merge commit.
-- Draft: while an item waits, a pull request is opened as a draft, a draft stays one, and the
-  report says "Not ready to merge". The items: a failing check, an open blocker, a review that
+- Draft: while an item waits, a pull request is opened as a draft, a draft stays one, a pull
+  request that was ready goes back to draft (`gh pr ready <number> --undo`), and the report says
+  "Not ready to merge". The items: a failing check, an open blocker, a review that
   failed, was invalid, or covered only part of the change, and a failed check the owner waived,
   which is written under "Checks" as `Exception accepted: <check>, <sha>, <who allowed it and
   when>`, never as a pass.

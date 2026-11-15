@@ -1,7 +1,7 @@
 # Path classes of this project: one "<class> <glob>" per line, a shell glob relative to the
 # repository root, in which * also matches /. Two classes:
 #   high  two reviewers and up to REVIEW_MAX_ROUNDS review rounds in /create-pr
-#   gate  listed under "Gate files" in the pull request; the owner reviews it after the merge
+#   gate  listed under "Gate files" in the pull request, for the owner's information
 # A path that nothing matches is low when it is a document (Markdown) or a generated file (no
 # reviewer), and otherwise normal (one reviewer, one round); instruction files such as AGENTS.md,
 # CLAUDE.md, and the skills, rules, and agents under .claude/ are normal (scripts/lib/classes.sh).
