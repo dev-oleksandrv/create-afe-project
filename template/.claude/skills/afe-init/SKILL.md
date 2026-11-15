@@ -66,9 +66,9 @@ opened with the `create-pr` skill. It holds:
     from memory when a generator exists.
   - Pin the toolchain (`engines` and `.nvmrc`, `.python-version`, `rust-toolchain.toml`,
     `.tool-versions`, and the like); commit the lockfile; add `.env.example` with every setting
-    and a safe non-secret default, and take its read rule `Read(**/.env.*)` out of the deny list
-    through the `remove` key of `.claude/settings.project.json`, then run
-    `scripts/gen-settings.sh`.
+    and a safe non-secret default. The settings deny `Read(**/.env.*)` except what the negation
+    `Read(!.env.example)` after it carves out, so that file is open and every other `.env.*`
+    stays denied; never take either rule out.
   - Every dependency exists on its registry, is maintained, and has a license that fits; list
     each with its license in the pull request.
 - The checks: `scripts/checks.d/20-lint.sh`, the formatter check, linter, and type checker,
