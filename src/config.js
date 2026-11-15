@@ -201,4 +201,28 @@ export const MIGRATIONS = [
       `  done`,
     ].join('\n'),
   },
+  // 4.0.0 leaves two steps to the project (CHANGELOG.md, 4.0.0), and the update reports each one
+  // that applies; it changes nothing. A Stop hook of the project, .claude/hooks/project/stop/*.sh,
+  // that .claude/settings.project.json does not name: the Stop dispatcher no longer runs it, so it
+  // goes under hooks.Stop there. FWC_INSTALL and FWC_CLASSIFIER in .claude/harness.conf: nothing
+  // reads them, since the fail-without-change driver installs with SETUP.
+  {
+    version: '4.0.0',
+    after: [
+      `set -euo pipefail`,
+      `f=.claude/harness.conf`,
+      `keys=`,
+      `for k in FWC_INSTALL FWC_CLASSIFIER; do`,
+      `  if [ -f $f ] && grep -q -E "^[[:space:]]*$k=" $f; then keys=\${keys:+$keys, }$k; fi`,
+      `done`,
+      `if [ -n "$keys" ]; then`,
+      `  echo "$f sets $keys, which 4.0.0 no longer reads: delete them; the fail-without-change driver installs with SETUP" >> "$AFE_NOTES"`,
+      `fi`,
+      `for h in .claude/hooks/project/stop/*.sh; do`,
+      `  [ -f "$h" ] || continue`,
+      `  if [ -f .claude/settings.project.json ] && grep -q -F -e "$h" .claude/settings.project.json; then continue; fi`,
+      `  echo "$h no longer runs: since 4.0.0 the Stop dispatcher does not run .claude/hooks/project/stop/, so register it under hooks.Stop in .claude/settings.project.json" >> "$AFE_NOTES"`,
+      `done`,
+    ].join('\n'),
+  },
 ];

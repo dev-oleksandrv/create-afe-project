@@ -186,6 +186,36 @@ test('a failing command fails the 3.0.0 migration', () => {
   assert.notEqual(r.status, 0, 'the migration succeeds although writing its note failed');
 });
 
+test('the 4.0.0 migration reports the steps by hand that apply, changes nothing, and says the same on a second run', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'afe-'));
+  const notes = join(mkdtempSync(join(tmpdir(), 'afe-')), 'notes');
+  mkdirSync(join(dir, '.claude', 'hooks', 'project', 'stop'), { recursive: true });
+  const conf = 'SETUP=make setup\nFWC_INSTALL=npm ci\nFWC_CLASSIFIER=\nFWC_TEST=npm test\n';
+  writeFileSync(join(dir, '.claude', 'harness.conf'), conf);
+  writeFileSync(join(dir, '.claude', 'hooks', 'project', 'stop', '10-lint.sh'), '#!/usr/bin/env bash\n');
+  writeFileSync(join(dir, '.claude', 'hooks', 'project', 'stop', '20-own.sh'), '#!/usr/bin/env bash\n');
+  const settings = JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'command', command: '"$CLAUDE_PROJECT_DIR"/.claude/hooks/project/stop/20-own.sh' }] }] } });
+  writeFileSync(join(dir, '.claude', 'settings.project.json'), settings);
+  const expected = [
+    '.claude/harness.conf sets FWC_INSTALL, FWC_CLASSIFIER, which 4.0.0 no longer reads: delete them; the fail-without-change driver installs with SETUP',
+    '.claude/hooks/project/stop/10-lint.sh no longer runs: since 4.0.0 the Stop dispatcher does not run .claude/hooks/project/stop/, so register it under hooks.Stop in .claude/settings.project.json',
+  ];
+  for (const run of [1, 2]) {
+    const r = migrate('4.0.0', dir, notes);
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(readFileSync(notes, 'utf8').trimEnd().split('\n'), [].concat(...Array(run).fill(expected)));
+  }
+  assert.equal(readFileSync(join(dir, '.claude', 'harness.conf'), 'utf8'), conf);
+  assert.equal(readFileSync(join(dir, '.claude', 'settings.project.json'), 'utf8'), settings);
+
+  const clean = mkdtempSync(join(tmpdir(), 'afe-'));
+  mkdirSync(join(clean, '.claude'));
+  writeFileSync(join(clean, '.claude', 'harness.conf'), 'SETUP=\nFWC_TEST=\n');
+  const none = join(clean, 'notes');
+  assert.equal(migrate('4.0.0', clean, none).status, 0);
+  assert.ok(!existsSync(none) || readFileSync(none, 'utf8') === '', 'a project without the 3.x leftovers gets a note');
+});
+
 test('update shows the local edits it replaces, in the order of the manifest, and the files it removes first; a refusal changes nothing', async () => {
   const dir = join(mkdtempSync(join(tmpdir(), 'afe-')), 'p');
   await project.create(dir, { given: base, useDefaults: true, interactive: false, quiet: true, git: false });
