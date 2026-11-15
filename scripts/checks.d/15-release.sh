@@ -86,10 +86,20 @@ done
 rm -f "$work/gh-runs"
 
 # The release workflow publishes only after the full check of the tagged commit and an install of
-# the packed package that prints the tag's version.
+# the packed package that prints the tag's version. They run in the job `check`, which has read
+# access only; the job `release` needs it, holds the publishing credentials, and runs only what
+# the lockfile pins.
+wf=.github/workflows/release.yml
+job() { awk -v j="  $1:" '$0 == j {f = 1; next} /^  [a-z-]+:$/ {f = 0} f && !/^ *#/' "$wf"; }
 awk '/scripts\/check\.sh --verbose/ {c = NR} /npm install .*\.tgz/ {i = NR} /create-afe-project --version/ {v = NR}
-     /npm publish/ {p = NR} END {exit !(c && i && v && p && c < p && i < p && v < p)}' .github/workflows/release.yml ||
+     /npm publish/ {p = NR} END {exit !(c && i && v && p && c < p && i < p && v < p)}' "$wf" ||
   fail "release.yml publishes without the full check or the install of the packed package"
+job check | grep -q 'scripts/check.sh --verbose' && job check | grep -q 'npm install .*\.tgz' &&
+  ! job check | grep -q -E 'id-token|: write|npm publish|gh release' &&
+  awk '/^permissions:$/ {f = 1; next} /^[a-z]/ {f = 0} f' "$wf" | grep -qx '  contents: read' &&
+  job release | grep -qx '    needs: check' && job release | grep -q 'id-token: write' && job release | grep -q 'npm publish' &&
+  ! job release | grep -q -E 'scripts/(check|env)\.sh|npm install|npx|uv|pytest' ||
+  fail "release.yml runs the full check with the publishing credentials, or publishes without the check job"
 
 if [ "$failures" -gt 0 ]; then
   echo "== release tests failed: $failures"

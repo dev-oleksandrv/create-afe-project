@@ -1,9 +1,11 @@
 # Release of a version (docs/maintaining.md, section 5): the tag vX.Y.Z on main, which
 # scripts/tag-release.sh pushes after a Version PR merges and starts with workflow_dispatch, or a
-# tag pushed by hand. It checks that package.json and CHANGELOG.md are at X.Y.Z, runs the full
-# check (scripts/check.sh) on the tagged commit, installs the packed package in an empty
-# directory and runs it, publishes a GitHub release with the CHANGELOG.md section as its notes,
-# and publishes the npm package create-afe-project. npm authenticates by trusted publishing (OIDC, id-token: write):
+# tag pushed by hand. The job `check` runs the full check (scripts/check.sh) on the tagged commit
+# and installs the packed package in an empty directory and runs it, with read access only: the
+# template suite installs and runs tools that no lockfile pins. The job `release`, after it,
+# checks that package.json and CHANGELOG.md are at X.Y.Z, runs the package tests, publishes a
+# GitHub release with the CHANGELOG.md section as its notes, and publishes the npm package
+# create-afe-project; it runs only what the lockfile pins. npm authenticates by trusted publishing (OIDC, id-token: write):
 # the package's settings on npmjs.com name this repository and release.yml; no token is stored.
 name: release
 
@@ -17,12 +19,45 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
-  release:
+  check:
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+
+      # The full check of the tagged commit, as the check workflow runs it.
+      - name: full check
+        run: npm ci && scripts/env.sh setup && scripts/check.sh --verbose
+
+      # What npm publishes is the packed tarball: it installs and prints the tag's version.
+      - name: the packed package installs and runs
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          npm pack --silent --pack-destination "$RUNNER_TEMP" > /dev/null
+          mkdir "$RUNNER_TEMP/smoke"
+          cd "$RUNNER_TEMP/smoke"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$RUNNER_TEMP/create-afe-project-${TAG#v}.tgz" > /dev/null
+          [ "$(npx --no-install create-afe-project --version)" = "${TAG#v}" ] ||
+            { echo "the packed package does not print version ${TAG#v}"; exit 1; }
+
+  release:
+    needs: check
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["ubuntu-latest"]') }}
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -54,22 +89,8 @@ jobs:
           node -e 'const [a,b,c]=process.argv[1].split(".").map(Number); process.exit(a>11||(a==11&&(b>5||(b==5&&c>=1)))?0:1)' "$v" ||
             { echo "npm $v cannot publish by trusted publishing; it needs 11.5.1 or later"; exit 1; }
 
-      # The full check of the tagged commit, as the check workflow runs it.
-      - name: full check
-        run: npm ci && scripts/env.sh setup && scripts/check.sh --verbose
-
-      # What npm publishes is the packed tarball: it installs and prints the tag's version.
-      - name: the packed package installs and runs
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          npm pack --silent --pack-destination "$RUNNER_TEMP" > /dev/null
-          mkdir "$RUNNER_TEMP/smoke"
-          cd "$RUNNER_TEMP/smoke"
-          npm init -y > /dev/null
-          npm install --no-audit --no-fund "$RUNNER_TEMP/create-afe-project-${TAG#v}.tgz" > /dev/null
-          [ "$(npx --no-install create-afe-project --version)" = "${TAG#v}" ] ||
-            { echo "the packed package does not print version ${TAG#v}"; exit 1; }
+      - name: package tests
+        run: npm ci && npm test
 
       - name: GitHub release
         env:
