@@ -58,7 +58,7 @@ if [ "$classes" -eq 1 ]; then
     paths+=("$p")
     printf '%s\t%s\n' "$(class_of "$p")" "$p"
   done < <(changed_paths)
-  printf 'review\t%s\n' "$(review_level ${paths[@]+"${paths[@]}"})"
+  printf 'review\t%s\n' "$(review_level "$mb" ${paths[@]+"${paths[@]}"})"
   exit 0
 fi
 

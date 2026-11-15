@@ -50,21 +50,40 @@ expect_pass "no ecosystem block: manifests and tool configuration are normal unt
 expect_pass "the high paths are class high, in any directory" bash -c '. scripts/lib/classes.sh &&
   for f in src/auth/login.py api/security/x.go secrets/k.txt db/migrations/1.sql billing/x.ts svc/payments/y.rb contracts/api.yaml; do
     [ "$(class_of "$f")" = high ] || { echo "not high: $f"; exit 1; }; done'
-expect_pass "Markdown and generated files are low by the built-in rule; nothing else is" bash -c '. scripts/lib/classes.sh &&
-  for f in AGENTS.md docs/x.md docs/decisions/0001-x.md .template/owned.sha256 .afe-answers.json .claude/settings.json; do
+# Instruction and policy files are normal by function, though Markdown: they change what agents do.
+expect_pass "documents and generated files are low by the built-in rule; instruction files and nothing else are normal" bash -c '. scripts/lib/classes.sh &&
+  for f in docs/x.md docs/decisions/0001-x.md README.md src/README.md .template/owned.sha256 .afe-answers.json; do
     [ "$(class_of "$f")" = low ] || { echo "not low: $f"; exit 1; }; done &&
-  for f in .mcp.json .template/owned.txt scripts/check.sh .claude/settings.template.json; do [ "$(class_of "$f")" = normal ] || { echo "not normal: $f"; exit 1; }; done'
+  for f in AGENTS.md CLAUDE.md src/AGENTS.md pkg/x/CLAUDE.md .claude/settings.json .claude/skills/review/SKILL.md .claude/skills/review/rubric.md \
+    .claude/rules/docs.md .claude/agents/x.md .claude/commands/x.md template/.claude/skills/x/SKILL.md \
+    .mcp.json .template/owned.txt scripts/check.sh .claude/settings.template.json; do [ "$(class_of "$f")" = normal ] || { echo "not normal: $f"; exit 1; }; done'
 expect_pass "an approval or low line of an older project file is ignored" bash -c 'printf "approval src/*\nlow scripts/*\napproval .mcp.json\nnormal docs/*\nhigh docs/security/*\n" >> .claude/path-classes &&
   . scripts/lib/classes.sh && [ "$(class_of src/app.py)" = normal ] && [ "$(class_of scripts/x.sh)" = normal ] && [ "$(class_of .mcp.json)" = normal ] &&
   [ "$(class_of docs/x.md)" = low ] && [ "$(class_of docs/security/x.md)" = high ] && mkdir -p src && echo x > src/app.py && out=$(classes) &&
   printf "%s\n" "$out" | grep -qx "normal	src/app.py" && ! printf "%s\n" "$out" | grep -q "^approval"'
 expect_pass "classes of the changed paths, review two for a high path" bash -c 'gatefile && mkdir -p docs/plans src/auth && echo x > docs/plans/x.md && echo x >> AGENTS.md &&
   echo x > src/app.py && echo x > src/auth/login.py && echo "{}" > .mcp.json && record 0001 accepted &&
-  out=$(classes) && for l in "gate	scripts/checks.d/20-x.sh" "low	docs/plans/x.md" "low	AGENTS.md" "normal	src/app.py" \
+  out=$(classes) && for l in "gate	scripts/checks.d/20-x.sh" "low	docs/plans/x.md" "normal	AGENTS.md" "normal	src/app.py" \
     "high	src/auth/login.py" "normal	.mcp.json" "low	docs/decisions/0001-test.md" "review	two"; do
     printf "%s\n" "$out" | grep -qx "$l" || { echo "missing: $l"; printf "%s\n" "$out"; exit 1; }; done &&
   [ "$(printf "%s\n" "$out" | tail -n 1)" = "review	two" ]'
 expect_pass "review: none for documents only" bash -c 'mkdir -p docs/plans && echo x > docs/plans/x.md && classes | grep -qx "review	none"'
 expect_pass "review: one for code" bash -c 'mkdir -p src && echo x > src/app.py && classes | grep -qx "review	one"'
-expect_pass "review: none for a template update" bash -c 'echo x >> docs/decisions/adr-template.md && echo x >> scripts/check.sh && echo " " >> .afe-answers.json && echo x >> .claude/harness.conf && classes | grep -qx "review	none"'
+expect_pass "review: one for an instruction file alone" bash -c 'echo x >> AGENTS.md && classes | grep -qx "review	one" && git checkout -q -- AGENTS.md &&
+  echo x >> .claude/skills/create-pr/SKILL.md && classes | grep -qx "review	one"'
+# A template update: the _version of .afe-answers.json differs from the base's, and every other
+# path is template-owned, generated, or a seeded file other than configuration.
+update() { sed -i.bak 's/"_version": "[^"]*"/"_version": "0.0.1"/' .afe-answers.json && rm .afe-answers.json.bak &&
+  echo x >> docs/decisions/adr-template.md && echo x >> scripts/check.sh && echo x >> AGENTS.md; }
+export -f update
+expect_pass "review: none for a template update" bash -c 'update && classes | grep -qx "review	none"'
 expect_pass "review: one for template-owned edits without an update" bash -c 'echo x >> docs/decisions/adr-template.md && echo x >> scripts/check.sh && classes | grep -qx "review	one"'
+expect_pass "review: one for a whitespace edit of the answers file, which is no update" bash -c 'echo x >> docs/decisions/adr-template.md && echo x >> scripts/check.sh && echo " " >> .afe-answers.json && classes | grep -qx "review	one"'
+expect_pass "review: an update keeps the review of a gate path" bash -c 'update && echo x >> .github/workflows/check.yml && classes | grep -qx "review	one"'
+expect_pass "review: an update with a seeded configuration file gets its review, even when it is not class gate" bash -c 'update && grep -v "^gate .claude/" .claude/path-classes > t && mv t .claude/path-classes &&
+  echo x >> .claude/harness.conf && out=$(classes) && printf "%s\n" "$out" | grep -qx "normal	.claude/harness.conf" && printf "%s\n" "$out" | grep -qx "review	one"'
+# A high path that the template owns, by a path-classes line of the base: an update keeps its review.
+gitc "$a" switch -q -c high-owned && printf 'high scripts/check.sh\n' >> "$a/.claude/path-classes" && gitc "$a" commit -q -am high
+(cd "$a" && update && scripts/check-decisions.sh --classes --base high-owned > "$work/high-owned.log" 2>&1) && grep -qx "review	two" "$work/high-owned.log" ||
+  { cat "$work/high-owned.log"; fail "review: an update overrides the review of a high path"; }
+gitc "$a" checkout -q -- . && gitc "$a" switch -q main && gitc "$a" branch -q -D high-owned
