@@ -11,7 +11,8 @@
 // (the decision records and their index) are exempt, in the full scan and as arguments: they
 // record history, and a path in them may go stale; their links are checked as above. A candidate contains "/", has no
 // whitespace, none of * ? < > { } $ |, and no scheme, and its first segment is the name of an
-// entry in the repository root; a trailing ":line", "#anchor", or "::name" is stripped first.
+// entry in the repository root; a trailing ":line", ":line-line", "#anchor", or "::name" is
+// stripped first, so `src/x.ts:3-12` names src/x.ts.
 // Any other token, such as origin/main or owner/name, is not a path and is not checked. The root
 // entries and the existence of a path come from Git (tracked and untracked files that are not
 // ignored, and their directories), compared case-sensitively, so an ignored directory such as
@@ -160,7 +161,7 @@ function exists(path) {
 // The path that a backticked token names, or null when the token is no path candidate.
 function candidate(token) {
   if (!token.includes('/') || /[\s*?<>{}$|]/.test(token) || /^[a-z][a-z0-9+.-]*:/i.test(token)) return null;
-  const path = token.replace(/::[^/]*$/, '').replace(/#[^/]*$/, '').replace(/(:\d+)+$/, '');
+  const path = token.replace(/::[^/]*$/, '').replace(/#[^/]*$/, '').replace(/(:\d+(-\d+)?)+$/, '');
   if (rootEntries === undefined) {
     const paths = gitPaths();
     rootEntries = paths ? new Set([...paths].map((p) => p.split('/')[0])) : new Set(readdirSync(root));

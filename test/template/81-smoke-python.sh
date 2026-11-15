@@ -46,6 +46,8 @@ if command -v uvx >/dev/null; then
     fail "Python: the acceptance check misses REQ-003, which no test carries"
   (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc.log" 2>&1) && grep -q "ok: tests/test_mul.py passes with the change and fails on the base" "$work/d-fwc.log" ||
     { cat "$work/d-fwc.log"; fail "Python: fail-without-change rejects a new test that fails on the base"; }
+  # The last lines of the base run show why the test failed there, for the pull request to quote.
+  grep -q "cannot import name 'mul'" "$work/d-fwc.log" || { cat "$work/d-fwc.log"; fail "Python: fail-without-change does not show why the test fails on the base"; }
   printf 'from calc import mul\n\n\ndef test_broken():\n    assert mul(2, 3) == 7\n' > "$d/tests/test_broken.py"
   (cd "$d" && scripts/fail-without-change.sh --base main > "$work/d-fwc0.log" 2>&1) &&
     { cat "$work/d-fwc0.log"; fail "Python: fail-without-change accepts a test that fails with the change too"; }

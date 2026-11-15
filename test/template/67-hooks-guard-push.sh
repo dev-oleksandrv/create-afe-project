@@ -8,6 +8,22 @@ for c in "git push origin main" "git push" "git push origin HEAD:main" "git -C .
   hook deny '{"tool_name":"Bash","tool_input":{"command":"'"$c"'"}}'
 done
 hook allow '{"tool_name":"Bash","tool_input":{"command":"git push -u origin feature"}}'
+# bash_hook <decision> <command>: the guard hook on a Bash call of the command.
+bash_hook() { hook "$1" "$(node -e 'process.stdout.write(JSON.stringify({ tool_name: "Bash", tool_input: { command: process.argv[1] } }))' "$2")"; }
+# Quoted text is data: a push inside single quotes, or inside double quotes without $ or a
+# backtick, such as a commit message or test data, is no push.
+for c in 'git commit -m "docs; git push origin main"' "git commit -m 'a | git push origin main'" \
+  "printf '%s\n' \"x && git push origin main\"" $'git commit -m "first line\ngit push origin main"' \
+  "echo 'it''s; git push origin main'"; do
+  bash_hook allow "$c"
+done
+# The real forms are still denied: a quoted remote or refspec is still a word, a command
+# substitution inside double quotes and a subshell are still seen, and a quote of one kind inside
+# the other hides no command; a line continuation joins the lines.
+for c in $'git push \\\norigin main' "git push 'origin' 'main'" 'git push origin "main"' 'echo "$(git push origin main)"' 'echo "`git push origin main`"' \
+  '(git push origin main)' "echo 'done'; git push origin main" "echo \"a'\" ; git push origin main ; echo \"'b\""; do
+  bash_hook deny "$c"
+done
 # DOCS_GUARD=off passes the push too.
 out=$(cd "$a" && printf '%s' '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}' | DOCS_GUARD=off CLAUDE_PROJECT_DIR="$a" .claude/hooks/guard.sh 2>&1) &&
   [ -z "$out" ] || fail "guard hook: DOCS_GUARD=off does not pass a push to main: '${out:0:120}'"

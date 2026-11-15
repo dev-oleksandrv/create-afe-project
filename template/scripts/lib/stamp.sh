@@ -1,10 +1,12 @@
 # Sourced by scripts/check.sh and .claude/hooks/stop-dispatch.sh, in the root of the repository.
 # The green stamp: a local cache that lets a check skip a tree it has already passed. CI never
 # reads or writes it. There are two kinds, so that a change of one kind does not re-run the checks
-# of the other: docs, the Markdown files (*.md), and code, every other path.
+# of the other: docs, the Markdown files (*.md) and the names of every other path, which links and
+# code paths may point at, and code, the content of every other path.
 # tree_stamps: prints two lines, the code stamp, then the docs stamp. Each is a SHA-256 over the
-#   kind's entries (mode, blob, path) in a temporary index that holds the working tree as
-#   `git add -A` sees it: a copy of the worktree's index, so the stat cache makes it fast, with
+#   kind's entries (mode, blob, path; for docs also the path of each entry of code) in a
+#   temporary index that holds the working tree as `git add -A` sees it: a copy of the
+#   worktree's index, so the stat cache makes it fast, with
 #   ignored files left out, a symbolic link by its target, a submodule or a nested repository by
 #   its commit (a nested repository without a commit, or a file git cannot read, is left out, as
 #   `git add -A --ignore-errors` leaves it out). It is over content alone, never over HEAD or the real index, so neither `git add`
@@ -14,7 +16,8 @@
 # tree_stamp <kind>: prints the stamp of one kind, code or docs.
 # stamp_read <scope> <kind>: prints the stored stamp of the scope, fast or full, or nothing.
 # stamp_write <scope> <kind> [stamp]: stores the stamp, by default the tree's; the files are
-#   afe-green-<scope>-<kind> in the worktree's own git directory.
+#   afe-green-<scope>-<kind> in the worktree's own git directory. Another kind, such as the base
+#   that scripts/check.sh stores, needs its stamp given.
 # stamp_matches <scope> <kind> [stamp]: true when the stored stamp of the scope equals the stamp,
 #   by default the tree's; for fast, a stored full stamp counts too.
 stamp_sha256() {
@@ -33,9 +36,9 @@ tree_stamps() {
   GIT_INDEX_FILE=$tmp/index GIT_OBJECT_DIRECTORY=$tmp/objects GIT_ALTERNATE_OBJECT_DIRECTORIES=$objs \
     git -c advice.addEmbeddedRepo=false add -A --ignore-errors > /dev/null 2>&1
   # The listing reads the index alone, never an object.
-  for kind in ':(exclude)*.md' '*.md'; do
-    GIT_INDEX_FILE=$tmp/index git ls-files -s -z -- "$kind" 2>/dev/null | stamp_sha256
-  done
+  GIT_INDEX_FILE=$tmp/index git ls-files -s -z -- ':(exclude)*.md' 2>/dev/null | stamp_sha256
+  { GIT_INDEX_FILE=$tmp/index git ls-files -s -z -- '*.md'
+    GIT_INDEX_FILE=$tmp/index git ls-files -z -- ':(exclude)*.md'; } 2>/dev/null | stamp_sha256
   rm -rf "$tmp"
 }
 

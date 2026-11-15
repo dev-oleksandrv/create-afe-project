@@ -8,10 +8,15 @@
 # runs nothing. Otherwise, for the paths that differ from the base of the change
 # (scripts/lib/git-base.sh), committed or not, untracked included, every part runs even when an
 # earlier one fails:
-# - a Markdown file changed: scripts/check-docs.sh with the changed files (all files when one was
-#   deleted), and scripts/check-decisions.sh when a path under docs/decisions/ changed;
+# - a Markdown file changed: scripts/check-docs.sh with the changed files, and
+#   scripts/check-decisions.sh when a path under docs/decisions/ changed; scripts/check-docs.sh
+#   with every file instead when a path that the base has is gone (deleted or renamed), since it
+#   may be the target of a link. Only that check of every document stores the docs stamp;
 # - another path changed, and CHECK_FAST of .claude/harness.conf is set and is not
-#   scripts/check-docs.sh: scripts/env.sh fast.
+#   scripts/check-docs.sh: scripts/env.sh fast. With CHECK_LOCK set (scripts/lib/lock.sh), the
+#   Stop of the main agent waits for that lock as any check does, and the Stop of a sub-agent
+#   skips the fast check while another process holds it, says so in one line, and stores no code
+#   stamp: the agent's own checks and the next Stop cover the change.
 # A failing part sends the agent back (exit 2) with one message for all failing parts, up to the
 # Ralph cap (scripts/lib/harness-conf.sh). During an unresolved merge conflict it lets the agent
 # stop.
@@ -42,6 +47,8 @@ git rev-parse --git-dir > /dev/null 2>&1 || exit 0
 # shellcheck source=scripts/lib/harness-conf.sh
 . scripts/lib/harness-conf.sh 2>/dev/null && . scripts/lib/stamp.sh 2>/dev/null &&
   . scripts/lib/git-base.sh 2>/dev/null || exit 0
+# shellcheck source=scripts/lib/lock.sh
+. scripts/lib/lock.sh 2>/dev/null || check_lock_busy() { return 1; }
 
 # During an unresolved merge conflict the checks cannot pass yet; let the
 # agent stop and ask instead of looping.
@@ -59,12 +66,12 @@ stamp_matches fast docs "$docs_stamp" && docs_green=1
 ralph_capped "$key" "$code_stamp $docs_stamp" && exit 0
 
 base=$(resolve_base 2>/dev/null) || base=HEAD
-md=() md_gone= decisions= other=
+md=() gone= decisions= other=
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   case "$f" in
-    *.md) if [ -f "$f" ]; then md+=("$f"); else md_gone=1; fi ;;
-    *) other=1 ;;
+    *.md) if [ -f "$f" ]; then md+=("$f"); else gone=1; fi ;;
+    *) other=1; [ -e "$f" ] || [ -L "$f" ] || gone=1 ;;
   esac
   case "$f" in docs/decisions/*) decisions=1 ;; esac
 done < <( { git -c core.quotePath=false diff --name-only --no-renames "$base" --
@@ -106,30 +113,40 @@ part() {
   fi
 }
 
+# all_docs: every document was checked, so a pass may store the docs stamp.
+all_docs=
 if [ -z "$docs_green" ]; then
-  if [ -n "$md_gone" ]; then
+  if [ -n "$gone" ]; then
     part "scripts/check-docs.sh" docs docs scripts/check-docs.sh
+    all_docs=1
   elif [ "${#md[@]}" -gt 0 ]; then
     part "scripts/check-docs.sh" docs docs scripts/check-docs.sh "${md[@]}"
   fi
-  if [ -n "$decisions" ] && { [ -n "$md_gone" ] || [ "${#md[@]}" -gt 0 ]; }; then
+  if [ -n "$decisions" ] && { [ -n "$gone" ] || [ "${#md[@]}" -gt 0 ]; }; then
     part "scripts/check-decisions.sh" docs plain scripts/check-decisions.sh
   fi
 fi
+skipped=
 if [ -n "$other" ] && [ -z "$code_green" ]; then
   case "$(conf_get CHECK_FAST)" in
     ''|scripts/check-docs.sh) ;;
-    *) part "the fast check, scripts/env.sh fast (CHECK_FAST in .claude/harness.conf)" code plain scripts/env.sh fast ;;
+    *)
+      if { [ "$event" = SubagentStop ] || [ -n "$agent" ]; } && check_lock_busy; then
+        skipped="Stop: the fast check is skipped while another process holds the lock $(conf_get CHECK_LOCK) (CHECK_LOCK of .claude/harness.conf); the agent's own checks and the next Stop cover the change."
+      else
+        part "the fast check, scripts/env.sh fast (CHECK_FAST in .claude/harness.conf)" code plain scripts/env.sh fast
+      fi ;;
   esac
 fi
 
-case "$bad" in *code*) ;; *) stamp_write fast code "$code_stamp" ;; esac
-case "$bad" in *docs*) ;; *) stamp_write fast docs "$docs_stamp" ;; esac
+case "$bad" in *code*) ;; *) [ -n "$skipped" ] || stamp_write fast code "$code_stamp" ;; esac
+case "$bad" in *docs*) ;; *) [ -z "$all_docs" ] || stamp_write fast docs "$docs_stamp" ;; esac
 if [ -n "$failures" ]; then
   ralph_block "$key" "$(printf 'Stop checks failed; fix them before finishing:%s%s' "$failures" "$warnings")" "$failed" \
     "$code_stamp $docs_stamp"
 fi
 ralph_pass "$key"
+[ -z "$skipped" ] || printf '%s\n' "$skipped" >&2
 if [ -n "$warnings" ]; then
   printf 'Stop checks: some parts could not run:%s\n' "$warnings" >&2
   exit 1

@@ -3,7 +3,8 @@
 echo "== the green stamp and scripts/check.sh"
 st() { (cd "$a" && . scripts/lib/stamp.sh && "$@"); }
 gd=$(git -C "$a" rev-parse --absolute-git-dir)
-# Two kinds: docs (*.md) and code (every other path); each changes only with its own files.
+# Two kinds: docs (*.md, and the names of the other paths) and code (the content of every other
+# path); each changes only with its own files.
 c0=$(st tree_stamp code) d0=$(st tree_stamp docs)
 printf '%s\n%s' "$c0" "$d0" | grep -qvE '^[0-9a-f]{64}$' && fail "stamp: tree_stamp is not a SHA-256 ($c0, $d0)"
 [ "$(st tree_stamp code)" = "$c0" ] && [ "$(st tree_stamp docs)" = "$d0" ] && [ "$c0" != "$d0" ] ||
@@ -18,8 +19,11 @@ gitc "$a" checkout -q -- .claude/harness.conf
 [ "$(st tree_stamp code)" = "$c0" ] || fail "stamp: code differs after a tracked file is restored"
 echo a > "$a/new.txt"
 s2=$(st tree_stamp code); [ "$s2" != "$c0" ] || fail "stamp: unchanged when an untracked file is added"
+# The docs stamp covers the names of the other paths, which links may point at, not their content.
+dn=$(st tree_stamp docs); [ "$dn" != "$d0" ] || fail "stamp: a new path other than Markdown does not change the docs stamp"
 echo b > "$a/new.txt"
 s3=$(st tree_stamp code); [ "$s3" != "$s2" ] && [ "$s3" != "$c0" ] || fail "stamp: unchanged when an untracked file's content changes"
+[ "$(st tree_stamp docs)" = "$dn" ] || fail "stamp: the content of a path other than Markdown changes the docs stamp"
 rm "$a/new.txt"
 echo a > "$a/new.md"
 [ "$(st tree_stamp docs)" != "$d0" ] && [ "$(st tree_stamp code)" = "$c0" ] || fail "stamp: an untracked Markdown file does not change docs alone"
@@ -94,6 +98,17 @@ for k in code docs; do
   (cd "$a" && scripts/check.sh --if-changed > "$work/check2.log" 2>&1) && grep -qx '#### all checks passed' "$work/check2.log" ||
     { cat "$work/check2.log"; fail "check.sh --if-changed: skips with a stale $k stamp"; }
 done
+# The base of the change counts too (scripts/check-decisions.sh depends on it): the same tree
+# with a moved base runs the checks.
+m0=$(git -C "$a" rev-parse main)
+gitc "$a" switch -q -c moved && gitc "$a" commit -q --allow-empty -m moved
+(cd "$a" && scripts/check.sh > "$work/check2.log" 2>&1 && scripts/check.sh --if-changed > "$work/check2.log" 2>&1) &&
+  [ "$(cat "$work/check2.log")" = "#### unchanged since the last passing run" ] ||
+  { cat "$work/check2.log"; fail "check.sh --if-changed: runs on an unchanged tree and base"; }
+gitc "$a" branch -q -f main moved
+(cd "$a" && scripts/check.sh --if-changed > "$work/check2.log" 2>&1) && grep -qx '#### all checks passed' "$work/check2.log" ||
+  { cat "$work/check2.log"; fail "check.sh --if-changed: skips the same tree with a moved base"; }
+gitc "$a" branch -q -f main "$m0" && gitc "$a" switch -q main && gitc "$a" branch -q -D moved
 # In GitHub Actions the stamp is neither read nor written.
 (cd "$a" && GITHUB_ACTIONS=true scripts/check.sh --if-changed > "$work/check3.log" 2>&1) && grep -qx '#### all checks passed' "$work/check3.log" ||
   { cat "$work/check3.log"; fail "check.sh --if-changed: reads the stamp in GitHub Actions"; }

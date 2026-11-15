@@ -1,8 +1,11 @@
 # Sourced by scripts/check-decisions.sh. The path classes: a path takes the highest class among
 # the `high <glob>` and `gate <glob>` lines of .claude/path-classes that match it; a path that no
-# line matches is low when it is Markdown or a generated file, otherwise normal. Low comes only
-# from that built-in rule: any other line of the file, such as an `approval` or `low` line of an
-# older project, is ignored.
+# line matches is low when it is a document (Markdown) or a generated file, otherwise normal. An
+# instruction or policy file is normal, Markdown or not, because it changes what agents do:
+# AGENTS.md and CLAUDE.md in any directory, the files under a .claude/ directory's skills/,
+# rules/, agents/, and commands/, and the generated .claude/settings.json. Low comes only from the
+# built-in rule: any other line of the file, such as an `approval` or `low` line of an older
+# project, is ignored.
 
 classes_file=.claude/path-classes
 
@@ -37,31 +40,52 @@ class_of() {
   fi
   if [ -z "$name" ]; then
     case "$1" in
-      *.md|.template/owned.sha256|.afe-answers.json|.claude/settings.json) name=low ;;
+      AGENTS.md|*/AGENTS.md|CLAUDE.md|*/CLAUDE.md|.claude/settings.json) name=normal ;;
+      .claude/skills/*|*/.claude/skills/*|.claude/rules/*|*/.claude/rules/*) name=normal ;;
+      .claude/agents/*|*/.claude/agents/*|.claude/commands/*|*/.claude/commands/*) name=normal ;;
+      *.md|.template/owned.sha256|.afe-answers.json) name=low ;;
       *) name=normal ;;
     esac
   fi
   echo "$name"
 }
 
-# review_level <path>...: the review before the pull request that the paths need, by their
-# highest class: two (high: two reviewers), one (gate, normal: one reviewer), or none (nothing
-# but class low). A template update needs none, because the template repository reviewed it: a
-# change of the answers file whose other paths are all template-owned, generated, or seeded.
+# answers_version [commit]: prints the _version of .afe-answers.json in the working tree, or in
+# the commit; nothing when the file or the field is missing.
+answers_version() {
+  if [ -n "${1:-}" ]; then git show "$1:.afe-answers.json" 2> /dev/null; else cat .afe-answers.json 2> /dev/null; fi |
+    node scripts/lib/json.mjs get _version 2> /dev/null
+}
+
+# review_level <base> <path>...: the review before the pull request that the paths, changed
+# against the base commit, need, by their highest class: two (high: two reviewers), one (gate,
+# normal: one reviewer), or none (nothing but class low). A template update needs none, because
+# the template repository reviewed it: the _version of .afe-answers.json differs from the base's,
+# no path is class high or gate, and every other path is template-owned, generated, or one of the
+# seeded README.md, CLAUDE.md, and .gitignore. The seeded configuration (.claude/path-classes,
+# .claude/harness.conf, .claude/settings.project.json) belongs to the project, so a change of it
+# gets the review its class asks for.
 review_level() {
-  local p c best=1 update=1 answers=0
+  local base=${1:-} p c best=1 update=1 answers=0 old new
+  [ "$#" -eq 0 ] || shift
   for p in "$@"; do
     case "$p" in
       .afe-answers.json) answers=1 ;;
       AGENTS.md|.template/owned.sha256|.claude/settings.json|docs/decisions/README.md) ;;
-      README.md|CLAUDE.md|.gitignore|.claude/path-classes|.claude/harness.conf|\
-      .claude/settings.project.json) ;;
+      README.md|CLAUDE.md|.gitignore) ;;
+      .claude/path-classes|.claude/harness.conf|.claude/settings.project.json) update=0 ;;
       *) glob_listed "$p" .template/owned.txt || update=0 ;;
     esac
     c=$(class_rank "$(class_of "$p")")
     [ "$c" -gt "$best" ] && best=$c
   done
-  if [ "$#" -eq 0 ] || { [ "$update" = 1 ] && [ "$answers" = 1 ]; } || [ "$best" -le 1 ]; then echo none
+  if [ "$update" = 1 ] && [ "$answers" = 1 ] && [ "$best" -le 2 ]; then
+    old=$(answers_version "$base") new=$(answers_version)
+    [ -n "$old" ] && [ -n "$new" ] && [ "$old" != "$new" ] || update=0
+  else
+    update=0
+  fi
+  if [ "$#" -eq 0 ] || [ "$update" = 1 ] || [ "$best" -le 1 ]; then echo none
   elif [ "$best" -ge 4 ]; then echo two
   else echo one; fi
 }

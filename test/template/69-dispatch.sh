@@ -34,10 +34,11 @@ stop '{"session_id":"long3"}'
   { cat "$work/stop.log"; fail "stop-dispatch: a missing documentation tool is reported in more than 10 lines"; }
 cp "$work/check-docs.keep" "$a/scripts/check-docs.sh" && rm -f "$a/docs/long.md" "$gd"/afe-ralph-long*
 # A green tree: the first stop runs the fast check, a second stop on the unchanged tree runs nothing,
-# and a change runs it again.
+# and a change runs it again. The docs stamp is stored only after a check of every document, which
+# this stop does not run.
 sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=touch $work/fast.marker#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
 stop; [ $? -eq 0 ] && [ ! -s "$work/stop.log" ] && [ -e "$work/fast.marker" ] && [ -f "$gd/afe-green-fast-code" ] &&
-  [ -f "$gd/afe-green-fast-docs" ] || { cat "$work/stop.log"; fail "stop-dispatch: a passing fast check prints, blocks, does not run, or stores no stamps"; }
+  [ ! -e "$gd/afe-green-fast-docs" ] || { cat "$work/stop.log"; fail "stop-dispatch: a passing fast check prints, blocks, does not run, or stores no code stamp, or a docs stamp without a check of every document"; }
 rm -f "$work/fast.marker"
 stop; [ $? -eq 0 ] && [ ! -s "$work/stop.log" ] && [ ! -e "$work/fast.marker" ] || fail "stop-dispatch: runs a check again on an unchanged green tree"
 echo x > "$a/src.txt"
@@ -48,8 +49,10 @@ cp "$a/scripts/check-docs.sh" "$work/check-docs.keep" &&
   printf '#!/usr/bin/env bash\ntouch "%s/docs.marker"\n' "$work" > "$a/scripts/check-docs.sh"
 stop; rm -f "$work/fast.marker" "$work/docs.marker"
 echo x >> "$a/README.md"
-stop; [ $? -eq 0 ] && [ ! -e "$work/fast.marker" ] && [ -e "$work/docs.marker" ] ||
-  { cat "$work/stop.log"; fail "stop-dispatch: a Markdown change after a green run runs the fast check, or not the documentation check"; }
+stop; [ $? -eq 0 ] && [ ! -e "$work/fast.marker" ] && [ -e "$work/docs.marker" ] && [ ! -e "$gd/afe-green-fast-docs" ] ||
+  { cat "$work/stop.log"; fail "stop-dispatch: a Markdown change after a green run runs the fast check, or not the documentation check, or a check of the changed documents alone stores the docs stamp"; }
+# Green documents, as after scripts/check.sh: a change of code runs the fast check alone.
+(cd "$a" && . scripts/lib/stamp.sh && stamp_write full docs)
 rm -f "$work/docs.marker" && echo z > "$a/src.txt"
 stop; [ $? -eq 0 ] && [ -e "$work/fast.marker" ] && [ ! -e "$work/docs.marker" ] ||
   { cat "$work/stop.log"; fail "stop-dispatch: a change of code after a green run runs the documentation check, or not the fast check"; }
@@ -64,6 +67,29 @@ stop; [ $? -eq 0 ] && [ ! -e "$work/fast.marker" ] && [ ! -e "$work/docs.marker"
 cp "$work/check-docs.keep" "$a/scripts/check-docs.sh"
 rm -f "$work/fast.marker" "$a/src.txt"
 gitc "$a" checkout -q -- .claude/harness.conf README.md && gitc "$a" switch -q main && gitc "$a" branch -q -D disp
+# Link targets: with green documents, a deleted or renamed path other than Markdown that the base
+# has runs the check of every document, which then stores the docs stamp; a path added and then
+# deleted on the branch changes the docs stamp, so the changed documents are checked again.
+green() { # stores the full stamps of the tree, as a passing scripts/check.sh does
+  (cd "$a" && . scripts/lib/stamp.sh && stamp_write full code && stamp_write full docs) && rm -f "$gd"/afe-green-fast-* "$gd"/afe-ralph-*
+}
+echo x > "$a/target.txt" && printf '# T\n\nSee [t](../target.txt).\n' > "$a/docs/t.md" && gitc "$a" add -A && gitc "$a" commit -q -m links
+green && rm "$a/target.txt"
+stop '{"session_id":"links"}'; [ $? -eq 2 ] && grep -q '^FAIL: docs/t.md:3: ../target.txt: no such file' "$work/stop.log" ||
+  { cat "$work/stop.log"; fail "stop-dispatch: a deleted link target passes with green documents"; }
+gitc "$a" checkout -q -- target.txt && green && mv "$a/target.txt" "$a/moved.txt"
+stop '{"session_id":"links"}'; [ $? -eq 2 ] && grep -q '^FAIL: docs/t.md:3: ../target.txt: no such file' "$work/stop.log" ||
+  { cat "$work/stop.log"; fail "stop-dispatch: a renamed link target passes with green documents"; }
+printf '# T\n\nSee [t](../moved.txt).\n' > "$a/docs/t.md" && rm -f "$gd"/afe-green-* "$gd"/afe-ralph-*
+stop '{"session_id":"links"}'; [ $? -eq 0 ] && [ -f "$gd/afe-green-fast-docs" ] ||
+  { cat "$work/stop.log"; fail "stop-dispatch: a passing check of every document does not store the docs stamp"; }
+rm "$a/moved.txt" && gitc "$a" checkout -q -- . && gitc "$a" switch -q -c links && echo x > "$a/other.txt" &&
+  printf '# T\n\nSee [o](../other.txt).\n' > "$a/docs/t2.md" && gitc "$a" add -A && gitc "$a" commit -q -m other
+green && rm "$a/other.txt"
+stop '{"session_id":"links"}'; [ $? -eq 2 ] && grep -q '^FAIL: docs/t2.md:3: ../other.txt: no such file' "$work/stop.log" ||
+  { cat "$work/stop.log"; fail "stop-dispatch: a link target added and deleted on the branch passes with green documents"; }
+gitc "$a" checkout -q -- . && gitc "$a" switch -q main && gitc "$a" branch -q -D links &&
+  git -C "$a" reset -q --hard "$start" && rm -f "$gd"/afe-green-* "$gd"/afe-ralph-*
 # A sub-agent that stops in the main session's tree (cwd and CLAUDE_PROJECT_DIR give one root) runs
 # nothing and prints nothing on a red tree; the main agent's Stop on that tree blocks.
 sed -i.bak "s#^CHECK_FAST=.*#CHECK_FAST=touch $work/fast.marker; exit 1#" "$a/.claude/harness.conf" && rm "$a/.claude/harness.conf.bak"
