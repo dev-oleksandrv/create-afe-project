@@ -34,6 +34,13 @@ for c in $'git push \\\norigin main' "git push 'origin' 'main'" 'git push origin
   '(git push origin main)' "echo 'done'; git push origin main" "echo \"a'\" ; git push origin main ; echo \"'b\""; do
   bash_hook deny "$c"
 done
+# Every push of the command is checked, not only the first one found: a harmless push before or
+# after a push to the default branch does not let it through.
+for c in 'echo "$(git push origin main)"; git push origin feature' 'git push origin feature; echo "$(git push origin main)"' \
+  "git push origin feature && bash -c 'cd repo && git push origin main'" "(git push origin feature); eval 'git push origin main'"; do
+  bash_hook deny "$c"
+done
+bash_hook allow 'git push origin feature; echo "$(git push origin other)"'
 # DOCS_GUARD=off passes the push too.
 out=$(cd "$a" && printf '%s' '{"tool_name":"Bash","tool_input":{"command":"git push origin main"}}' | DOCS_GUARD=off CLAUDE_PROJECT_DIR="$a" .claude/hooks/guard.sh 2>&1) &&
   [ -z "$out" ] || fail "guard hook: DOCS_GUARD=off does not pass a push to main: '${out:0:120}'"
