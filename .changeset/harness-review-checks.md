@@ -32,7 +32,8 @@ failing; what a project notices:
 - Guard hook (`.claude/hooks/guard.sh`): the command is read as words, so a push named inside
   quoted data, such as a commit message, is no longer denied; the command string of `bash -c`,
   `sh -c`, `zsh -c`, and `eval`, a command substitution in double quotes, and a subshell are
-  scanned, and every form the guard denied before is still denied.
+  scanned, each push of the command is checked, so one to the default branch denies the call
+  next to a harmless one, and every form the guard denied before is still denied.
 - `scripts/check-links.mjs` accepts `path:line-line` in a backticked code path that exists.
 - The `DIFF_WARN_LINES` warning of `scripts/check-decisions.sh --ready` leaves out lock files and
   test files (`TEST_GLOBS`, or the common patterns while it is empty); it fired on 51 of 95 pull
@@ -41,7 +42,8 @@ failing; what a project notices:
   fails there, so the pull request can quote the reason.
 - New `scripts/check-review-evidence.mjs [--head <sha>] [--base <sha>] [--level one|two] <file>`:
   validates the review evidence that an outside review engine hands to `create-pr`, as a chain of
-  clean reviews from the base to the head with no open blocker; its header holds the file format.
+  clean reviews of the diff from the base to the head with no open blocker; its header holds the
+  file format.
   Added on the owner's decision of 2026-11-15.
 
 Evidence: the review findings on instruction Markdown as class low, the update exemption, and the

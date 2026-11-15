@@ -25,8 +25,9 @@
 //   is the head of the last full review; the full reviews at the start form the start set, in
 //   which a later line of a role replaces an earlier one of the same role. With --level two the
 //   start set holds at least two roles.
-// - From the start, the clean confirm lines after the last full review, in file order, move a
-//   pointer: a confirm whose base is the pointer moves it to its head. The pointer ends at --head.
+// - From the start, the clean confirm lines with input diff after the last full review, in file
+//   order, move a pointer: such a confirm whose base is the pointer moves it to its head; a confirm
+//   of a plan or a question moves nothing. The pointer ends at --head.
 // - No finding is a blocker whose answer is open.
 // The line names each provider, and its model when it has one, of the start set and of the
 // confirms that moved the pointer, in order; the coverage is tools when one of those lines has
@@ -142,11 +143,11 @@ if (level === 'two' && byRole.size < 2) fail(`level two needs full reviews of tw
 const chain = [];
 let pointer = start;
 for (const o of lines) {
-  if (o.kind !== 'confirm' || o.n < last.n || !clean(o) || o.base !== pointer) continue;
+  if (o.kind !== 'confirm' || o.input !== 'diff' || o.n < last.n || !clean(o) || o.base !== pointer) continue;
   chain.push(o);
   pointer = o.head;
 }
-if (pointer !== head) fail(`the reviews end at ${pointer}, not at the head ${head}; a clean confirm from ${pointer} is missing`);
+if (pointer !== head) fail(`the reviews end at ${pointer}, not at the head ${head}; a clean confirm of the diff from ${pointer} is missing`);
 
 const open = lines.filter((o) => o.kind === 'finding' && o.severity === 'blocker' && o.answer === 'open');
 if (open.length) fail(`open blocker: ${open.map((o) => `${o.where} (line ${o.n})`).join(', ')}`);
